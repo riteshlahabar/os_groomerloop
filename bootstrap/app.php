@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Modules\Tenancy\Http\Middleware\ResolveTenant;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,7 +16,37 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Global: hardening headers belong on every response, including error responses
+        // rendered before any route matches.
+        $middleware->append(SecurityHeaders::class);
+
+        // D-010: Sanctum SPA cookie authentication. The React frontend authenticates with
+        // a same-origin session cookie and CSRF token rather than a bearer token held in
+        // localStorage, so there is no token for an XSS payload to steal.
+        $middleware->statefulApi();
+
+        // Force JSON before anything can decide to redirect or render HTML.
+        $middleware->api(prepend: [
+            ForceJsonResponse::class,
+        ]);
+
+        // Spec §33: every API route is rate limited. The limiter itself is defined in
+        // RateLimitServiceProvider and keyed per user or per tenant, never globally.
+        $middleware->throttleApi('api');
+
+        // Tenant isolation depends on this ordering, so it is enforced globally rather than left
+        // to each route to declare correctly.
         //
+        // SubstituteBindings lives in the "api" group and therefore runs BEFORE any route
+        // middleware — including ResolveTenant. That means route model binding would resolve
+        // `{user}` or `{appointment}` with no tenant in context, the global scope would not
+        // filter, and an owner of one business could load and modify a record belonging to
+        // another. Prioritising ResolveTenant ahead of SubstituteBindings closes that hole for
+        // every route in every module, present and future.
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolveTenant::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

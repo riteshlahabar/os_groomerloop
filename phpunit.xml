@@ -11,10 +11,19 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!--
+            Each module keeps its own tests beside its code (D-007), so this suite grows
+            automatically as modules are added and no per-module registration is needed.
+        -->
+        <testsuite name="Modules">
+            <directory>modules/*/Tests/Unit</directory>
+            <directory>modules/*/Tests/Feature</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>app</directory>
+            <directory>modules</directory>
         </include>
     </source>
     <php>
@@ -23,10 +32,23 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            D-008: tests run on MySQL, not SQLite in memory. The Phase 8 requirement that
+            twenty concurrent requests for one slot produce exactly one booking depends on
+            row-level locking, which SQLite does not have — a green SQLite suite would prove
+            nothing about production. Credentials come from .env; only the schema differs.
+        -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="groomerloop_os_test"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
+        <!--
+            Pinned rather than inherited from .env: D-010 session auth only engages when
+            Sanctum recognises the request Origin as first-party, so the suite must not depend
+            on whatever a developer happens to have configured locally.
+        -->
+        <env name="FRONTEND_URL" value="http://localhost:5173"/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost:5173"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

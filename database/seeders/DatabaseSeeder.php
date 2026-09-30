@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Modules\Entitlements\Database\Seeders\PlanSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -12,14 +12,18 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * Only reference data belongs here — rows the application cannot function without. The
+     * plan catalog is exactly that: with no plans, PlanEntitlements finds no default and
+     * fails closed, so every feature in the product is locked.
+     *
+     * Demo tenants, users, customers and appointments are deliberately absent. Seeding a fake
+     * business into a database that may be production is how test data reaches customers.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            PlanSeeder::class,
         ]);
     }
 }

@@ -1,6 +1,12 @@
 # GroomerLoop OS — MVP plan
 
-**Created:** 2026-09-25 · **Status:** Approved, not started · **Spec:** v1.0 §34 (MVP scope)
+**Created:** 2026-09-25 · **Revised:** 2026-09-26 · **Status:** Phase 0 complete · **Spec:** v1.0 §34
+
+> **Renumbered on 2026-09-26.** The stages below were reorganised into thirteen phases (0–12)
+> when the frontend decision changed. Stage 1 split into Phase 1 (Tenancy + Audit) and Phase 2
+> (Identity/RBAC); Stage 2 became Phase 3 (Entitlements, then Billing). Everything after shifts
+> by one. `docs/PROJECT_SUMMARY.md` carries the current phase list; the scope, data model and
+> risks below are unchanged and remain the plan of record.
 
 The agreed plan for the MVP build. Scope comes from spec §34, order from §38, and the
 "done when" gates from the acceptance criteria in §35. This file is the plan of record —
@@ -9,25 +15,43 @@ when reality diverges from it, update `docs/PROJECT_SUMMARY.md` and log the reas
 
 ## Locked decisions
 
+All of these are now written up in full — with context, alternatives and consequences — in
+`docs/DECISIONS.md`. This table is the index.
+
 | ID | Decision | Choice |
 | --- | --- | --- |
 | D-001 | Multi-tenancy | Shared schema, `tenant_id` on every tenant-owned table, global Eloquent scope + middleware |
-| D-002 | UI stack | Blade + Livewire 3 + Tailwind 4 |
-| D-003 | Billing | `PaymentGateway` interface; Stripe via Cashier, pending the blockers below |
-| D-004 | Cadence | One stage at a time, reviewed before the next begins |
+| D-002 | UI stack | ~~Blade + Livewire 3~~ — **superseded by D-006** |
+| D-003 | Billing | `PaymentGateway` / `SubscriptionGateway` interfaces; fake driver for MVP, Stripe behind the same contracts |
+| D-004 | Cadence | One phase at a time, reviewed before the next begins |
+| D-005 | Billing authority | Laravel owns plan/entitlement/subscription state; WordPress stays marketing-only |
+| D-006 | UI stack | **React SPA + Laravel JSON API** at `/api/v1`, one repo, Vite → `public/build` |
+| D-007 | Code structure | Modular monolith — `modules/<Module>/`, contracts-only boundaries, no repository layer |
+| D-008 | Database | MySQL/MariaDB for development, tests and production |
+| D-009 | PHP baseline | `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `bcmath`, `curl`, `gd`, `intl`, `zip`, `sodium` |
+| D-010 | Authentication | Sanctum SPA cookie auth, not localStorage bearer tokens |
+| D-011 | Hosting | **Open.** Shared cPanel cannot run a persistent queue worker |
 
-These still need writing up properly in `docs/DECISIONS.md` with context, alternatives and
-consequences. That is the first task of Stage 0.
+## Blockers
 
-## Open blockers
+**Resolved 2026-09-26:**
 
-1. **PHP CLI has no `curl` extension.** `stripe/stripe-php` requires `ext-curl`, so Cashier
-   cannot install. Fix is `extension=curl` in `C:\php83\php.ini`. Unresolved — needs the
-   owner's decision on who applies it.
-2. **Cashier may not support Laravel 13.** Dependency resolution showed Cashier topping out
-   at `illuminate/console ^12`. Verify before Stage 2. If confirmed, the fallback is the
-   `PaymentGateway` interface with a fake driver for MVP, wiring Stripe when Cashier catches
-   up or by using `stripe-php` directly.
+1. ~~**PHP CLI has no `curl` extension.**~~ Enabled in `C:\php83\php.ini` along with `gd`,
+   `intl`, `zip` and `sodium`; every DLL was already present in `C:\php83\ext`. Stripe is
+   unblocked.
+2. ~~**Cashier may not support Laravel 13.**~~ No longer on the critical path. `D-003` puts
+   billing behind `PaymentGateway` and `SubscriptionGateway` interfaces with a fake driver for
+   the MVP, so Phase 3 does not depend on Cashier at all.
+3. **New, discovered and resolved the same day:** the PHP CLI had no `pdo_sqlite` either, so the
+   configured SQLite database could not create a single table. Resolved by `D-008` — MySQL.
+
+**Still open:**
+
+4. **`D-011` hosting.** Shared cPanel cannot run a persistent queue worker, so spec §13
+   notifications and §33 retry/dead-letter handling cannot reach their gate there. Phases 0–8 are
+   unaffected; the decision is due before Phase 9.
+5. **React design files not yet received.** All frontend work waits on that handoff. The backend
+   runs ahead deliberately.
 
 ## Scope
 
@@ -76,10 +100,15 @@ Every table except `tenants`, `plans` and `plan_features` carries `tenant_id`.
 
 ### Stage 0 — Foundations
 
-npm and composer dependencies, `ext-curl` resolution, base Blade layout and Tailwind shell,
-test scaffolding, Pint run, and D-001 through D-004 written into `docs/DECISIONS.md`.
+**Completed 2026-09-26.** MySQL database and dedicated user, PHP extension baseline, Composer
+`Modules\` PSR-4 autoload (Livewire removed, Sanctum added), the `ModuleServiceProvider` base
+class, the `Platform` module with `GET /api/v1/health`, the API security middleware layer
+(headers, forced JSON, CORS allow-list, three named rate limiters), the `Modules` PHPUnit suite,
+`pint.json`, and `D-001` through `D-011` written into `docs/DECISIONS.md`.
 
-**Done when:** `composer test` is green on the stock suite and `npm run build` succeeds.
+**Done when (met):** `php artisan test` green — 10 tests, 31 assertions — `./vendor/bin/pint
+--test` clean, and `GET /api/v1/health` returning 200 JSON over real HTTP with security headers
+present. The React build is deferred with the rest of the frontend until the design arrives.
 
 ### Stage 1 — Tenancy, auth, RBAC (§5, §27)
 
@@ -93,7 +122,7 @@ search, export and a queued job.
 ### Stage 2 — Plans, entitlements, billing (§2, §24, §25)
 
 `plans` and `plan_features` seeded from the §25 matrix; `Entitlements::allows($tenant,
-'feature.key')` as the single gate, with route middleware and a Blade directive; the
+'feature.key')` as the single gate, with route middleware and the entitlement map exposed to the React SPA; the
 subscription state machine (trial, active, past_due, grace, cancelled, reactivated); the
 `PaymentGateway` interface and its driver.
 
@@ -157,9 +186,10 @@ Responsive pass, the full §35 acceptance-criteria suite, Pint, and a `/project-
 
 - **The availability engine is the critical path.** Stages 6 and 7 hold most of the real
   complexity and will produce most of the bugs. Budget time accordingly.
-- **SQLite concurrency differs from production.** SQLite's locking behaviour is not MySQL's or
-  Postgres's, so the double-booking test can pass locally and fail in production. Decide the
-  production database before Stage 6.
+- ~~**SQLite concurrency differs from production.**~~ **Resolved by `D-008`** — development,
+  tests and production all run MySQL, so the double-booking test is meaningful. Residual risk:
+  the local MariaDB is 10.4, which lacks `SKIP LOCKED` (10.6+); that affects queue throughput,
+  not booking correctness.
 - **Shared schema depends on discipline.** Isolation holds only if every model uses the
   `BelongsToTenant` trait. Mitigated by making the cross-tenant test a per-resource
   requirement rather than a single suite-level check.

@@ -20,5 +20,388 @@ implementation choices do not need an entry.
 
 ---
 
-_No decisions recorded yet. The first one due is **D-001 — multi-tenancy strategy**, which
-constrains every model, query, policy and job in the project._
+## D-001 — Multi-tenancy strategy
+
+**Date:** 2026-09-25 · **Status:** Accepted
+
+**Context:** Invariant #1 requires that Tenant A can never reach Tenant B data through UI, API,
+search, export or a background job. That guarantee has to be structural, because it will be
+re-established by every one of the fifteen MVP modules. The choice constrains every model,
+query, policy, job and migration in the project, so it could not be deferred.
+
+**Decision:** A shared schema with a `tenant_id` column on every tenant-owned table. A
+`BelongsToTenant` trait applies a global Eloquent scope and auto-fills `tenant_id` on create;
+middleware resolves the current tenant per request; the tenant context is serialised into
+queued jobs so background work is scoped identically to web requests.
+
+**Alternatives:** *Database per tenant* — the strongest isolation, but it multiplies migration
+runs, makes cross-tenant product analytics (spec §36) painful, and is impractical on the shared
+hosting the owner currently has. *Schema per tenant* — a PostgreSQL-flavoured answer that MySQL
+does not model well, and D-008 puts the project on MySQL.
+
+**Consequences:** Cheap to operate and easy to report across. The cost is that isolation now
+depends on discipline: a model that forgets the trait is a silent data leak. Mitigated by a CI
+guard test that iterates every module model and fails if a tenant-owned one lacks the trait,
+plus a per-resource cross-tenant test rather than one suite-level check.
+
+---
+
+## D-002 — UI stack: Blade + Livewire 3
+
+**Date:** 2026-09-25 · **Status:** **Superseded by D-006**
+
+**Context:** The MVP needed a front-end approach before any screen could be built.
+
+**Decision (as taken):** Blade templates with Livewire 3 and Tailwind 4, server-rendered, no
+separate API.
+
+**Why it was superseded:** The owner already holds the product design as React components. A
+Blade rebuild would have meant re-implementing a design that exists, so the premise the decision
+rested on turned out to be false. See D-006.
+
+---
+
+## D-003 — Payment provider behind an interface
+
+**Date:** 2026-09-25 · **Status:** Accepted
+
+**Context:** Spec §24 requires the full subscription lifecycle, while §40 explicitly leaves the
+payment gateway unfixed. Invariant #5 requires providers to sit behind interfaces. At the time
+of the decision, Stripe could not even be installed locally because PHP had no `curl`, and
+Cashier's Laravel 13 compatibility was unverified.
+
+**Decision:** Billing logic depends on a `PaymentGateway` and a `SubscriptionGateway` interface,
+never on a vendor SDK. A `FakeGateway` satisfies them for the MVP; a `StripeGateway` is wired
+behind the same contracts. Both implementations are verified by one shared contract test suite,
+so the fake used in tests is genuinely substitutable for the real one.
+
+**Alternatives:** Calling Cashier directly from controllers — faster initially, but it welds the
+subscription state machine to one vendor and would have blocked all of Phase 3 on an
+`ext-curl` problem unrelated to billing logic.
+
+**Consequences:** Phase 3 can be built and tested with no payment account at all, and a gateway
+swap touches one class. The cost is that Cashier's conveniences must be re-implemented behind
+the interface rather than used directly.
+
+---
+
+## D-004 — One phase at a time, reviewed before the next
+
+**Date:** 2026-09-25 · **Status:** Accepted
+
+**Context:** The MVP spans fifteen modules, and the owner wants to see and approve progress
+rather than receive one large drop.
+
+**Decision:** Work proceeds one phase at a time. Each phase has a concrete, test-backed "done
+when" gate and is reviewed before the next begins. `CLAUDE.md` is updated after every task, not
+only at session end.
+
+**Consequences:** Slower to reach a demo, much cheaper to correct course. It also means a phase
+is never "nearly done" — either its gate passes or the phase is still open.
+
+---
+
+## D-005 — Laravel owns billing; WordPress stays marketing-only
+
+**Date:** 2026-09-25 · **Status:** Accepted
+
+**Context:** `groomerloop.com` is the product's own marketing site, running WordPress with
+Elementor and WooCommerce, and its pricing page already lists the four plans from spec §25.
+WooCommerce could plausibly have owned subscriptions. Spec §24 and §35 require plan, entitlement
+and subscription state to be authoritative and consistent inside the OS.
+
+**Decision:** The Laravel OS is the single source of truth for plan, entitlement and
+subscription state. WordPress remains a marketing and content site; WooCommerce is not a
+subscription system of record. The two integration points are the Join button linking to
+`app.groomerloop.com/register?plan=<plan>` and the homepage lead form posting into the OS CRM.
+
+**Alternatives:** WooCommerce Subscriptions as the billing system — it would have required
+syncing entitlement state across two databases and two admin surfaces, with WordPress plugin
+updates able to break customer billing.
+
+**Consequences:** One entitlement authority, satisfying invariant #3. The marketing site can be
+redesigned or replaced without touching billing. Target shape:
+`groomerloop.com` (WordPress marketing) → `app.groomerloop.com` (Laravel OS) →
+`<tenant>.groomerloop.com` (tenant sites, Phase 11).
+
+---
+
+## D-006 — React SPA frontend, Laravel as a versioned JSON API
+
+**Date:** 2026-09-26 · **Status:** Accepted · **Supersedes D-002**
+
+**Context:** The owner holds the product design as React components and asked for "frontend in
+react and backend in laravel". They also needed to know whether React is viable on their shared
+cPanel host. It is: a React build is static JavaScript and CSS, which LiteSpeed serves like any
+other file, with no Node process on the server.
+
+**Decision:** Laravel becomes a JSON API under `/api/v1`. React is the only view layer. Both
+live in one repository, with the SPA building into `public/build`, so a deploy remains a single
+upload. The API version prefix is defined once, as a constant on the module base provider.
+
+**Alternatives:** Keeping Blade + Livewire (D-002) — fewer moving parts and one place to enforce
+tenancy, but it discards a design that already exists. Next.js with SSR — rejected outright: it
+needs a permanent Node process, which shared cPanel without WHM cannot provide.
+
+**Consequences:** Accepted costs, each with a named mitigation:
+
+- Validation and authorization now have an API layer as their only gate, so tenant isolation
+  must be proven there. Mitigated by making the cross-tenant test a per-resource requirement.
+- The bundle cannot be built on the host. It is built locally or in CI and uploaded.
+- Client-rendered React ranks poorly on Google, which matters for the tenant websites of spec
+  §14 and the public booking page of §12 — the only pages that need search traffic. Phase 11
+  will prerender those to static HTML at publish time, which needs no server-side Node.
+- CORS and cookie settings become security-critical; see D-010.
+
+---
+
+## D-007 — Modular monolith: one folder per functionality
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** The owner requires SOLID, an MVC structure, a separate folder per functionality and
+separate modules, with controllers under 200 lines and one controller per functionality. A flat
+`app/Models` plus `app/Http/Controllers` would hold roughly fifteen modules' worth of classes by
+the end of the MVP.
+
+**Decision:** Every feature is a module at `modules/<Module>/`, autoloaded under the `Modules\`
+PSR-4 namespace, containing its own `Models`, `Domain`, `Actions`, `Contracts`, `Http`
+(`Controllers/Api/V1`, `Requests`, `Resources`, `Middleware`), `Policies`, `Jobs`, `Events`,
+`Database/Migrations`, `Routes`, `Resources/views` and `Tests`. A shared
+`App\Support\ModuleServiceProvider` base class wires those conventional folders up, so an
+individual module provider is nearly empty.
+
+A module may reach another module **only** through its `Contracts/` interfaces or a domain event
+— never another module's Eloquent model, Action or migration. `Tenancy` and `Audit` are the
+shared kernel and may be depended on by all; `Platform` is the shared kernel for HTTP concerns
+and owns no tenant data.
+
+Deliberately excluded: a repository layer. Eloquent models are used directly inside their own
+module, and interfaces sit only at module edges and external providers. Wrapping every model in
+a repository is the usual way "SOLID in Laravel" becomes busywork.
+
+**Alternatives:** *Standard flat Laravel layout* — conventional and familiar, but it does not
+meet the owner's requirement and scales badly past a few modules. *Runtime plugin architecture*
+— rejected as a product-spec violation: spec §1 and §37 state GroomerLoop is one connected
+system, not a CMS. Modules here are compile-time organisation over a single shared,
+tenant-scoped schema, with no runtime enable/disable, no per-tenant module registry and no
+separate databases. What a tenant may use is decided by the central entitlement service, never
+by which modules happen to be loaded.
+
+**Consequences:** Each module is independently readable and testable, and the 200-line
+controller ceiling becomes easy to hold because controllers only translate HTTP to an Action.
+Module providers must be listed explicitly in `bootstrap/providers.php` — chosen over scanning
+`modules/` at boot, because a directory scan on every cold request buys nothing and a module
+missing from the list should fail visibly rather than half-load.
+
+---
+
+## D-008 — MySQL for development and production
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** `.env` specified SQLite, but the PHP 8.3 CLI had neither `pdo_sqlite` nor `sqlite3`
+enabled, so `php artisan migrate` could not create a single table. Separately, `MVP_PLAN.md`
+already flagged SQLite's locking semantics as a risk to the Phase 8 requirement that twenty
+concurrent requests for one appointment slot produce exactly one booking.
+
+**Decision:** MySQL/MariaDB for development, tests and production. An existing XAMPP MariaDB
+10.4.32 instance on port 3306 is used locally, with dedicated schemas `groomerloop_os` and
+`groomerloop_os_test` and a dedicated `groomerloop` user granted rights on only those two —
+never `root`. `phpunit.xml` points the suite at the test schema.
+
+**Alternatives:** Enabling `pdo_sqlite` and staying on SQLite — a faster start with nothing to
+install, but it would test the wrong thing: SQLite locks the whole database file while MySQL
+locks rows, so a green concurrency suite locally would say nothing about production. Since
+`pdo_mysql` was *already* enabled and SQLite's driver was not, SQLite was also the higher-effort
+option on the PHP side.
+
+**Consequences:** Development matches the cPanel production database, and the single most
+important test in the product is trustworthy. One caveat to carry forward: **MariaDB 10.4 does
+not support `SKIP LOCKED`**, which arrived in 10.6. That affects queue throughput under
+contention, not booking correctness — `SELECT … FOR UPDATE` still guarantees the single-booking
+result — but the production database should be MySQL 8.0+ or MariaDB 10.6+.
+
+---
+
+## D-009 — PHP extension baseline
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** The PHP 8.3.31 CLI was missing `curl`, `gd`, `intl`, `zip` and `sodium`. Each one
+blocks something concrete: `curl` blocks the Stripe SDK, `gd` blocks the pet photos of spec §9,
+`zip` slows Composer, `intl` is needed for locale-correct formatting. All of the DLLs were
+already present in `C:\php83\ext` and `extension_dir` was set correctly — they were simply
+commented out.
+
+**Decision:** The baseline is `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `bcmath`, `curl`,
+`gd`, `intl`, `zip` and `sodium`. All five missing extensions were enabled in `C:\php83\php.ini`
+after backing it up, and `expose_php` was turned off so PHP stops advertising its version in the
+`X-Powered-By` header.
+
+**Consequences:** The `ext-curl` blocker recorded on 2026-09-25 is resolved, so Stripe is
+unblocked for Phase 3. This baseline is now a deployment requirement to check against any
+candidate host.
+
+---
+
+## D-010 — Sanctum SPA cookie authentication
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** D-006 splits the product into an API and a React SPA, so the SPA needs to
+authenticate. The two usual options are a bearer token held by the client or a same-origin
+session cookie.
+
+**Decision:** Laravel Sanctum in SPA mode — a same-origin, HTTP-only, encrypted session cookie
+with CSRF protection, enabled via `statefulApi()`. `SESSION_ENCRYPT` is on and
+`SANCTUM_STATEFUL_DOMAINS` lists only the SPA and app origins.
+
+**Alternatives:** Bearer tokens in `localStorage` — simpler to reason about across domains, but
+any successful XSS reads the token directly, and a stolen token is usable until it expires. An
+HTTP-only cookie cannot be read by JavaScript at all.
+
+**Consequences:** CORS becomes security-critical, because credentialed cross-origin requests are
+now possible. Laravel's default `allowed_origins` of `['*']` is therefore replaced with an
+explicit allow-list drawn from `FRONTEND_URL` and `APP_URL`, with `supports_credentials`
+enabled — a wildcard is both unsafe here and rejected outright by browsers for credentialed
+requests. Locked in by tests in `modules/Platform/Tests/Feature/ApiSecurityTest.php`.
+
+---
+
+## D-011 — Hosting target
+
+**Date:** 2026-09-26 · **Status:** **Open — must be resolved before Phase 9 ships**
+
+**Context:** The current host is shared cPanel (`103.191.209.246`, user `hrnkutuc`), LiteSpeed,
+no WHM and therefore no root. SSH is unreachable: a port scan on 2026-09-25 found 80, 443 and
+2083 open and every candidate SSH port closed.
+
+**The problem:** Spec §13 notifications and §33 background processing need a persistent queue
+worker for reminders, retries and dead-letter handling. Shared cPanel cannot run one. A
+cron-driven `queue:work --stop-when-empty` each minute is the only approximation, and it caps
+reminder precision at a minute while remaining fragile. This is independent of the frontend
+choice — it would be identical under Blade.
+
+**Options:** a small VPS with Forge or Ploi, which removes every constraint at roughly
+$6–12/month; or staying on shared hosting and accepting degraded notification reliability, which
+conflicts with spec §33.
+
+**Consequences of leaving it open:** Phases 0–8 are unaffected and can be built and tested
+locally. Phase 9 cannot honestly reach its gate on shared hosting, so the decision is due
+before then. Recorded here rather than assumed.
+
+---
+
+## D-012 — The tenant scope fails closed
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** `D-001` enforces tenant isolation with a global Eloquent scope. That leaves one
+question the scope cannot avoid answering: what should a query on a tenant-owned model do when
+no tenant has been resolved? Most multi-tenancy packages answer "return everything unscoped",
+which is convenient for seeders and console commands and catastrophic if a protected route ever
+loses its middleware — the endpoint would quietly serve every tenant's rows with no error
+anywhere.
+
+**Decision:** `TenantContext` carries a strict flag alongside the tenant. When a tenant is set,
+the scope filters by it. When no tenant is set **and** strict mode is on, the scope applies
+`where 1 = 0` — the query returns nothing rather than everything. When no tenant is set and
+strict mode is off, the query is global.
+
+Strict mode is switched on by `ResolveTenant` at the start of every HTTP request, before it has
+even attempted to resolve a tenant, and by `TenantQueueBridge` for any job dispatched by a
+tenant. Console commands, seeders and migrations run relaxed. `TenantContext::withoutTenancy()`
+is the single, explicit escape hatch for deliberately global queries.
+
+**Alternatives:** *Unscoped when no tenant* — the common default, rejected because it makes a
+forgotten middleware a silent data leak instead of a visible bug. *Throwing an exception* —
+maximally loud, but it breaks migrations, seeders, factories and any legitimate platform-wide
+query, so it would have been worked around immediately and thereby weakened.
+
+**Consequences:** A misconfigured route returns an empty result instead of leaking, and the
+failure is obvious to whoever is testing it. The cost is one piece of state to understand, and
+one genuine subtlety: resolving the authenticated user is itself a query against the
+tenant-owned `users` table and necessarily happens *before* the tenant is known. `ResolveTenant`
+therefore performs that lookup inside `withoutTenancy()` and only then enforces strict mode —
+without that ordering, every authenticated request would fail to find its own user.
+
+---
+
+## D-013 — Roles as an enum matrix; the User model stays shared kernel
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** Spec §5 fixes six roles and §23 requires roles and permissions, while invariant #3
+demands that gating be resolved centrally rather than by name checks scattered through the code.
+Two questions had to be answered: where the role-to-capability map lives, and where the `User`
+model lives now that Identity exists as a module.
+
+**Decision (roles):** A `Permission` enum lists every capability; a `Role` enum maps each of the
+six roles to the permissions it carries, and that map is the only place authorization is written
+down. Every permission is registered as a Laravel gate ability, so `$user->can('customers.manage')`
+and a `permission:` route middleware both work with no translation layer. Application code asks
+about permissions and never compares role names. Permissions are derived from the role at runtime
+rather than stored in a pivot table — the matrix is small, fixed by the spec, and version
+controlled, so a table would add migrations and drift without adding capability.
+
+**Decision (User):** `App\Models\User` stays in `app/` as shared kernel rather than moving into
+`modules/Identity/Models/`. Authentication is configured framework-wide in `config/auth.php`, and
+both Tenancy and Audit legitimately reference the model. Moving it into Identity would have forced
+Tenancy to reference another module's Eloquent model, which the D-007 boundary rule forbids.
+Instead each module contributes its own concern as a trait: Tenancy's `BelongsToTenant` and
+Identity's `HasRole`, which registers the `Role` cast itself so the model need not know about it.
+
+**Alternatives:** *A permissions pivot table with per-user overrides* — more flexible, but spec §5
+describes fixed roles, and per-user grants would make the effective permission set unauditable
+from the code. *Moving `User` into Identity* — architecturally tidier in isolation, but it breaks
+the module boundary rule for two other modules.
+
+**Consequences:** Adding a role or moving a capability is a one-file change with a test that
+fails loudly (`RolePermissionMatrixTest` asserts all six roles against all permissions). The cost
+is that per-user permission overrides are not possible without revisiting this; if spec §23 later
+needs them, they go in a table consulted *after* the role matrix, not instead of it.
+
+Two consequences are worth recording because they are not obvious:
+
+- Neither `tenant_id` nor `role` is fillable on `User`. Both are set only by trusted paths, so no
+  mass assignment can move a user between businesses or grant permissions.
+- `Role::PlatformAdmin` is excluded from `assignableWithinTenant()`, and both the invite and
+  role-change paths re-check it, so no business can mint GroomerLoop staff.
+
+---
+
+## D-014 — Tenant resolution is prioritised ahead of route model binding
+
+**Date:** 2026-09-26 · **Status:** Accepted
+
+**Context:** Found by a failing test in Phase 2, and it was a real cross-tenant data leak rather
+than a test problem. An owner of one business successfully changed the role of a user belonging to
+another business, and the request returned 200.
+
+The cause is middleware ordering. `SubstituteBindings` is part of Laravel's `api` middleware
+group, and group middleware runs before route middleware — so `{user}` was resolved into a model
+*before* `ResolveTenant` had established which tenant the request was for. With no tenant in
+context the global scope did not filter (D-012's strict mode had not been switched on yet), so the
+lookup found the record and everything downstream treated it as the caller's own.
+
+Phase 1's isolation gate had not caught this because its test routes used closures with explicit
+`findOrFail` queries. Route model binding is a separate path, and it is the one every real
+controller will use.
+
+**Decision:** `bootstrap/app.php` calls
+`$middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ResolveTenant::class)`.
+Laravel sorts a route's combined middleware by that priority list, so tenant resolution now runs
+before binding on every route, in every module, whatever order a route file happens to declare.
+
+**Alternatives:** *Removing `SubstituteBindings` from the api group and re-adding it after
+`tenant` per route group* — works, but it makes correct isolation something every future route
+file has to remember, which is exactly the class of mistake this project is trying to design out.
+*Scoped bindings (`->scopeBindings()`)* — solves nested-resource scoping, not this: it constrains
+a child to its parent, and says nothing about the tenant of a top-level binding.
+
+**Consequences:** Cross-tenant binding is closed globally and cheaply. Two regression tests in
+`TenantIsolationTest` now cover the binding path alongside the hand-written query path, so the
+ordering cannot be silently undone. The general lesson is recorded in `CLAUDE.md`: when a
+tenant-owned resource gains an endpoint, the isolation test must exercise route model binding and
+not only an explicit query.

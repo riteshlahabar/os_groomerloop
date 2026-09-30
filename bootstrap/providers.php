@@ -1,7 +1,49 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use App\Providers\RateLimitServiceProvider;
+use Modules\Audit\AuditServiceProvider;
+use Modules\Billing\BillingServiceProvider;
+use Modules\Crm\CrmServiceProvider;
+use Modules\Entitlements\EntitlementsServiceProvider;
+use Modules\Identity\IdentityServiceProvider;
+use Modules\Onboarding\OnboardingServiceProvider;
+use Modules\Platform\PlatformServiceProvider;
+use Modules\Tenancy\TenancyServiceProvider;
 
 return [
+    // Shared kernel.
     AppServiceProvider::class,
+    RateLimitServiceProvider::class,
+
+    // Feature modules (D-007), in dependency order per spec §38.
+    //
+    // Listed explicitly rather than discovered by scanning modules/ at boot: a directory
+    // scan on every cold request buys nothing and a module that is not listed here should
+    // fail visibly rather than half-load.
+    PlatformServiceProvider::class,
+
+    // Tenancy must boot before anything that reads tenant-owned data, and Audit before
+    // anything that records against it.
+    TenancyServiceProvider::class,
+    AuditServiceProvider::class,
+
+    // Identity depends on both: it resolves tenants at login and audits role changes.
+    IdentityServiceProvider::class,
+
+    // Entitlements depends on Tenancy only. It must boot before any module that gates a route
+    // on `entitlement:`, and deliberately before Billing — plan gating has to work for a
+    // business that has never paid (spec §2, invariant #3).
+    EntitlementsServiceProvider::class,
+
+    // Billing depends on Entitlements (PlanRegistry), so it boots after it.
+    BillingServiceProvider::class,
+
+    // Onboarding depends on Tenancy and Audit only. Other modules register their own §7 step
+    // verifiers into its registry as they are built, so it never reads their tables.
+    OnboardingServiceProvider::class,
+
+    // CRM depends on Entitlements (its routes are entitlement-gated) and is depended on by
+    // Pets, Scheduling and Notifications through CustomerDirectory.
+    CrmServiceProvider::class,
 ];
