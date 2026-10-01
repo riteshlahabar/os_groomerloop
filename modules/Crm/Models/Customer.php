@@ -54,12 +54,33 @@ final class Customer extends Model
         'notes',
     ];
 
+    /**
+     * The same defaults the migration writes, stated again in code on purpose.
+     *
+     * Without these, a freshly created customer answers consent questions from unset
+     * attributes — so the response to POST /customers reported "email: not allowed" while the
+     * row in the database said the opposite, and a page refresh changed the answer. Consent
+     * is the one thing in this module that may not be approximately right (invariant #9), and
+     * it has to read correctly on an unsaved model too: Notifications will ask allowsChannel()
+     * of whatever instance it is handed.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'lead',
+        'country' => 'US',
+        'accepts_email' => true,
+        'accepts_sms' => false,
+        'accepts_push' => false,
+        'accepts_marketing' => false,
+    ];
+
     public static function booted(): void
     {
         // Normalised forms are derived, never supplied. Keeping this in the model rather
         // than in each action means an import, a public booking and a merge all produce
         // comparable values without any of them remembering to.
-        static::saving(static function (Customer $customer): void {
+        self::saving(static function (Customer $customer): void {
             $customer->email_normalised = ContactNormaliser::email($customer->email);
             $customer->phone_normalised = ContactNormaliser::phone($customer->phone);
         });

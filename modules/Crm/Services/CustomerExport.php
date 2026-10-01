@@ -2,6 +2,7 @@
 
 namespace Modules\Crm\Services;
 
+use Illuminate\Database\Eloquent\Builder;
 use Modules\Crm\Domain\CommunicationChannel;
 use Modules\Crm\Models\Customer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -59,7 +60,7 @@ final class CustomerExport
 
     /**
      * @param  array<string, mixed>  $filters
-     * @return \Illuminate\Database\Eloquent\Builder<Customer>
+     * @return Builder<Customer>
      */
     private function query(array $filters)
     {

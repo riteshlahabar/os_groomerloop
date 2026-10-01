@@ -33,6 +33,22 @@ enum Permission: string
     case ViewPets = 'pets.view';
     case ManagePets = 'pets.manage';
 
+    /**
+     * Spec §9 asks for "internal staff notes with permissions" — a visibility level of its own,
+     * distinct from the notes the customer supplied.
+     *
+     * Held by everyone who handles the animal, and that deliberately includes Groomer, who has
+     * no ManagePets: "muzzle required", "bit a groomer in March" is safety information, and the
+     * person holding the clippers is both the one who needs to read it and the one who learns
+     * it. Marketing is the exception — §5 scopes it to growth modules, and staff commentary
+     * about a customer's dog has no business in a campaign tool.
+     *
+     * Granting read and write together is the honest shape: a groomer who may read the handling
+     * history is the right person to add to it, and splitting them would mean the observation
+     * never gets written down.
+     */
+    case AccessInternalPetNotes = 'pets.internal_notes';
+
     case ViewServices = 'services.view';
     case ManageServices = 'services.manage';
 

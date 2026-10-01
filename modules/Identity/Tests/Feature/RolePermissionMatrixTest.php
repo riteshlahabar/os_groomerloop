@@ -41,7 +41,7 @@ final class RolePermissionMatrixTest extends TestCase
                 // Bulk customer movement is a Manager-and-above capability (spec §8).
                 Permission::ExportCustomers, Permission::ImportCustomers,
 
-                Permission::ViewPets, Permission::ManagePets,
+                Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices, Permission::ManageServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
@@ -52,7 +52,9 @@ final class RolePermissionMatrixTest extends TestCase
 
             'groomer reads the day and moves appointments through statuses' => [Role::Groomer, [
                 Permission::ViewCustomers,
-                Permission::ViewPets,
+
+                // Read-only on the pet record, but trusted with its handling history (§9).
+                Permission::ViewPets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments,
@@ -61,7 +63,7 @@ final class RolePermissionMatrixTest extends TestCase
 
             'front desk books and manages customers' => [Role::FrontDesk, [
                 Permission::ViewCustomers, Permission::ManageCustomers,
-                Permission::ViewPets, Permission::ManagePets,
+                Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,

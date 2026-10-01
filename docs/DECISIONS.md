@@ -405,3 +405,107 @@ a child to its parent, and says nothing about the tenant of a top-level binding.
 ordering cannot be silently undone. The general lesson is recorded in `CLAUDE.md`: when a
 tenant-owned resource gains an endpoint, the isolation test must exercise route model binding and
 not only an explicit query.
+
+## D-015 — The §7 "customers and pets" onboarding step stays client-marked until Pets exists
+
+**Date:** 2026-09-30 · **Status:** Accepted
+
+**Context:** Spec §7 step 8 is "Add or import customers and pets". Onboarding (Phase 4) verifies a
+step by asking whichever module owns it, through `OnboardingStepVerifier`, and `OnboardingStep`
+declares per step whether it is verified at all. Catalog will answer for services and Team for
+staff. With Crm delivered, it is now possible for a module to answer this step — but only for half
+of it, because Pets (§9) does not exist.
+
+A verifier that answered from customers alone would report the step complete for a business that
+has imported four hundred customers and no pets. That business cannot be booked in: §11
+appointments are for a pet, not a customer. The §16 dashboard would then show setup as finished
+while the thing setup exists to enable is still impossible.
+
+**Decision:** `OnboardingStep::CustomersAndPets::isVerified()` stays `false`, and Crm registers no
+verifier. The step remains completable by the owner marking it done, like Policies, Website and
+Integrations. The Pets phase owns the combined verifier — customers *and* pets — and flips the
+step to verified at the same time.
+
+**Alternatives:** *Register a customers-only verifier now* — the checklist would lie, which is the
+exact failure the verifier mechanism was built to prevent (a checklist that can be ticked without
+doing the work). *Split §7 step 8 into two steps* — tempting, but the spec is the requirement
+baseline and it lists one step; splitting it to suit the build order would be the code editing the
+requirements. *Have Crm register a verifier that Pets later decorates* — two modules owning one
+step, with the answer depending on which booted, for no gain over waiting.
+
+**Consequences:** The step reads as ordinary client-marked progress until Phase 5b, which is
+honest and needs no explanation in the UI. `StepVerifiers::satisfied()` returns null only for
+steps whose module is genuinely missing, so the `unavailable` state stays meaningful. The cost is
+one deferred item, recorded here and in the Pets follow-ups, and the risk is that it is forgotten
+— mitigated by the follow-up in `summaries/2026-09-30-phase-5-crm.md` and the note in
+`MODULE_STATUS.md` row 7.
+
+## D-016 — Pet photos have a column and no upload path
+
+**Date:** 2026-09-30 · **Status:** Accepted
+
+**Context:** Spec §9 lists "Photo" among a pet's details, and it is a real requirement: a groomer
+identifies the animal at check-in, and the §15 mobile experience shows pet profiles. But there is
+no file upload anywhere in GroomerLoop, and §28's "secure file uploads" is one of the four spec
+requirements that no phase in the 13-phase plan owns. Pet photos are the first thing to need it;
+§14 logo/branding and §21 brand assets need it next.
+
+Building uploads properly here means MIME and magic-byte validation, size limits, a storage driver
+behind an interface (invariant #5), signed or authorised read URLs so one business cannot fetch
+another's files, image re-encoding to strip EXIF and defuse polyglot files, and a retention story
+for §28 data deletion. That is a phase of work, not a field on a form, and doing it badly inside
+the Pets phase would put an unauthenticated file-serving path into a multi-tenant product.
+
+**Decision:** `pets.photo_path` exists, nullable, and nothing writes it. `PetResource` exposes
+`photo_url` as a permanently null key. The upload endpoint, the storage contract and the
+authorised read path are deferred to a dedicated §28 uploads phase, which must be placed in the
+build sequence before Phase 11 (Website) because §14 branding depends on it too.
+
+**Alternatives:** *Accept a URL string instead of a file* — moves the problem to the client and
+invites server-side request forgery when anything later fetches that URL, plus every photo then
+depends on a third-party host staying up. *Base64 in a JSON field* — no validation story, no
+re-encoding, and it bloats every pet response. *Leave the column out entirely* — then adding it
+later is a migration plus a change to the resource contract the SPA already consumes; a null key
+the client can render around costs nothing now.
+
+**Consequences:** The pet record is complete against §9 except for the photo, and the gap is a
+named decision rather than an oversight. The SPA can build the profile screen against the final
+response shape today. The risk is that the deferred uploads phase stays unscheduled — tracked as
+an explicit "owns no phase" item in `PROJECT_SUMMARY.md` and in `CLAUDE.md`, and it now has a
+concrete first consumer rather than being an abstract §28 line item.
+
+## D-017 — Team owns the service↔staff eligibility link, not Catalog
+
+**Date:** 2026-09-30 · **Status:** Accepted
+
+**Context:** Spec §10 lists "eligible groomers/staff" as a property of a service, and §23 lists
+staff and their availability. It is a many-to-many, so exactly one module has to own the pivot, and
+whichever owns it must be able to validate ids on both sides.
+
+Catalog ships first in Phase 6 and Team second. If Catalog owned the link it would have to validate
+a staff id against a table that does not exist yet, and there would be no contract to ask —
+`exists:staff,id` cannot be written before Team, and writing it later means the coupling arrives as
+a retrofit rather than as a decision.
+
+**Decision:** `Team` owns the eligibility table and registers nothing in Catalog. It validates
+service ids through `Catalog\Contracts\ServiceCatalog`, which exists by the time Team is built, and
+exposes the answer through its own contract (`StaffDirectory::canPerform($staffId, $serviceId)` or
+equivalent) for Scheduling and Booking to consult. Catalog stays unaware that staff exist.
+
+This is the same shape as Phase 5: Pets owned `customer_id` and validated it through Crm's
+`CustomerDirectory`, because Crm shipped first. The general rule it establishes — **the module that
+ships second owns the link and validates through the first module's contract** — is what keeps the
+dependency graph acyclic without anyone having to think about it each time.
+
+**Alternatives:** *Catalog owns it with a deferred validation* — a foreign key to a table that does
+not exist is not a migration that can run, and a nullable unvalidated column would let a booking be
+assigned to a staff id from another business. *A third module owning the join* — one more module,
+and neither §10 nor §23 describes one. *Ship Team before Catalog* — Team would then have the same
+problem in the opposite direction, since §23 availability is described in terms of the services a
+groomer performs.
+
+**Consequences:** Catalog is complete against §10 except for that one bullet, which is recorded
+here and in `MODULE_STATUS.md` rather than silently missing. Scheduling (§11) must consult two
+contracts to validate an appointment — the service from Catalog, the staff eligibility from Team —
+which is the honest shape of the question anyway. The risk is that Team is built without it and the
+bullet is forgotten; the follow-up is in the Phase 6 session log and on Team's own status row.

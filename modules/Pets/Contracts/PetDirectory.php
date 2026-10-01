@@ -1,0 +1,55 @@
+<?php
+
+namespace Modules\Pets\Contracts;
+
+/**
+ * How other modules look a pet up (D-007).
+ *
+ * Scheduling (§11) needs to know a pet exists and belongs to the customer being booked;
+ * Booking (§12) needs the same check on a public, unauthenticated request; Notifications (§13)
+ * and Retention (§22) need to know whether contacting anyone about this pet is appropriate at
+ * all. None of them may load the Pet model.
+ *
+ * `belongsTo` is the important one. A booking request carries a customer id and a pet id, both
+ * from the client, and nothing else stops someone booking their own appointment against another
+ * family's dog — inside the same business, where the tenant scope offers no protection.
+ */
+interface PetDirectory
+{
+    public function exists(int $petId): bool;
+
+    /**
+     * Is this pet owned by this customer, in this tenant?
+     *
+     * False for an unknown pet or an unknown customer, so a caller that forgets to check
+     * existence separately still cannot act on a mismatch.
+     */
+    public function belongsTo(int $petId, int $customerId): bool;
+
+    /**
+     * Display name for a calendar entry or a message ("Bella"), or null if the pet is not in the
+     * current tenant.
+     */
+    public function nameOf(int $petId): ?string;
+
+    /**
+     * May the business be prompted to contact anyone about this pet?
+     *
+     * False for an archived pet and — the case this exists for — a deceased one. §22 sends
+     * rebooking and win-back messages off the back of quiet periods, and a pet that has died is
+     * permanently quiet.
+     */
+    public function allowsOutreach(int $petId): bool;
+
+    /**
+     * The ids of a customer's current pets, for a booking form or a calendar entry.
+     *
+     * @return list<int>
+     */
+    public function idsForCustomer(int $customerId): array;
+
+    /**
+     * Does this business have any pets on file? Used by the §7 onboarding checklist (`D-015`).
+     */
+    public function hasAny(): bool;
+}

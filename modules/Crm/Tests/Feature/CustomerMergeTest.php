@@ -4,6 +4,7 @@ namespace Modules\Crm\Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Modules\Audit\Models\AuditEvent;
 use Modules\Crm\Actions\MergeCustomers;
 use Modules\Crm\Contracts\CustomerMergeParticipant;
@@ -198,7 +199,7 @@ final class CustomerMergeTest extends TestCase
     {
         $customer = Customer::factory()->create();
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         app(MergeCustomers::class)->execute($customer, $customer);
     }

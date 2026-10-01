@@ -4,10 +4,12 @@ use App\Providers\AppServiceProvider;
 use App\Providers\RateLimitServiceProvider;
 use Modules\Audit\AuditServiceProvider;
 use Modules\Billing\BillingServiceProvider;
+use Modules\Catalog\CatalogServiceProvider;
 use Modules\Crm\CrmServiceProvider;
 use Modules\Entitlements\EntitlementsServiceProvider;
 use Modules\Identity\IdentityServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
+use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
 use Modules\Tenancy\TenancyServiceProvider;
 
@@ -46,4 +48,14 @@ return [
     // CRM depends on Entitlements (its routes are entitlement-gated) and is depended on by
     // Pets, Scheduling and Notifications through CustomerDirectory.
     CrmServiceProvider::class,
+
+    // Pets must boot after Crm and after Onboarding: it registers itself into Crm's customer-merge
+    // registry and Onboarding's §7 step-verifier registry, and both of those singletons are
+    // declared by their own provider's register().
+    PetsServiceProvider::class,
+
+    // Catalog depends on Tenancy, Audit and Onboarding's verifier registry only. It boots before
+    // Team, which owns the §10 "eligible groomers" link and validates service ids through this
+    // module's contract (D-017).
+    CatalogServiceProvider::class,
 ];

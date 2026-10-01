@@ -2,9 +2,7 @@
 
 namespace Modules\Crm\Actions;
 
-use Illuminate\Support\Str;
 use Modules\Crm\Models\Customer;
-use Modules\Crm\Models\CustomerTag;
 use Modules\Tenancy\Support\TenantContext;
 
 /**
@@ -16,7 +14,10 @@ use Modules\Tenancy\Support\TenantContext;
  */
 final class SyncCustomerTags
 {
-    public function __construct(private readonly TenantContext $tenants) {}
+    public function __construct(
+        private readonly TenantContext $tenants,
+        private readonly UpsertCustomerTag $upsert,
+    ) {}
 
     /**
      * @param  list<string>  $names
@@ -26,21 +27,14 @@ final class SyncCustomerTags
         $ids = [];
 
         foreach ($names as $name) {
-            $name = trim($name);
-            $slug = Str::slug($name);
+            // Creation goes through the one action that owns it, so a tag typed onto a
+            // customer and a tag added on the settings screen cannot drift apart — including
+            // the rule that a name with nothing to slug ("!!!") is not a tag at all.
+            $tag = $this->upsert->execute($name);
 
-            // An empty name, or one that is nothing but punctuation, would slug to "" and
-            // collide with every other such tag on the unique index.
-            if ($name === '' || $slug === '') {
+            if ($tag === null) {
                 continue;
             }
-
-            // firstOrCreate on the slug, not the name: "Nervous" and "nervous" are one tag,
-            // and the unique index on (tenant_id, slug) would reject the second anyway.
-            $tag = CustomerTag::query()->firstOrCreate(
-                ['slug' => $slug],
-                ['name' => $name],
-            );
 
             $ids[] = $tag->getKey();
         }

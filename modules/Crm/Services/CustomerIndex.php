@@ -75,6 +75,21 @@ final class CustomerIndex
     }
 
     /**
+     * How many customers the filters match.
+     *
+     * Used by the export audit record, and it has to be the *filtered* count. An audit trail
+     * saying four thousand customers were exported when the request asked for one tag is
+     * worse than no number at all, because it would be believed.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function countMatching(array $filters): int
+    {
+        // without('tags'), because a count has no rows to render them onto.
+        return $this->query($filters)->without('tags')->count();
+    }
+
+    /**
      * @param  Builder<Customer>  $query
      * @param  array<string, mixed>  $filters
      */

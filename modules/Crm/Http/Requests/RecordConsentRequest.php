@@ -3,7 +3,7 @@
 namespace Modules\Crm\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use Modules\Crm\Domain\CommunicationChannel;
 
 final class RecordConsentRequest extends FormRequest
@@ -31,20 +31,38 @@ final class RecordConsentRequest extends FormRequest
         ];
     }
 
-    protected function prepareForValidation(): void
+    /**
+     * @return array<string, mixed>
+     */
+    public function after(): array
     {
-        $channels = $this->input('channels');
+        return [
+            // An unknown channel name is refused rather than ignored. Silently dropping
+            // "e-mail" would answer 200 to a request that changed nothing, and a client
+            // would have no way to discover the typo.
+            function (Validator $validator): void {
+                foreach (array_keys((array) $this->input('channels', [])) as $channel) {
+                    if (CommunicationChannel::tryFrom((string) $channel) === null) {
+                        $validator->errors()->add(
+                            "channels.{$channel}",
+                            'Unknown communication channel.'
+                        );
+                    }
+                }
+            },
 
-        if (is_array($channels)) {
-            // Unknown channel names are dropped here rather than silently ignored deeper
-            // in, so a typo produces a validation error the caller can see.
-            $this->merge([
-                'channels' => array_intersect_key(
-                    $channels,
-                    array_flip(CommunicationChannel::values())
-                ),
-            ]);
-        }
+            // Rejects a request that says nothing, so an empty body cannot stamp a new
+            // consent_recorded_at as though the customer had confirmed something.
+            function (Validator $validator): void {
+                $saysSomething = $this->channelDecisions() !== []
+                    || $this->has('marketing')
+                    || $this->has('opted_out');
+
+                if (! $saysSomething) {
+                    $validator->errors()->add('channels', 'Say what the customer has agreed to.');
+                }
+            },
+        ];
     }
 
     /**
@@ -53,7 +71,11 @@ final class RecordConsentRequest extends FormRequest
     public function channelDecisions(): array
     {
         /** @var array<string, mixed> $channels */
-        $channels = $this->safe()->array('channels');
+        $channels = (array) $this->input('channels', []);
+
+        // Filtered to the known channels here as well as validated above, so the action can
+        // never be handed a key it would have to decide what to do with.
+        $channels = array_intersect_key($channels, array_flip(CommunicationChannel::values()));
 
         return array_map(static fn ($v): bool => filter_var($v, FILTER_VALIDATE_BOOLEAN), $channels);
     }
@@ -76,22 +98,5 @@ final class RecordConsentRequest extends FormRequest
     public function source(): string
     {
         return $this->string('source')->toString() ?: 'staff';
-    }
-
-    /**
-     * Rejects a request that says nothing, so an empty body cannot stamp a new
-     * consent_recorded_at as though the customer had confirmed something.
-     *
-     * @return array<string, mixed>
-     */
-    public function after(): array
-    {
-        return [
-            function (\Illuminate\Validation\Validator $validator): void {
-                if (! $this->hasAny(['channels', 'marketing', 'opted_out'])) {
-                    $validator->errors()->add('channels', 'Say what the customer has agreed to.');
-                }
-            },
-        ];
     }
 }

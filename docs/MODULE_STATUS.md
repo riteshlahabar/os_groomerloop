@@ -5,7 +5,7 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-09-26 (Phase 2 complete)
+**Last updated:** 2026-09-30 (Phase 6a Catalog complete — 489 tests / 1721 assertions green)
 
 ## Foundations
 
@@ -23,13 +23,13 @@ click-through.
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Tenancy + Audit (shared kernel) | §27 | 1 | MVP | **Tested** | Global scope, fail-closed strict mode (`D-012`), queue bridge, append-only audit trail |
 | 2 | Identity: auth, 6 roles, RBAC | §5 | 2 | MVP | **Tested** | Sanctum SPA cookie auth, atomic registration, role matrix (`D-013`), invitations |
-| 3 | Entitlements | §2, §25 | 3 | MVP | Not started | Single gate; no plan name anywhere else (invariant #3) |
-| 4 | Billing | §24 | 3 | MVP | Not started | `PaymentGateway` interface (`D-003`); Laravel owns billing (`D-005`) |
-| 5 | Business onboarding | §7 | 4 | MVP | Not started | Resumable and skippable |
-| 6 | Customer CRM | §8 | 5 | MVP | Not started | Incl. duplicate detection and merge |
-| 7 | Pet profiles | §9 | 5 | MVP | Not started | First-class records; photos need `gd` (now enabled) |
-| 8 | Services / catalog | §10 | 6 | MVP | Not started | Price, duration, buffer, add-ons, eligibility |
-| 9 | Team + staff availability | §23 | 6 | MVP | Not started | Roles, permissions, availability, time off |
+| 3 | Entitlements | §2, §25 | 3 | MVP | **Tested** | Plans are data, not an enum; §25 matrix asserted cell-for-cell; 402 ≠ 403 |
+| 4 | Billing | §24 | 3 | MVP | **Tested** | Closed state machine; `PaymentGateway` + fake (`D-003`); a delinquent business keeps every feature |
+| 5 | Business onboarding | §7 | 4 | MVP | **Tested** | Resumable and skippable; verified steps ignore stored completion |
+| 6 | Customer CRM | §8 | 5 | MVP | **Tested** | Search/filter/sort + pagination, dedupe + merge, import/export, tags, consent |
+| 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
+| 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
+| 9 | Team + staff availability | §23 | 6 | MVP | Next | Roles, permissions, availability, time off. **Owes the `D-017` service↔staff eligibility link, §9's pet service preferences, and the `staff` onboarding verifier** |
 | 10 | Calendar + appointment engine | §11 | 7 | MVP | Not started | **Critical path.** Server-side conflict prevention |
 | 11 | Public online booking | §12 | 8 | MVP | Not started | Needs the 20-concurrent-request test on MySQL |
 | 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved |
@@ -66,7 +66,13 @@ Additionally, per `D-007`, every module must satisfy the cross-cutting CI guards
    fails the build naming any offender.
 2. Every tenant-owned resource with an endpoint is isolation-tested through **route model
    binding**, not only through an explicit query — see `D-014` for why that distinction matters.
-3. No module references another module's `Models\` namespace — only `Contracts\`.
-4. No plan-name literal outside the plans seeder.
-5. Every metric class implements `MetricDefinition`.
-6. Every provider driver, fakes included, passes its shared contract test.
+3. No module references another module's `Models\` namespace — only `Contracts\`. Enforced since
+   Phase 5 by `ModuleBoundaryGuardTest`, which scans every module's non-test PHP. `Tenancy` and
+   `Audit` are shared kernel and exempt; any other crossing is listed file-by-file in the test's
+   `ACCEPTED` map, so each one had to be argued for rather than permitted by a broad rule.
+4. No plan-name literal outside the plans seeder. Enforced by `PlanLiteralGuardTest`.
+5. Every metric class implements `MetricDefinition`. **Absent, not green** — arrives with Insights
+   (Phase 10). There is no subject code yet.
+6. Every provider driver, fakes included, passes its shared contract test. Partly present:
+   `Billing/Tests/Contract/PaymentGatewayContract.php` covers the payment gateway. The mail, SMS
+   and voice providers do not exist yet.

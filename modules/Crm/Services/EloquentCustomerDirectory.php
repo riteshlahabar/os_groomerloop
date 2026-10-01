@@ -21,9 +21,54 @@ final class EloquentCustomerDirectory implements CustomerDirectory
         return $this->find($customerId) !== null;
     }
 
+    /**
+     * Not memoised, and `current()` rather than every row: a business that has archived its only
+     * customer has not set up a customer book, and the onboarding checklist should say so. The
+     * answer can also change within a request — the import creates the first customers — so a
+     * cached "no" would leave the checklist wrong until the next page load.
+     */
+    public function hasAny(): bool
+    {
+        return Customer::query()->current()->exists();
+    }
+
     public function nameOf(int $customerId): ?string
     {
         return $this->find($customerId)?->fullName();
+    }
+
+    /**
+     * One query for the whole page, and it fills the same memo `nameOf()` reads — so a caller
+     * that primes a list here makes every subsequent per-row lookup free.
+     *
+     * Ids that resolve to nothing are memoised as null as well, otherwise a missing customer
+     * would be re-queried on every row that mentions it.
+     *
+     * @param  list<int>  $customerIds
+     * @return array<int, string|null>
+     */
+    public function namesOf(array $customerIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $customerIds)));
+        $unresolved = array_values(array_diff($ids, array_keys($this->resolved)));
+
+        if ($unresolved !== []) {
+            foreach (Customer::query()->whereKey($unresolved)->get() as $customer) {
+                $this->resolved[(int) $customer->getKey()] = $customer;
+            }
+
+            foreach ($unresolved as $id) {
+                $this->resolved[$id] ??= null;
+            }
+        }
+
+        $names = [];
+
+        foreach ($ids as $id) {
+            $names[$id] = $this->resolved[$id]?->fullName();
+        }
+
+        return $names;
     }
 
     public function mayContact(int $customerId, CommunicationChannel $channel): bool

@@ -31,7 +31,7 @@ final class CustomerTag extends Model
     {
         // Derived from the name, so "Nervous", "nervous" and "  Nervous  " are one tag
         // rather than three. The unique index on (tenant_id, slug) then does the work.
-        static::saving(static function (CustomerTag $tag): void {
+        self::saving(static function (CustomerTag $tag): void {
             $tag->slug = Str::slug($tag->name);
         });
     }

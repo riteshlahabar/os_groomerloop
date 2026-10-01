@@ -5,6 +5,7 @@ namespace Modules\Crm\Http\Controllers\Api\V1;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Modules\Audit\Contracts\AuditRecorder;
+use Modules\Crm\Actions\UpsertCustomerTag;
 use Modules\Crm\Http\Requests\StoreCustomerTagRequest;
 use Modules\Crm\Http\Resources\CustomerTagResource;
 use Modules\Crm\Models\CustomerTag;
@@ -26,14 +27,21 @@ final class CustomerTagController
         );
     }
 
-    public function store(StoreCustomerTagRequest $request): JsonResponse
+    /**
+     * 200 rather than 201 when the tag already existed, so a client that asks twice can tell
+     * that nothing new was made.
+     */
+    public function store(StoreCustomerTagRequest $request, UpsertCustomerTag $upsert): JsonResponse
     {
-        // firstOrCreate on the slug, which the model derives from the name: asking twice for
-        // the same tag returns the same tag rather than colliding on the unique index.
-        $tag = CustomerTag::query()->firstOrCreate(
-            ['slug' => \Illuminate\Support\Str::slug($request->string('name')->toString())],
-            $request->safe()->only(['name', 'colour']),
+        $tag = $upsert->execute(
+            $request->string('name')->toString(),
+            $request->input('colour'),
         );
+
+        // Unreachable over HTTP: StoreCustomerTagRequest already refuses a name with nothing
+        // to slug. Handled rather than assumed, because the action is also called from
+        // SyncCustomerTags where a nameless tag is simply skipped.
+        abort_if($tag === null, Response::HTTP_UNPROCESSABLE_ENTITY);
 
         return CustomerTagResource::make($tag)
             ->response()

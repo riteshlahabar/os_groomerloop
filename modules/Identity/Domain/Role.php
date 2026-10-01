@@ -56,7 +56,7 @@ enum Role: string
             self::Manager => [
                 Permission::ViewCustomers, Permission::ManageCustomers,
                 Permission::ExportCustomers, Permission::ImportCustomers,
-                Permission::ViewPets, Permission::ManagePets,
+                Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices, Permission::ManageServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
@@ -67,7 +67,11 @@ enum Role: string
 
             self::Groomer => [
                 Permission::ViewCustomers,
-                Permission::ViewPets,
+
+                // Reads pets but cannot edit the record — and still holds the internal notes,
+                // because handling and safety history is what the person grooming the animal
+                // most needs and is best placed to add to (spec §9, §5).
+                Permission::ViewPets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments,
@@ -76,7 +80,7 @@ enum Role: string
 
             self::FrontDesk => [
                 Permission::ViewCustomers, Permission::ManageCustomers,
-                Permission::ViewPets, Permission::ManagePets,
+                Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,

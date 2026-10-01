@@ -58,15 +58,32 @@ final class OnboardingChecklistTest extends TestCase
     }
 
     /**
-     * The honest-reporting case. Services and hours have no verifier yet because Catalog and
-     * Scheduling are not built, and the checklist says so rather than nagging the owner to
-     * do something the product cannot accept.
+     * The honest-reporting case: business hours have no verifier because Scheduling (§11) is not
+     * built, and the checklist says so rather than nagging the owner to do something the product
+     * cannot yet accept.
+     *
+     * This test used to use the Services step. It moved to BusinessHours when Catalog shipped and
+     * registered a verifier for services — which is the mechanism working, not the test rotting.
+     * Staff is the other one still unanswered, until Team (§23) arrives.
      */
     public function test_a_step_whose_module_does_not_exist_reports_as_unavailable(): void
     {
+        $hours = $this->stepFromApi(OnboardingStep::BusinessHours);
+
+        $this->assertTrue($hours['unavailable']);
+        $this->assertFalse($hours['completed']);
+        $this->assertTrue($hours['verified']);
+    }
+
+    /**
+     * The counterpart, and the reason the distinction exists at all: a step whose module *is* built
+     * reports as an ordinary outstanding task rather than as "coming soon".
+     */
+    public function test_a_step_whose_module_exists_is_outstanding_rather_than_unavailable(): void
+    {
         $services = $this->stepFromApi(OnboardingStep::Services);
 
-        $this->assertTrue($services['unavailable']);
+        $this->assertFalse($services['unavailable']);
         $this->assertFalse($services['completed']);
         $this->assertTrue($services['verified']);
     }

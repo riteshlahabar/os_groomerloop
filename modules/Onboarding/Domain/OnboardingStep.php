@@ -99,7 +99,12 @@ enum OnboardingStep: string
             self::BusinessDetails,
             self::BusinessHours,
             self::Staff,
-            self::Services => true,
+            self::Services,
+
+            // Verified from Phase 5b, when Pets arrived. It needs both halves — a business with
+            // four hundred imported customers and no pets cannot be booked at all, because a §11
+            // appointment is for a pet — so Pets owns the verifier and registers it (`D-015`).
+            self::CustomersAndPets => true,
 
             default => false,
         };
