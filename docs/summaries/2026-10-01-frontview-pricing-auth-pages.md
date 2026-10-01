@@ -161,6 +161,23 @@ Pricing use the template's other inner-page variant, plain `<header class="heade
   scrolled each, confirmed the full-color logo now stays visible instead of fading to white.
   No further pages use a third header variant, so this closes the issue across the whole site.
 
+## Addendum 5 — a third "Book Appointment" 404 missed in the original nav sweep (same day)
+
+The owner reported the home page's "Book Appointment" button still 404'd. Addendum 1 (`D-021`)
+only caught and fixed the header and footer occurrences — a third one, in the mid-page "What We
+Offer / Complete Grooming Solutions" section, pointed at `services.html` (never ported) and was
+missed because the original sweep searched for `booking-appointment.html` specifically, not every
+"Book Appointment"-labeled link regardless of target.
+
+- `home.blade.php`: relabeled this third button to "Get Started" → `{{ url('/register') }}`,
+  same reasoning as `D-021` (icon changed from a calendar to the user-plus icon used by the other
+  two for visual consistency).
+- Re-swept the whole file for any remaining `href="*.html"` afterward: only the previously-known,
+  explicitly out-of-scope blog teaser links (`blog-grid.html`, `blog-details.html` ×6) remain.
+- Verified live: scrolled to the section, confirmed the button now reads "Get Started"; confirmed
+  programmatically via `document.querySelectorAll('a')` that both "Get Started" buttons on the
+  page now carry `href="http://127.0.0.1:8000/register"`; confirmed `GET /register` → 200.
+
 ## Follow-ups
 
 - [ ] Run a dedicated Phase 7 session: verify what `modules/Scheduling` already contains against

@@ -534,8 +534,8 @@
                                     are designed to deliver exceptional results every visit.</p>
                             </div>
                             <div class="view-more wow fadeInUp" data-wow-duration="2s" data-wow-delay="0.2s">
-                                <a href="services.html" class="primary-btn d-inline-flex align-items-center gap-2"> <i
-                                        class="ti ti-calendar-event"></i> Book Appointment</a>
+                                <a href="{{ url('/register') }}" class="primary-btn d-inline-flex align-items-center gap-2"> <i
+                                        class="ti ti-user-plus"></i> Get Started</a>
                             </div>
                         </div>
                     </div>
