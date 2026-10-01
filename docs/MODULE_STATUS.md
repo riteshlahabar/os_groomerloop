@@ -28,7 +28,7 @@ below the table)
 | 1 | Tenancy + Audit (shared kernel) | §27 | 1 | MVP | **Tested** | Global scope, fail-closed strict mode (`D-012`), queue bridge, append-only audit trail |
 | 2 | Identity: auth, 6 roles, RBAC | §5 | 2 | MVP | **Tested** | Sanctum SPA cookie auth, atomic registration, role matrix (`D-013`), invitations |
 | 3 | Entitlements | §2, §25 | 3 | MVP | **Tested** | Plans are data, not an enum; §25 matrix asserted cell-for-cell; 402 ≠ 403 |
-| 4 | Billing | §24 | 3 | MVP | **Tested** | Closed state machine; `PaymentGateway` + fake (`D-003`); a delinquent business keeps every feature |
+| 4 | Billing | §24 | 3 | MVP | **Tested** | Closed state machine; `PaymentGateway` + fake (`D-003`); a delinquent business keeps every feature. **`StripeGateway` added 2026-10-01 (`D-025`)** — real driver, `BILLING_GATEWAY` still defaults to `fake` until a real Stripe secret key exists; its own contract test skips itself until then |
 | 5 | Business onboarding | §7 | 4 | MVP | **Tested** | Resumable and skippable; verified steps ignore stored completion |
 | 6 | Customer CRM | §8 | 5 | MVP | **Tested** | Search/filter/sort + pagination, dedupe + merge, import/export, tags, consent |
 | 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
@@ -127,5 +127,7 @@ Additionally, per `D-007`, every module must satisfy the cross-cutting CI guards
 5. Every metric class implements `MetricDefinition`. **Absent, not green** — arrives with Insights
    (Phase 10). There is no subject code yet.
 6. Every provider driver, fakes included, passes its shared contract test. Partly present:
-   `Billing/Tests/Contract/PaymentGatewayContract.php` covers the payment gateway. The mail, SMS
-   and voice providers do not exist yet.
+   `Billing/Tests/Contract/PaymentGatewayContract.php` covers the payment gateway, now with two
+   drivers held to it — `FakePaymentGateway` and `StripeGateway` (`D-025`, 2026-10-01); the
+   latter's test skips itself without a real Stripe secret key. The mail, SMS and voice
+   providers do not exist yet.

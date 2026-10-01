@@ -769,3 +769,67 @@ window" — the setting is stored and surfaced now, but nothing enforces it yet,
 needs an unguessable per-booking token design of its own and spec §12's own 7-step flow stops at
 "receives confirmation," not "may later cancel online." Add-ons and recurring bookings are also
 out of scope for the public flow, for the same reason — neither appears in those 7 steps.
+
+## D-025 — Stripe is `PaymentGateway`'s first real driver; the contract gained `setDefaultPaymentMethod()` to support it
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** The owner asked to wire up Stripe as the real payment gateway (spec §24, §30,
+invariant #5), which had been deliberately left unchosen since Phase 3 (`billing.gateway`
+defaulted to `fake`, the only driver that existed). Building `StripeGateway` exposed a gap in
+the existing `PaymentGateway::charge()` signature: it takes a `customerReference` but no
+payment-method token, because it was designed around "charge this customer's card" rather than
+"charge this specific card" — correct for a gateway that has its own notion of a customer's
+default payment method, but nothing in the contract ever told a real gateway which stored card
+was the app's own default (`PaymentMethod.is_default`, maintained entirely in this
+application's database). `FakePaymentGateway` never needed to know, because its `charge()`
+doesn't inspect payment methods at all. Stripe's off-session `PaymentIntent` charge does need an
+explicit `payment_method`, and the obvious source — the customer's `invoice_settings.
+default_payment_method` on Stripe's side — only stays correct if something keeps it in sync with
+local `is_default` changes.
+
+**Decision:** Added `PaymentGateway::setDefaultPaymentMethod(string $customerReference, string
+$token): void` to the contract. `StorePaymentMethod` and `ForgetPaymentMethod` — the two actions
+that ever change which local `PaymentMethod` row is `is_default` — call it immediately after
+their database transaction commits (never inside one, the same rule every other gateway call in
+this module already follows: a network round trip must not hold a lock open). `StripeGateway`
+implements it as `Customer::update(..., ['invoice_settings' => ['default_payment_method' =>
+$token]])`; `FakePaymentGateway` just records the value, since its own `charge()` has no use for
+it but every driver must still honestly implement the full contract (invariant #5).
+`StripeGateway::charge()` reads the customer's Stripe-side default (falling back to the most
+recently attached card only for a customer that somehow reached a charge without one ever being
+set) and creates-and-confirms an off-session `PaymentIntent` against it; a `CardException`
+becomes a `ChargeResult::declined()`, never an exception, preserving the existing dunning-cycle
+contract (`ChargeResult`'s own docblock) — only a gateway-side problem (bad key, unreachable,
+an outright-rejected request) becomes `GatewayFailure`.
+
+Also added, for the same reason Stripe needed more than the fake did: `BillingServiceProvider`
+refuses to boot the `PaymentGateway` singleton when `BILLING_GATEWAY=stripe` and `services.
+stripe.secret` is empty, the same "fail loudly rather than silently fall back" rule the unknown-
+driver case already had. `services.stripe.{key,secret,webhook_secret}` live in Laravel's
+conventional `config/services.php`, not `modules/Billing/Config/billing.php` — the latter stays
+business policy (trial length, dunning windows) that finance can tune; third-party credentials
+belong in the file every other provider in this app already uses.
+
+**Alternatives considered:**
+- Pass the specific `PaymentMethod` token into `charge()` instead of adding a new method —
+  rejected: it would change every existing caller of `charge()` (`ChargeSubscription`) to look
+  up and thread through a token it does not otherwise need, for a concern (which card is
+  default) that `is_default` already owns. A narrower addition keeps the existing call sites
+  untouched.
+- Let `StripeGateway::charge()` always read Stripe's own default without this app ever writing
+  it — rejected: nothing would then set it in the first place for a customer created through
+  this application (Stripe's default is only ever set by an explicit API call), so every charge
+  would fall through to "most recently attached card," which silently diverges from
+  `PaymentMethod.is_default` the first time a business adds a second card without intending to
+  change its default.
+
+**Consequences:** A new driver that needs to track more about "current state" than the fake does
+is a one-method contract addition plus two small call-sites, not a parallel bookkeeping scheme
+bypassing `PaymentGateway`. `GatewayDriverGuardTest` required `StripeGatewayTest` to exist before
+this could merge cleanly (CI guard #6) — it exists, extends the shared `PaymentGatewayContract`
+trait, and skips itself when `STRIPE_SECRET_KEY` is unset (true in this environment; no Stripe
+account exists to test against yet). It documents, but does not fix, a real limitation of the
+shared contract trait for a provider whose declines are card-bound rather than
+description-bound (see the test file's own docblock) — left for whoever configures a real
+Stripe test-mode account to resolve, since verifying either fix needs that account.

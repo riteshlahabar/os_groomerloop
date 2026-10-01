@@ -25,6 +25,9 @@ final class FakePaymentGateway implements PaymentGateway
     /** @var array<string, list<PaymentMethodDetails>> */
     private array $methods = [];
 
+    /** @var array<string, string> */
+    private array $defaults = [];
+
     /** @var list<array{customer: string, amount: int, currency: string, description: string}> */
     private array $charges = [];
 
@@ -58,6 +61,11 @@ final class FakePaymentGateway implements PaymentGateway
             $this->methods[$customerReference] ?? [],
             static fn (PaymentMethodDetails $m): bool => $m->token !== $token,
         ));
+    }
+
+    public function setDefaultPaymentMethod(string $customerReference, string $token): void
+    {
+        $this->defaults[$customerReference] = $token;
     }
 
     public function charge(string $customerReference, int $amountCents, string $currency, string $description): ChargeResult

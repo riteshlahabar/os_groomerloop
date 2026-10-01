@@ -29,7 +29,7 @@ final class ForgetPaymentMethod
             $this->gateway->forgetPaymentMethod($customerReference, $method->token);
         }
 
-        DB::transaction(function () use ($method): void {
+        $newDefault = DB::transaction(function () use ($method): ?PaymentMethod {
             $wasDefault = $method->is_default;
 
             $this->audit->record('payment_method.removed', $method, [
@@ -41,11 +41,21 @@ final class ForgetPaymentMethod
 
             // Never leave a business with cards but no default, or the next charge has
             // nothing to pick and fails for a reason nobody can see on the billing screen.
-            if ($wasDefault) {
-                $next = PaymentMethod::query()->oldest('id')->first();
-                $next?->forceFill(['is_default' => true])->save();
+            if (! $wasDefault) {
+                return null;
             }
+
+            $next = PaymentMethod::query()->oldest('id')->first();
+            $next?->forceFill(['is_default' => true])->save();
+
+            return $next;
         });
+
+        // Outside the transaction, same reason as StorePaymentMethod's equivalent call: keeps
+        // a real driver's own default payment method in sync with the new local one.
+        if ($newDefault !== null && is_string($customerReference) && $customerReference !== '') {
+            $this->gateway->setDefaultPaymentMethod($customerReference, $newDefault->token);
+        }
     }
 
     /**

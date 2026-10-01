@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stripe
+    |--------------------------------------------------------------------------
+    |
+    | Modules\Billing\Services\Gateways\StripeGateway (invariant #5, spec §30). Set
+    | BILLING_GATEWAY=stripe in .env once 'secret' is filled in; the webhook secret is unused
+    | until a webhook endpoint exists. 'key' is the publishable key the future client-side
+    | Stripe.js integration needs — never sent anywhere from this application itself.
+    |
+    */
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

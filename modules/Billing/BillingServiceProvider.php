@@ -6,6 +6,7 @@ use App\Support\ModuleServiceProvider;
 use Modules\Billing\Console\ExpireLapsedSubscriptionsCommand;
 use Modules\Billing\Contracts\PaymentGateway;
 use Modules\Billing\Services\Gateways\FakePaymentGateway;
+use Modules\Billing\Services\Gateways\StripeGateway;
 use RuntimeException;
 
 /**
@@ -30,11 +31,20 @@ final class BillingServiceProvider extends ModuleServiceProvider
      */
     private const GATEWAYS = [
         'fake' => FakePaymentGateway::class,
+        'stripe' => StripeGateway::class,
     ];
 
     public function register(): void
     {
         parent::register();
+
+        // StripeGateway takes its secret key as a constructor argument rather than reading
+        // config itself — the same reason `AuditRecorder` et al. are constructor-injected
+        // contracts, not facades: a driver that reaches into global config directly cannot be
+        // unit-tested with a different key without mutating app state.
+        $this->app->when(StripeGateway::class)
+            ->needs('$secretKey')
+            ->give(fn (): string => (string) config('services.stripe.secret'));
 
         // Singleton so the fake's recorded charges survive across a request in tests, and so
         // a real driver's HTTP client and credentials are built once per process.
@@ -52,6 +62,12 @@ final class BillingServiceProvider extends ModuleServiceProvider
                     $driver,
                     implode(', ', array_keys(self::GATEWAYS))
                 ));
+            }
+
+            if ($class === StripeGateway::class && (string) config('services.stripe.secret', '') === '') {
+                throw new RuntimeException(
+                    'BILLING_GATEWAY is set to [stripe] but STRIPE_SECRET_KEY is not configured.'
+                );
             }
 
             return $this->app->make($class);

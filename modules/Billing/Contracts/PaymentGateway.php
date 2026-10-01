@@ -41,7 +41,19 @@ interface PaymentGateway
     public function createCustomer(string $name, string $email): string;
 
     /**
-     * Charge a stored payment method.
+     * Mark one stored payment method as the one `charge()` should use.
+     *
+     * `charge()` takes no payment-method token of its own — it bills "this customer's" card,
+     * mirroring `PaymentMethod.is_default` (exactly one default per tenant, enforced by
+     * `StorePaymentMethod`/`ForgetPaymentMethod`). This is what keeps a real gateway's own
+     * notion of "default" from drifting out of sync with that local bookkeeping: both actions
+     * call this whenever the local default changes. The fake tracks it only so its own
+     * behaviour matches what a real driver does; it has nothing else to do with the value.
+     */
+    public function setDefaultPaymentMethod(string $customerReference, string $token): void;
+
+    /**
+     * Charge the customer's default payment method (see `setDefaultPaymentMethod()`).
      *
      * A decline comes back as an unsuccessful ChargeResult, not an exception — see the
      * reasoning on that class.

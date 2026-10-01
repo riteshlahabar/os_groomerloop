@@ -31,10 +31,11 @@ final class StorePaymentMethod
         // holds locks for the length of a network call.
         $details = $this->gateway->storePaymentMethod($customerReference, $token);
 
-        return DB::transaction(function () use ($details, $makeDefault, $customerReference): PaymentMethod {
+        [$method, $isDefault] = DB::transaction(function () use ($details, $makeDefault, $customerReference): array {
             $first = ! PaymentMethod::query()->exists();
+            $isDefault = $makeDefault || $first;
 
-            if ($makeDefault || $first) {
+            if ($isDefault) {
                 PaymentMethod::query()->update(['is_default' => false]);
             }
 
@@ -45,7 +46,7 @@ final class StorePaymentMethod
                 'last_four' => $details->lastFour,
                 'expiry_month' => $details->expiryMonth,
                 'expiry_year' => $details->expiryYear,
-                'is_default' => $makeDefault || $first,
+                'is_default' => $isDefault,
             ]);
 
             // The gateway customer reference is stored on the subscription so a later charge
@@ -59,8 +60,17 @@ final class StorePaymentMethod
                 'last_four' => $details->lastFour,
             ]);
 
-            return $method;
+            return [$method, $isDefault];
         });
+
+        // Outside the transaction, the same reason the call above is: a gateway round trip
+        // must never hold a database lock open. Keeps a real driver's own "default" in sync
+        // with PaymentMethod.is_default (see PaymentGateway::setDefaultPaymentMethod()).
+        if ($isDefault) {
+            $this->gateway->setDefaultPaymentMethod($customerReference, $details->token);
+        }
+
+        return $method;
     }
 
     /**

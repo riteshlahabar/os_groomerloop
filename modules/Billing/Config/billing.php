@@ -13,8 +13,9 @@ return [
     |
     | Which driver satisfies the PaymentGateway contract. "fake" is a real driver that
     | passes the same contract test as every other (CI guard #6), and is the correct
-    | choice in development and in the test suite. Stripe is unblocked (ext-curl is
-    | enabled) but is not wired until credentials exist.
+    | choice in development and in the test suite. "stripe" (D-025) needs
+    | services.stripe.secret configured — BillingServiceProvider refuses to boot with
+    | BILLING_GATEWAY=stripe and no key, rather than silently falling back to the fake.
     |
     */
     'gateway' => env('BILLING_GATEWAY', 'fake'),

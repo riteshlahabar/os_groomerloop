@@ -10,6 +10,11 @@ waitlist — which this session built. It also surfaced a second undocumented mo
 `modules/Notifications/` (Phase 9), sitting unregistered on disk; not touched this session, see
 `MODULE_STATUS.md`.
 
+**Same day, yet another session:** added `StripeGateway` as Billing's first real
+`PaymentGateway` driver (`D-025`) — the owner wants Stripe for payment collection.
+`BILLING_GATEWAY` still defaults to `fake`; switching over needs a real Stripe secret key,
+which this environment does not have.
+
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
 
@@ -86,7 +91,7 @@ Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 | `Audit` | Tested | `audit_events`, `AuditRecorder` contract, append-only (updates and deletes throw) |
 | `Identity` | Tested | Sanctum SPA cookie auth, atomic registration, 6-role matrix (`D-013`), invitations, policies |
 | `Entitlements` | Tested | `plans` + `plan_features` as data, 21 §25 capability keys, `entitlement:` middleware, 402 not 403 |
-| `Billing` | Tested | `subscriptions`/`invoices`/`payment_methods`, closed state machine, `PaymentGateway` + fake |
+| `Billing` | Tested | `subscriptions`/`invoices`/`payment_methods`, closed state machine, `PaymentGateway` + fake + `StripeGateway` (`D-025`, defaults to fake until a real key exists) |
 | `Onboarding` | Tested | 11 §7 steps, `business_profiles` + `onboarding_progress`, verifier registry |
 | `Crm` | Tested | `customers` + `customer_tags` (+ pivot), 12 endpoints, dedupe + merge, import/export, consent |
 | `Pets` | Tested | `pets`, 7 endpoints, §9 note-visibility split, deceased ≠ archived, merge participant, §7 verifier |
@@ -104,7 +109,9 @@ frontview session — 551/554, the 3 failures being `ModuleBoundaryGuardTest`/
 that session's own (verified-green) changes. Same-day waitlist session — ran only the 3 guard
 tests per the owner's standing instruction: tenancy and boundary guards passed, registration
 guard failed for the unrelated `modules/Notifications` discovery below; the waitlist itself was
-verified by migration, `pint`, `route:list` and `tinker`, not by an automated suite.
+verified by migration, `pint`, `route:list` and `tinker`, not by an automated suite. Same-day
+Stripe session — ran `ModuleBoundaryGuardTest` and `GatewayDriverGuardTest` only, both passed;
+`StripeGatewayTest` itself skips (no real Stripe key in this environment) rather than running.
 
 ### What CRM, Pets, Catalog and Team each enforce beyond plain CRUD
 
@@ -143,9 +150,10 @@ also remains deferred, waiting on a module with both a service and a preferred-g
 ## Known gaps and risks
 
 - **Invariants #1, #3, #4, #8 and #9 are enforced and tested.** #2 (server-side booking truth)
-  and #7 (metrics defined or absent) wait on Phases 7–8 and 10. #5 (provider abstraction) exists
-  only for payments; no `MailProvider`, `SmsProvider` or `VoiceProvider` contract exists yet. #6
-  (AI never invents) has no subject code.
+  and #7 (metrics defined or absent) wait on Phases 7–8 and 10. #5 (provider abstraction) now
+  has two real `PaymentGateway` drivers (`fake`, `stripe` — `D-025`) but still no `MailProvider`,
+  `SmsProvider` or `VoiceProvider` contract, and Stripe is unverified against a real account
+  (no credentials exist in this environment). #6 (AI never invents) has no subject code.
 - **CI guards 5 and 6 are absent rather than green** — `MetricDefinition` and the mail/SMS/voice
   provider contract tests have no subject code yet. Absence is easy to mistake for passing.
 - **`D-011` hosting is unresolved and blocks Phase 9.** Shared cPanel cannot run a persistent
