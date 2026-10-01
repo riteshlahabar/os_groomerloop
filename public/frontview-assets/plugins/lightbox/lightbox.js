@@ -1,0 +1,5 @@
+const lightbox=GLightbox({selector:".image-popup",title:!1}),lightboxDesc=GLightbox({selector:".image-popup-desc"}),lightboxvideo=GLightbox({selector:".image-popup-video-map",title:!1});
+const lightboxProduct = GLightbox({ 
+    selector: ".product-popup", 
+    title: !1 
+});

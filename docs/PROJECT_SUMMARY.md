@@ -1,6 +1,7 @@
 # GroomerLoop OS — project summary
 
-**Last updated:** 2026-09-30 · **Phase:** 6 of 12, half complete (Catalog done, Team next) · **Spec:** v1.0 (40 sections)
+**Last updated:** 2026-10-01 · **Phase:** 6 of 12, in progress (Catalog done, Team Task 1/10) ·
+**Spec:** v1.0 (40 sections)
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
@@ -8,10 +9,15 @@ Living snapshot of where the project actually stands. Rewritten in place — for
 > Corrected on 2026-09-30: this file and `MODULE_STATUS.md` had been left at Phase 2 while
 > Phases 3, 4 and 5 shipped. Those sessions updated `CLAUDE.md` but not `docs/`. If they
 > disagree again, the repo is the truth.
+>
+> Corrected again on 2026-10-01: Team's Task 1/10 and today's frontview homepage were both
+> missing here. The Team entry is transcribed from `CLAUDE.md`'s account of that session, not
+> independently re-verified this session — see `MODULE_STATUS.md` row 9 for detail.
 
 ## Current state
 
-**Phases 0 through 5 are complete, and Phase 6 is half done — Catalog is built, Team is next.** The
+**Phases 0 through 5 are complete, and Phase 6 is in progress — Catalog is built, Team Task 1/10
+(migrations + models) is verified.** The
 application is a modular Laravel 13 JSON API under `/api/v1` with enforced tenant isolation,
 session-cookie authentication, the six roles of spec §5 behind one permission matrix, central plan
 entitlements, the full §24 billing lifecycle, the §7 resumable onboarding checklist, the §8 customer
@@ -31,10 +37,14 @@ service is still active. Every one of those actions is audited and tenant-scoped
 Services is built; Appointments → Bookings → Communications is next, and Phase 7 holds most of the
 real MVP complexity.
 
-**There is no frontend.** Blade is used only for mail templates. React work starts when the owner
-supplies the design files (`D-006`).
+**There is no authenticated-app frontend yet.** The React SPA from `D-006` is still waiting on
+design files for the owner/staff dashboard. Blade is used for mail templates and, as of
+2026-10-01, for one public page: `GET /frontview` renders `index.html` from the owner-supplied
+HTML/CSS template verbatim (`docs/summaries/2026-10-01-frontview-homepage.md`), outside the
+module system — see `MODULE_STATUS.md`. Only that one page is ported so far.
 
-Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-017`):
+Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-017`, `D-019`; `D-018` is
+reserved for Team, write-up pending):
 
 - **React SPA + Laravel JSON API** at `/api/v1` (`D-006`).
 - **Modular monolith** (`D-007`): one self-contained folder per functionality under `modules/`,
@@ -131,20 +141,26 @@ Worth knowing before extending it, because each of these is a test someone will 
 
 ## In progress
 
-**Phase 6 is half done.** Catalog is closed; `modules/Team` (§23) has not started.
+**Phase 6 is in progress.** Catalog is closed; `modules/Team` (§23) has its migrations and models
+verified (Task 1 of a 10-task plan — `CLAUDE.md`'s 2026-10-01 session notes), but no controllers,
+no routes, and no tests of its own yet (Task 9 is where tests land).
 
 ## Next up
 
-**Phase 6b — `modules/Team` (spec §23).**
+**Phase 6b — `modules/Team` (spec §23), continuing from Task 1/10.**
 
-1. Staff records, working hours, availability, time off, deactivation. Registers the `staff`
-   onboarding verifier.
+1. Staff records, working hours, availability, time off, deactivation — models and migrations
+   done; controllers and routes next. Registers the `staff` onboarding verifier.
 2. The **`D-017` service↔staff eligibility link** (§10's "eligible groomers/staff"), owned here
    because Catalog shipped first and cannot validate a staff id. Validates service ids through
    `Catalog\Contracts\ServiceCatalog`.
 3. §9's **"service preferences"** on a pet, deferred twice now — the useful version is a service
    *and* a preferred groomer, so it waits for the module that has both.
-4. **Gate:** isolation through route model binding, server-side pagination on every index, a
+4. **Known issue to fix in the controllers:** `UpdateStaffMemberRequest` currently accepts
+   `status` in its mass-update rules, so a plain `PATCH` could flip Active ⇄ Inactive without
+   going through `DeactivateStaffMember`/`reactivate()` — skipping the audit events every other
+   lifecycle entity in this codebase (Pet, Subscription) keeps behind a dedicated action.
+5. **Gate:** isolation through route model binding, server-side pagination on every index, a
    `permission:` on every route, the onboarding verifier registered and tested, and an eligibility
    check exposed through a contract for Scheduling to consult.
 
@@ -172,7 +188,10 @@ has to be placed before Phase 11 — see the gaps below.
   logs/metrics/error tracking (§33), and product analytics (§36, 17 platform-level metrics).
 - **React CSR is weak for SEO**, which matters for §14 tenant sites and the §12 booking page.
   Phase 11 plans prerendering to static HTML at publish time.
-- **No React design files received yet.** All frontend work is blocked on that handoff.
+- **No React design files received yet** for the authenticated owner/staff dashboard — that
+  frontend work is still blocked on the handoff. The owner has supplied a static HTML/CSS/JS
+  template for the *public-facing* side (used for `/frontview`, see above); that's a separate
+  hand-off and doesn't unblock the React SPA.
 - **Availability engine remains the critical path.** Phases 7 and 8 hold most of the real MVP
   complexity.
 - **Shared-schema isolation depends on discipline**, mitigated by the two scanning guards and the

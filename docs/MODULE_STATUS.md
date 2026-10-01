@@ -5,7 +5,8 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-09-30 (Phase 6a Catalog complete — 489 tests / 1721 assertions green)
+**Last updated:** 2026-10-01 (Team Task 1/10 — migrations + models verified; frontview homepage
+added outside the module system — see note below the table)
 
 ## Foundations
 
@@ -29,7 +30,7 @@ click-through.
 | 6 | Customer CRM | §8 | 5 | MVP | **Tested** | Search/filter/sort + pagination, dedupe + merge, import/export, tags, consent |
 | 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
 | 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
-| 9 | Team + staff availability | §23 | 6 | MVP | Next | Roles, permissions, availability, time off. **Owes the `D-017` service↔staff eligibility link, §9's pet service preferences, and the `staff` onboarding verifier** |
+| 9 | Team + staff availability | §23 | 6 | MVP | In progress | Task 1/10 (migrations + models) verified 2026-10-01; `TeamServiceProvider` registered. Controllers, the `D-017` service↔staff eligibility link, §9's pet service preferences and the `staff` onboarding verifier are still outstanding — see `CLAUDE.md` session notes for 2026-10-01 |
 | 10 | Calendar + appointment engine | §11 | 7 | MVP | Not started | **Critical path.** Server-side conflict prevention |
 | 11 | Public online booking | §12 | 8 | MVP | Not started | Needs the 20-concurrent-request test on MySQL |
 | 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved |
@@ -45,6 +46,16 @@ click-through.
 | 22 | Product analytics | §36 | — | Phase 2 | Not started | MRR, churn, conversion, usage |
 | 23 | AI voice agent | §19, §29 | — | Phase 3 | Not started | Growth Partner plan only |
 | 24 | Advanced AI + growth intelligence | §17, §29 | — | Phase 3 | Not started | |
+
+## Frontview — public homepage (outside the phase table)
+
+Not a backend module and deliberately not in the table above: `GET /frontview` serves
+`resources/views/frontview/home.blade.php`, a direct Blade port of `index.html` from the
+owner-supplied HTML/CSS template (`docs/summaries/2026-10-01-frontview-homepage.md`, `D-019`).
+No business logic, no tenant data, no module scaffolding — just the design as supplied. Only the
+homepage is ported; the template's other ~59 pages are not. This is the first concrete content
+for the still-`Not started` §14 Website module (row 14) but is not that module itself — it has no
+per-tenant data binding yet.
 
 ## Why row 12 reads `Blocked` rather than `Not started`
 

@@ -509,3 +509,27 @@ here and in `MODULE_STATUS.md` rather than silently missing. Scheduling (§11) m
 contracts to validate an appointment — the service from Catalog, the staff eligibility from Team —
 which is the honest shape of the question anyway. The risk is that Team is built without it and the
 bullet is forgotten; the follow-up is in the Phase 6 session log and on Team's own status row.
+
+## D-019 — `public/<name>/` and `GET /<name>` must not share a segment
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** Porting the owner-supplied HTML template's homepage, static assets were placed under
+`public/frontview/assets/` and the page routed at `GET /frontview`. Under `php artisan serve`
+this 404'd with "No such file or directory" even though `php artisan route:list` showed the route
+registered correctly. PHP's built-in server (and the same is true of a typical Apache/Nginx +
+Laravel `.htaccess`/`try_files` setup, which serves an existing file or directory before falling
+through to `index.php`) resolves `public/frontview` as a real directory first, since it exists on
+disk, and never reaches the Laravel router.
+
+**Decision:** The static asset folder was renamed to `public/frontview-assets/` — a sibling of
+any future `/frontview` route rather than its namesake — and every asset reference updated to
+match. General rule going forward: a route path and a `public/` folder name must never share a
+leading path segment.
+
+**Alternatives:** Routing the page at a different path (e.g. `/home` instead of `/frontview`) was
+rejected — `/frontview` is the name the owner used for this concept and the clearer fit.
+
+**Consequences:** Every future page ported from the same template (or any new top-level route)
+needs its static assets under `public/<name>-assets/`, not `public/<name>/assets/`, to avoid the
+same collision.
