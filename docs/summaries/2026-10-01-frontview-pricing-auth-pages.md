@@ -125,6 +125,26 @@ About Us/Contact Us/Pricing use); the owner then asked for the exact same header
   centered, Home/Pricing/About Us/Contact Us nav, Sign In + Get Started), the search offcanvas
   opens and closes correctly, and the auth forms render unaffected.
 
+## Addendum 3 — two more white-on-light contrast bugs on login/register (same day)
+
+After the header was made to match Home, the owner reported the nav menu text was white (so
+invisible) and the small watermark logo above each form was still white too.
+
+- **Nav text**: `header.header-one`'s default `.main-nav>li>a` color is `#fff`, meant for Home's
+  dark hero image behind it; the template only darkens it via `header.header-one.fixed` (the
+  scrolled state) or a `max-width:991.98px` mobile rule. Login/Register never scroll (the form
+  has its own internal `overflow-auto`, the outer wrapper is a fixed `vh-100`), so `.fixed` never
+  gets added and the nav text stayed invisible-white against these pages' `bg-light` background.
+  Fixed by adding a `body.auth-page` class to both pages and a scoped rule in
+  `groomerloop-overrides.css` forcing `var(--gray-900)` (the same dark color the template's own
+  fixed/mobile states already use).
+- **Watermark logo**: the decorative logo above each form (`<div class="auth-logo">`) used
+  `logo-white.png`, nearly invisible on the same light background. Changed to `logo.png` (the
+  colored logo) on both `login.blade.php` and `register.blade.php` — a one-line asset swap, no
+  CSS involved since it's a plain `<img>`, not a CSS-driven swap like the header logo.
+- Verified live in the browser on both pages: nav text now reads clearly in dark gray, and the
+  colored GroomerLoop logo renders above both forms.
+
 ## Follow-ups
 
 - [ ] Run a dedicated Phase 7 session: verify what `modules/Scheduling` already contains against

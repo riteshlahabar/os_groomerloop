@@ -31,7 +31,7 @@
 
 </head>
 
-<body>
+<body class="auth-page">
 
     <!-- Begin Wrapper -->
     <div class="main-wrapper bg-light">
@@ -136,7 +136,7 @@
                                 <form id="registerForm" novalidate class="d-flex justify-content-center align-items-center my-3">
                                     <div class="d-flex flex-column justify-content-lg-center p-4 p-lg-0 pb-0 flex-fill">
                                         <div class=" mx-auto mb-4 text-center auth-logo">
-                                            <a href="{{ url('/') }}"><img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid"
+                                            <a href="{{ url('/') }}"><img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid"
                                                     alt="GroomerLoop logo"></a>
                                         </div>
                                         <div>

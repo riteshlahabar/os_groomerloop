@@ -31,7 +31,7 @@
 
 </head>
 
-<body>
+<body class="auth-page">
 
     <!-- Begin Wrapper -->
     <div class="main-wrapper bg-light">
@@ -135,7 +135,7 @@
 
                                     <div class="d-flex flex-column justify-content-between p-3">
                                         <div class="mx-auto mb-4 text-center auth-logo">
-                                            <a href="{{ url('/') }}"><img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid"
+                                            <a href="{{ url('/') }}"><img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid"
                                                     alt="GroomerLoop logo"></a>
                                         </div>
 

@@ -16,3 +16,16 @@ header.header-one.fixed .navbar .navbar-brand.logo {
 header.header-one.fixed .navbar .navbar-brand.logo-white {
     display: none !important;
 }
+
+/*
+ * Login/Register (body.auth-page) reuse Home's header-one markup, but these pages are always
+ * on a light background (bg-light) and never scroll, so header.header-one.fixed — the state
+ * the template relies on to darken the nav text for a light background — never gets added.
+ * Without it, the nav links inherit header-one's default white text (meant for Home's dark
+ * hero image) and become nearly invisible. Force the same dark color the fixed/mobile states
+ * already use.
+ */
+.auth-page header.header-one .header-nav .main-menu-wrapper .main-nav > li > a {
+    color: var(--gray-900) !important;
+}
+
