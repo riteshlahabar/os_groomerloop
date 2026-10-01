@@ -54,10 +54,10 @@
                 <div class="container">
                     <nav class="navbar navbar-expand-lg header-nav" aria-label="header navigation">
                         <div class="navbar-header d-lg-none">
-                            <a href="index.html" class="navbar-brand logo">
+                            <a href="{{ url('/') }}" class="navbar-brand logo">
                                 <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
                             </a>
-                            <a href="index.html" class="navbar-brand logo-white">
+                            <a href="{{ url('/') }}" class="navbar-brand logo-white">
                                 <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid" alt="Logo-white">
                             </a>
                             <div id="mobile_btn">
@@ -67,7 +67,7 @@
                         <div class="menu-wrapper">
                             <div class="main-menu-wrapper">
                                 <div class="menu-header">
-                                    <a href="index.html" class="menu-logo">
+                                    <a href="{{ url('/') }}" class="menu-logo">
                                         <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid logo" alt="Logo">
                                     </a>
                                     <div id="menu_close" class="menu-close">
@@ -84,12 +84,12 @@
                                                         <div class="col-lg-4">
                                                             <div class="single-demo active">
                                                                 <div class="demo-img">
-                                                                    <a href="index.html" class="inner-demo-img"><img
+                                                                    <a href="{{ url('/') }}" class="inner-demo-img"><img
                                                                             src="{{ asset('frontview-assets/img/home/home-01.jpg') }}"
                                                                             class="img-fluid" alt="home-1"></a>
                                                                 </div>
                                                                 <div class="demo-info">
-                                                                    <a href="index.html" class="inner-demo-img">Luxury
+                                                                    <a href="{{ url('/') }}" class="inner-demo-img">Luxury
                                                                         Salon</a>
                                                                 </div>
                                                             </div>
@@ -229,10 +229,10 @@
                             </div>
                         </div>
                         <div class="header-logo d-lg-block d-none">
-                            <a href="index.html" class="navbar-brand logo">
+                            <a href="{{ url('/') }}" class="navbar-brand logo">
                                 <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
                             </a>
-                            <a href="index.html" class="navbar-brand logo-white">
+                            <a href="{{ url('/') }}" class="navbar-brand logo-white">
                                 <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid" alt="Logo-white">
                             </a>
                         </div>

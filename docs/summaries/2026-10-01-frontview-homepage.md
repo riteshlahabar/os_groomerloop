@@ -131,3 +131,33 @@ in the parent folder above `os.groomerloop.com`, outside the Laravel project).
   in this template).
 - The root Laravel `public/favicon.ico` (the stock default, used by the untouched `GET /` ⇒
   `welcome` route) was left alone — out of scope, unrelated to the frontview page.
+
+## Session 3 — root route, and the first push
+
+**Scope:** The owner deleted `resources/views/welcome.blade.php` directly and pointed out `GET /`
+still showed the stock welcome page. Wired the site root to the frontview homepage, and pushed
+this session's work to `origin/main` for the first time.
+**Outcome:** Completed.
+
+### Changed
+
+- `routes/web.php` — `GET /` now renders `frontview.home` (the stock `welcome` view no longer
+  exists). `GET /frontview` is kept as an alias to the same view, since `D-019` and this file's
+  earlier sessions already refer to that path.
+- `resources/views/frontview/home.blade.php` — the 7 logo/"Home" self-links that pointed at
+  `href="index.html"` (the template's own filename, meaningless under Laravel) now point at
+  `{{ url('/') }}`, so they actually navigate somewhere real.
+
+### Verified
+
+- `GET /` and `GET /frontview` both return 200 and render the same page; `pint --test` passed;
+  confirmed visually in Chrome.
+
+### Note — nothing had been pushed before this session
+
+The owner asked to push and reported cPanel's `git pull` saying "up to date." Diagnosis: this
+session's entire first pass (Sessions 1–2 above) had only ever been `git add`ed, never
+committed — `git log` showed `HEAD` and `origin/main` on the same pre-existing commit
+(`ac07573`, "module updated"). "Up to date" was accurate: there was nothing on the remote to
+pull because nothing had been pushed. Committed and pushed `origin/main` once this session's
+root-route fix was in, so cPanel's next pull will have something to fetch.
