@@ -6,13 +6,14 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
 /**
  * An exception to the rota (spec §23 "availability"): holiday, sickness, an afternoon out.
  *
- * @property \Illuminate\Support\Carbon $starts_at
- * @property \Illuminate\Support\Carbon $ends_at
+ * @property Carbon $starts_at
+ * @property Carbon $ends_at
  */
 final class StaffTimeOff extends Model
 {

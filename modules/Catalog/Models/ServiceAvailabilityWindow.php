@@ -2,9 +2,9 @@
 
 namespace Modules\Catalog\Models;
 
+use App\Domain\DayOfWeek;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Domain\DayOfWeek;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
 /**

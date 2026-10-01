@@ -2,10 +2,10 @@
 
 namespace Modules\Catalog\Http\Requests;
 
+use App\Domain\DayOfWeek;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
-use App\Domain\DayOfWeek;
 
 /**
  * The per-service availability rules of spec §10.

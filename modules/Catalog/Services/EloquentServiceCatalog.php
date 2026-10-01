@@ -2,8 +2,8 @@
 
 namespace Modules\Catalog\Services;
 
-use Modules\Catalog\Contracts\ServiceCatalog;
 use App\Domain\DayOfWeek;
+use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Catalog\Domain\ServiceSummary;
 use Modules\Catalog\Models\Service;
 

@@ -4,6 +4,8 @@ namespace Modules\Team\Services;
 
 use App\Domain\DayOfWeek;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Modules\Team\Contracts\StaffDirectory;
 use Modules\Team\Domain\StaffSummary;
 use Modules\Team\Models\StaffMember;
@@ -178,7 +180,7 @@ final class EloquentStaffDirectory implements StaffDirectory
      */
     private function assignedServiceIds(int $staffMemberId): array
     {
-        return \Illuminate\Support\Facades\DB::table('staff_member_service')
+        return DB::table('staff_member_service')
             ->where('staff_member_id', $staffMemberId)
             ->pluck('service_id')
             ->map(static fn (mixed $id): int => (int) $id)
@@ -197,7 +199,7 @@ final class EloquentStaffDirectory implements StaffDirectory
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<StaffMember>  $query
+     * @param  Builder<StaffMember>  $query
      * @return list<StaffSummary>
      */
     private function summariseMany($query): array

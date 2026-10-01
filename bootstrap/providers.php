@@ -11,6 +11,7 @@ use Modules\Identity\IdentityServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
+use Modules\Team\TeamServiceProvider;
 use Modules\Tenancy\TenancyServiceProvider;
 
 return [
@@ -58,4 +59,9 @@ return [
     // Team, which owns the §10 "eligible groomers" link and validates service ids through this
     // module's contract (D-017).
     CatalogServiceProvider::class,
+
+    // Team depends on Catalog's ServiceCatalog contract (D-017) and Onboarding's verifier
+    // registry, so it boots after both. Scheduling (§11) and Booking (§12) will depend on this
+    // module's StaffDirectory.
+    TeamServiceProvider::class,
 ];
