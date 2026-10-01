@@ -108,6 +108,23 @@ background.
 - Verified live in the browser: scrolled the homepage, confirmed the full-color logo (with
   tagline) now stays visible in the sticky header instead of fading to white.
 
+## Addendum 2 — login/register given the same header as Home (same day, follow-up request)
+
+The owner pointed out Login and Register had no header bar at all — the source template designs
+them as standalone full-viewport auth screens with zero site chrome, which the first addendum's
+header fix hadn't addressed. First pass added the simpler inner-page `.header` variant (the one
+About Us/Contact Us/Pricing use); the owner then asked for the exact same header as Home instead.
+
+- Replaced that with Home's actual `<header class="header header-one">` markup verbatim (mobile
+  navbar-header, trimmed 4-item nav, desktop `header-logo`, and the full `header-items` — search
+  icon, Sign In, Get Started) on both `login.blade.php` and `register.blade.php`.
+- Added the matching `#search-offcanvas` panel and `.sidebar-overlay` div (copied from
+  `home.blade.php`) to both pages so the header's search icon and mobile menu backdrop are
+  functional rather than pointing at markup that doesn't exist on the page.
+- Verified live in the browser on both pages: header renders identically to Home's (logo
+  centered, Home/Pricing/About Us/Contact Us nav, Sign In + Get Started), the search offcanvas
+  opens and closes correctly, and the auth forms render unaffected.
+
 ## Follow-ups
 
 - [ ] Run a dedicated Phase 7 session: verify what `modules/Scheduling` already contains against

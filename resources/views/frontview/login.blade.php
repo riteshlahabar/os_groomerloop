@@ -36,6 +36,63 @@
     <!-- Begin Wrapper -->
     <div class="main-wrapper bg-light">
 
+        <!-- Header Start -->
+        <header class="header header-one">
+            <div class="container">
+                <nav class="navbar navbar-expand-lg header-nav" aria-label="header navigation">
+                    <div class="navbar-header d-lg-none">
+                        <a href="{{ url('/') }}" class="navbar-brand logo">
+                            <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
+                        </a>
+                        <a href="{{ url('/') }}" class="navbar-brand logo-white">
+                            <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid" alt="Logo-white">
+                        </a>
+                        <div id="mobile_btn">
+                            <i class="ti ti-menu-deep"></i>
+                        </div>
+                    </div>
+                    <div class="menu-wrapper">
+                        <div class="main-menu-wrapper">
+                            <div class="menu-header">
+                                <a href="{{ url('/') }}" class="menu-logo">
+                                    <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid logo" alt="Logo">
+                                </a>
+                                <div id="menu_close" class="menu-close">
+                                    <i class="ti ti-x"></i>
+                                </div>
+                            </div>
+                            <ul class="main-nav">
+                                <li><a href="{{ url('/') }}">Home</a></li>
+                                <li><a href="{{ url('/pricing') }}">Pricing</a></li>
+                                <li><a href="{{ url('/about-us') }}">About Us</a></li>
+                                <li><a href="{{ url('/contact-us') }}">Contact Us</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="header-logo d-lg-block d-none">
+                        <a href="{{ url('/') }}" class="navbar-brand logo">
+                            <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
+                        </a>
+                        <a href="{{ url('/') }}" class="navbar-brand logo-white">
+                            <img src="{{ asset('frontview-assets/img/logo-white.png') }}" class="img-fluid" alt="Logo-white">
+                        </a>
+                    </div>
+                    <div class="nav header-items">
+                        <button class="topbar-icon" data-bs-toggle="offcanvas" data-bs-target="#search-offcanvas"
+                            aria-label="Search">
+                            <i class="ti ti-search"></i>
+                        </button>
+                        <a href="{{ url('/login') }}" class="secondary-btn"><i
+                                class="ti ti-login me-2"></i>Sign In</a>
+                        <a href="{{ url('/register') }}" class="primary-btn"><i
+                                class="ti ti-user-plus me-2"></i>Get
+                            Started</a>
+                    </div>
+                </nav>
+            </div>
+        </header>
+        <!-- Header End -->
+
         <!-- Start Content -->
         <div class="container-fuild position-relative z-1">
 
@@ -157,6 +214,28 @@
         <!-- End Content -->
 
     </div>
+    <!-- End Wrapper -->
+
+    <!-- Search Offcanvas -->
+    <div class="offcanvas offcanvas-top" tabindex="-1" id="search-offcanvas">
+        <div class="offcanvas-header">
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"><i
+                    class="ti ti-x"></i></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="search-content-form">
+                <form action="#">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search">
+                        <button class="btn btn-primary" type="submit"><i class="ti ti-search"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay"></div>
+
     <!-- Bootstrap Core JS -->
     <script src="{{ asset('frontview-assets/js/bootstrap.bundle.min.js') }}"></script>
 
