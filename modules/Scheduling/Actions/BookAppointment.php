@@ -13,7 +13,6 @@ use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Models\AppointmentStatusHistory;
 use Modules\Scheduling\Services\AvailabilityEngine;
 use Modules\Team\Contracts\StaffDirectory;
-use Modules\Team\Models\StaffMember;
 
 /**
  * Book one appointment (spec §11), concurrency-safe (invariant #2, spec §35).
@@ -59,7 +58,7 @@ final class BookAppointment
             // The serialisation point — see the class docblock. A null staff member has nothing
             // to lock: an unassigned "requested" appointment can't conflict with anything yet.
             if ($staffMemberId !== null) {
-                StaffMember::query()->whereKey($staffMemberId)->lockForUpdate()->first();
+                $this->staff->lockForBooking($staffMemberId);
             }
 
             if (! $this->availability->isAvailable((int) $attributes['service_id'], $staffMemberId, $start)) {
@@ -136,6 +135,14 @@ final class BookAppointment
 
         if ($staffMemberId !== null && ! $this->staff->canPerform((int) $staffMemberId, $serviceId)) {
             $errors['staff_member_id'] = 'This staff member is not eligible to perform the selected service.';
+        }
+
+        foreach ((array) ($attributes['add_on_service_ids'] ?? []) as $addOnId) {
+            if (! $this->catalog->allowsAddOn($serviceId, (int) $addOnId)) {
+                $errors['add_on_service_ids'] = 'One of the selected add-ons is not offered with this service.';
+
+                break;
+            }
         }
 
         if ($errors !== []) {

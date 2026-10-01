@@ -9,7 +9,7 @@ use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Services\AvailabilityEngine;
-use Modules\Team\Models\StaffMember;
+use Modules\Team\Contracts\StaffDirectory;
 
 /**
  * Move an appointment to a new time (spec §11). Same concurrency shape as `BookAppointment` —
@@ -22,6 +22,7 @@ final class RescheduleAppointment
         private readonly AuditRecorder $audit,
         private readonly AvailabilityEngine $availability,
         private readonly ServiceCatalog $catalog,
+        private readonly StaffDirectory $staff,
     ) {}
 
     public function execute(Appointment $appointment, Carbon $start): Appointment
@@ -38,7 +39,7 @@ final class RescheduleAppointment
 
         return DB::transaction(function () use ($appointment, $start, $service, $staffMemberId, $previousStart): Appointment {
             if ($staffMemberId !== null) {
-                StaffMember::query()->whereKey($staffMemberId)->lockForUpdate()->first();
+                $this->staff->lockForBooking($staffMemberId);
             }
 
             if (! $this->availability->isAvailable(

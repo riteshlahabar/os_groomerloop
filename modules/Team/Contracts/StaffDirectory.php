@@ -86,4 +86,16 @@ interface StaffDirectory
      * Does this business have anyone on the team? Used by the §7 onboarding checklist.
      */
     public function hasAny(): bool;
+
+    /**
+     * Take a row lock on this staff member for the duration of the caller's open transaction.
+     *
+     * Scheduling's booking/reschedule/reassign actions serialise concurrent attempts against the
+     * same groomer by locking their row before re-checking availability (`D-022`) — `SELECT ...
+     * FOR UPDATE` only works as a gate when every concurrent writer takes the same lock before it
+     * reads, so this must run on the model Team actually owns. A no-op for an unknown staff
+     * member: there is nothing to serialise against, and the caller's own existence check is
+     * what refuses the request.
+     */
+    public function lockForBooking(int $staffMemberId): void;
 }

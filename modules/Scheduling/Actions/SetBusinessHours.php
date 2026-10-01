@@ -30,7 +30,7 @@ final class SetBusinessHours
 
         $tenant = $this->tenants->tenant();
 
-        DB::transaction(function () use ($windows, $tenant): void {
+        DB::transaction(function () use ($windows): void {
             BusinessHour::query()->delete();
 
             foreach ($windows as $window) {

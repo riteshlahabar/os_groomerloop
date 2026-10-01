@@ -9,7 +9,7 @@ use Modules\Scheduling\Domain\AppointmentSummary;
 /**
  * The seam the future public booking phase (spec §12) will build on — Scheduling owns the
  * appointment engine; Booking is a later, public-facing entry point onto the same one, never a
- * parallel implementation (see the §11/§12 boundary note in `D-021`).
+ * parallel implementation (see the §11/§12 boundary note in `D-023`).
  *
  * Unlike `ServiceCatalog`/`StaffDirectory` (pure read directories, because no other module
  * creates a service or a staff member on another module's behalf), this contract also exposes
@@ -41,7 +41,7 @@ interface AppointmentScheduler
 
     /**
      * @param  array<string, mixed>  $attributes  customer_id, pet_id, service_id, staff_member_id
-     *     (nullable), starts_at, customer_notes, internal_notes, add_on_service_ids (optional)
+     *                                            (nullable), starts_at, customer_notes, internal_notes, add_on_service_ids (optional)
      */
     public function book(array $attributes): AppointmentSummary;
 

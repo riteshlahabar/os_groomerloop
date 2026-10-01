@@ -24,7 +24,7 @@ final class BookRecurringAppointments
 
     /**
      * @param  array<string, mixed>  $attributes  same shape BookAppointment::execute() takes,
-     *     minus starts_at which is read from $firstStart instead
+     *                                            minus starts_at which is read from $firstStart instead
      * @return array{booked: list<Appointment>, skipped: list<array{starts_at: string, reason: string}>}
      */
     public function execute(array $attributes, Carbon $firstStart, int $intervalWeeks, int $occurrences): array

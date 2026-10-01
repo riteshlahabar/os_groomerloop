@@ -3,6 +3,7 @@
 namespace Modules\Scheduling\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 
 /**
  * Shape-only validation (required, integer, date format). Whether the ids actually exist, belong
@@ -50,6 +51,11 @@ final class BookAppointmentRequest extends FormRequest
         return $this->has('add_on_service_ids')
             ? array_map('intval', (array) $this->input('add_on_service_ids', []))
             : null;
+    }
+
+    public function start(): Carbon
+    {
+        return Carbon::parse($this->string('starts_at')->toString());
     }
 
     public function isRecurring(): bool

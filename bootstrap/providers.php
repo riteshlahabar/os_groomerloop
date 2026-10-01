@@ -11,6 +11,7 @@ use Modules\Identity\IdentityServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
+use Modules\Scheduling\SchedulingServiceProvider;
 use Modules\Team\TeamServiceProvider;
 use Modules\Tenancy\TenancyServiceProvider;
 
@@ -64,4 +65,9 @@ return [
     // registry, so it boots after both. Scheduling (§11) and Booking (§12) will depend on this
     // module's StaffDirectory.
     TeamServiceProvider::class,
+
+    // Scheduling (§11) depends on Catalog, Team, Crm and Pets' read contracts plus Onboarding's
+    // verifier registry, so it boots last. Booking (§12) will depend on this module's
+    // AppointmentScheduler (D-023) rather than building a second appointment engine.
+    SchedulingServiceProvider::class,
 ];

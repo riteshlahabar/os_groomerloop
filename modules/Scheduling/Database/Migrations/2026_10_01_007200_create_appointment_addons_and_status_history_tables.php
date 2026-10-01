@@ -50,7 +50,9 @@ return new class extends Migration
 
             $table->timestamp('created_at')->useCurrent();
 
-            $table->index(['tenant_id', 'appointment_id', 'created_at']);
+            // Explicit, shorter name: the auto-generated one exceeds MySQL/MariaDB's 64-character
+            // identifier limit (a real failure, hit while migrating this for the first time).
+            $table->index(['tenant_id', 'appointment_id', 'created_at'], 'appointment_status_history_timeline_index');
         });
     }
 

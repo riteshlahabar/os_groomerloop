@@ -172,6 +172,11 @@ final class EloquentStaffDirectory implements StaffDirectory
         return StaffMember::query()->active()->exists();
     }
 
+    public function lockForBooking(int $staffMemberId): void
+    {
+        StaffMember::query()->whereKey($staffMemberId)->lockForUpdate()->first();
+    }
+
     /**
      * The eligibility pivot, read by id. Team owns this table (`D-017`) but never loads Catalog's
      * model — the ids are all Scheduling needs, and it validates them through `ServiceCatalog`.

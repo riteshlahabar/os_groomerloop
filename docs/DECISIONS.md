@@ -639,3 +639,77 @@ architecture rather than reproducing it verbatim, the opposite of the 2026-10-01
 "design as supplied, no edits beyond asset paths" approach (`D-019`). Future pages ported from
 this template should get the same scrutiny — port the visual design, but only keep navigation and
 CTAs that point at something the product actually does.
+
+## D-022 — Scheduling's booking lock goes through `StaffDirectory::lockForBooking()`, never `Team\Models\StaffMember` directly
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** `BookAppointment`, `RescheduleAppointment` and `UpdateAppointment` (Phase 7,
+`modules/Scheduling`) each need the same concurrency guarantee invariant #2 requires: two
+concurrent requests racing to book the same groomer's calendar must not both pass the
+availability check before either has written. The only working precedent in this codebase
+(`Billing\Services\InvoiceNumbers::next()`) locks a row that already exists and belongs to its
+own module. Scheduling has no such row of its own to lock — the thing that must be serialised is
+"everyone trying to book *this groomer*," and the only stable, always-existing row that
+represents that is the `StaffMember` row Team owns. Whoever built Scheduling's domain layer
+(found already on disk, undocumented, in this same session) imported `Modules\Team\Models\
+StaffMember` directly and called `lockForUpdate()` on it in all three actions — exactly the
+`ModuleBoundaryGuardTest` violation D-007 exists to catch, and the reason the guard was failing
+before this entry.
+
+**Decision:** Added `StaffDirectory::lockForBooking(int $staffMemberId): void` to Team's own
+contract, implemented in `EloquentStaffDirectory` as the identical `StaffMember::query()
+->whereKey($id)->lockForUpdate()->first()` call, and changed all three Scheduling actions to call
+`$this->staff->lockForBooking($id)` instead of touching the model. The lock still participates in
+the caller's open `DB::transaction()` — Laravel's query builder shares the current connection
+regardless of which module's code issued the query — so moving the call behind the contract
+changes nothing about the guarantee, only who is allowed to ask for it.
+
+**Alternatives considered:**
+- Add a `Team\Contracts\StaffDirectory::assignable()`-style read method and lock a different,
+  Scheduling-owned row instead (e.g. the business's own tenant row) — rejected: locking the
+  tenant row would serialise *every* booking attempt for the whole business behind one gate, not
+  just attempts against the same groomer, which is a far more aggressive throughput cost for no
+  extra safety.
+- Have Scheduling maintain its own per-staff-member "lock row" (e.g. a `staff_booking_locks`
+  table it owns) — rejected: a second table whose only job is to exist for `FOR UPDATE` is more
+  moving parts than a one-line contract method, for a guarantee the existing `StaffMember` row
+  already provides for free.
+
+**Consequences:** Any future module that needs the same "serialise against this staff member"
+guarantee (Booking, §12, is the obvious next one) calls the same contract method rather than
+re-deciding how to lock a groomer. `ModuleBoundaryGuardTest` passes for Scheduling without an
+`ACCEPTED` entry, because there is no longer a crossing to accept.
+
+## D-023 — Scheduling (§11) owns the appointment engine; Booking (§12) is a future public entry point onto it, never a parallel implementation
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** `Scheduling\Contracts\AppointmentScheduler`'s own docblock already stated this
+relationship when its code was found on disk (undocumented, this session) — §11 and §12 are two
+spec sections describing what looks like two booking systems (the salon's own calendar vs. a
+public booking page), and without an explicit decision, a future Phase 8 session could reasonably
+read them as two separate engines and build Booking with its own availability/locking logic
+duplicating Scheduling's.
+
+**Decision:** `AppointmentScheduler` is the one place an appointment is created, rescheduled or
+has its status changed, for both the authenticated calendar (§11) and the future public booking
+page (§12). Phase 8 adds a new, unauthenticated-but-rate-limited entry point that calls the same
+contract — a thinner `BookAppointmentRequest`-equivalent for an anonymous caller, the same
+`AvailabilityEngine` composing the same three checks (business hours, service rules, staff
+availability) plus the same conflict check and the same per-staff-member lock (`D-022`). Nothing
+about invariant #2's concurrency guarantee changes based on who is asking.
+
+**Alternatives considered:**
+- A separate `Booking` module with its own appointment-creation path, reusing only read
+  contracts (`ServiceCatalog`, `StaffDirectory`) — rejected: this is exactly the "disconnected
+  systems" spec §1 and §37 warn against (GroomerLoop is one connected system, not a CRM plus a
+  bolted-on booking widget), and it would require the concurrency lock to be re-proven correct in
+  a second place.
+
+**Consequences:** Phase 8's work is almost entirely a new, public-facing `Http` surface
+(controllers, Form Requests, rate limiting, a narrower public-facing resource shape) plus
+whatever public-booking-specific rules spec §12 adds (lead time, cancellation window, auto vs.
+manual confirmation) — not a new appointment engine. Any availability or locking fix made in
+Scheduling automatically applies to the public booking page once it exists, because it is calling
+the same code.

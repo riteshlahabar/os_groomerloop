@@ -6,8 +6,10 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Identity\Domain\Role;
 use Modules\Onboarding\Contracts\OnboardingStepVerifier;
+use Modules\Onboarding\Domain\ChecklistItem;
 use Modules\Onboarding\Domain\OnboardingStep;
 use Modules\Onboarding\Models\BusinessProfile;
+use Modules\Onboarding\Services\ChecklistStatus;
 use Modules\Onboarding\Services\StepVerifiers;
 use Modules\Tenancy\Models\Tenant;
 use Modules\Tenancy\Support\TenantContext;
@@ -58,21 +60,29 @@ final class OnboardingChecklistTest extends TestCase
     }
 
     /**
-     * The honest-reporting case: business hours have no verifier because Scheduling (§11) is not
-     * built, and the checklist says so rather than nagging the owner to do something the product
-     * cannot yet accept.
+     * The honest-reporting case: a verified step with no registered verifier reports as
+     * "unavailable" rather than "outstanding" — the checklist says the capability is not built,
+     * rather than nagging the owner about something the product cannot yet accept.
      *
-     * This test used to use the Services step. It moved to BusinessHours when Catalog shipped and
-     * registered a verifier for services — which is the mechanism working, not the test rotting.
-     * Staff is the other one still unanswered, until Team (§23) arrives.
+     * This used to be provable against a real, live spec step (Services, then BusinessHours, each
+     * in turn — moving the example each time a module shipped a verifier was the mechanism
+     * working, not the test rotting). As of this session every step the enum declares verified
+     * (Account, BusinessDetails, BusinessHours, Staff, Services, CustomersAndPets) has a real
+     * verifier registered — which is worth celebrating, not papering over — so there is no longer
+     * a live example left to point at. Proving the mechanism now means exercising
+     * `ChecklistStatus` directly against a `StepVerifiers` registry with nothing registered,
+     * rather than relying on a real step staying permanently unbuilt.
      */
     public function test_a_step_whose_module_does_not_exist_reports_as_unavailable(): void
     {
-        $hours = $this->stepFromApi(OnboardingStep::BusinessHours);
+        $status = new ChecklistStatus(new StepVerifiers);
 
-        $this->assertTrue($hours['unavailable']);
-        $this->assertFalse($hours['completed']);
-        $this->assertTrue($hours['verified']);
+        $hours = collect($status->checklist())
+            ->first(fn (ChecklistItem $item): bool => $item->step === OnboardingStep::BusinessHours);
+
+        $this->assertTrue($hours->unavailable);
+        $this->assertFalse($hours->completed);
+        $this->assertTrue($hours->verified);
     }
 
     /**

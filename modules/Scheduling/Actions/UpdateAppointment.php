@@ -8,7 +8,6 @@ use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Services\AvailabilityEngine;
 use Modules\Team\Contracts\StaffDirectory;
-use Modules\Team\Models\StaffMember;
 
 /**
  * Edit an appointment's notes, add-ons or assigned groomer — never its time (that's
@@ -66,7 +65,7 @@ final class UpdateAppointment
     private function reassignStaff(Appointment $appointment, ?int $newStaffMemberId): void
     {
         if ($newStaffMemberId !== null) {
-            StaffMember::query()->whereKey($newStaffMemberId)->lockForUpdate()->first();
+            $this->staff->lockForBooking($newStaffMemberId);
 
             if (! $this->staff->canPerform($newStaffMemberId, $appointment->service_id)) {
                 throw ValidationException::withMessages([

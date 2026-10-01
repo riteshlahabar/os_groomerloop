@@ -23,6 +23,7 @@ final class AppointmentStatusHistory extends Model
     protected $table = 'appointment_status_history';
 
     protected $fillable = [
+        'appointment_id',
         'from_status',
         'to_status',
         'changed_by',
