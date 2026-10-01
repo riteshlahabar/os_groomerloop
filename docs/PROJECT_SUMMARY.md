@@ -21,6 +21,17 @@ credentials stored in a table and edited from an admin panel rather than `.env`.
 end-to-end via `tinker` across fresh process boundaries. `MAIL_MAILER` still defaults to `log`
 until a real `PlatformAdmin` user (none exists yet) enables real settings.
 
+**Same day, final session:** built the authenticated admin panel (`GET /admin` + 15 nav
+placeholders), Blade-rendered from the owner's Cuba template — see "Admin panel" in
+`MODULE_STATUS.md`. Verified fully live end-to-end in a real browser (login → real stat cards →
+live count change after creating real data → logout → redirect enforcement). That verification
+is what surfaced **`D-027`**: the app's own `Referrer-Policy: no-referrer` (global since Phase 0)
+was silently 401-ing every Sanctum-authenticated `fetch()` any Blade page makes — fixed to
+`same-origin`. This affects every future Blade page and the eventual React SPA alike, and the
+existing automated suite is structurally blind to a regression of it (see `D-027`). Also fixed a
+real crash in last session's `SuperAdminServiceProvider` (cached a raw Eloquent model; now
+caches a plain array).
+
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
 
@@ -109,15 +120,13 @@ Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 | Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-020` |
 
 **Verification history (condensed; full detail in each day's `docs/summaries/` entries):**
-2026-10-01 Team session — 554/554 passed, 1909 assertions, all guards green. Same-day
-frontview session — 551/554, the 3 failures being `ModuleBoundaryGuardTest`/
-`ModuleRegistrationGuardTest` catching the then-undiscovered `modules/Scheduling`, unrelated to
-that session's own (verified-green) changes. Same-day waitlist session — ran only the 3 guard
-tests per the owner's standing instruction: tenancy and boundary guards passed, registration
-guard failed for the unrelated `modules/Notifications` discovery below; the waitlist itself was
-verified by migration, `pint`, `route:list` and `tinker`, not by an automated suite. Same-day
-Stripe session — ran `ModuleBoundaryGuardTest` and `GatewayDriverGuardTest` only, both passed;
-`StripeGatewayTest` itself skips (no real Stripe key in this environment) rather than running.
+2026-10-01 Team session — 554/554 passed, 1909 assertions, all guards green. Every session
+since then on the same day (frontview, waitlist, Stripe, SuperAdmin, admin panel) ran only the
+relevant guard tests (per the owner's standing instruction to avoid routine full-suite runs),
+not the full suite — each found green on its own touched area except `ModuleRegistrationGuardTest`,
+which has failed consistently since the frontview session purely because of the still-unregistered
+`modules/Notifications` discovery (unrelated to any of that work). The admin-panel session's own
+verification was a full real-browser walkthrough instead of PHPUnit — see `D-027`.
 
 ### What CRM, Pets, Catalog and Team each enforce beyond plain CRUD
 
@@ -176,8 +185,9 @@ also remains deferred, waiting on a module with both a service and a preferred-g
   Phase 11 plans prerendering to static HTML at publish time.
 - **No React design files received yet** for the authenticated owner/staff dashboard — that
   frontend work is still blocked on the handoff. The owner has supplied a static HTML/CSS/JS
-  template for the *public-facing* side (used for `/frontview`, see above); that's a separate
-  hand-off and doesn't unblock the React SPA.
+  template for the *public-facing* side (used for `/frontview`) and, as of 2026-10-01, a second
+  one for the authenticated side (`/admin`, Blade, see "Admin panel" in `MODULE_STATUS.md`).
+  Both are separate hand-offs and neither unblocks the React SPA.
 - **Availability engine remains the critical path.** Phases 7 and 8 hold most of the real MVP
   complexity.
 - **Shared-schema isolation depends on discipline**, mitigated by the two scanning guards and the

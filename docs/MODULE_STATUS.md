@@ -45,7 +45,7 @@ below the table)
 | 18 | Customer retention + rebooking | §22 | — | Phase 2 | Not started | Segmentation, inactive-customer detection |
 | 19 | Google + social integrations | §21, §30 | — | Phase 2 | Not started | Official APIs only |
 | 20 | Mobile app | §15 | — | Phase 2 | Not started | React Native can share code with the SPA (`D-006`) |
-| 21 | Super admin console | §31 | — | Phase 2 | **In progress** | Tenant support with strict audit — not built. **First slice built 2026-10-01 (`D-026`), ahead of normal order**: `modules/SuperAdmin` holds platform-wide SMTP settings (`platform_mail_settings`, no `tenant_id`), edited via `GET/PUT /api/v1/admin/mail-settings` (`permission:platform.administer`, no `tenant` middleware). No `PlatformAdmin` user exists yet to actually use it |
+| 21 | Super admin console | §31 | — | Phase 2 | **In progress** | Tenant support with strict audit — not built. **First slice built 2026-10-01 (`D-026`), ahead of normal order**: `modules/SuperAdmin` holds platform-wide SMTP settings (`platform_mail_settings`, no `tenant_id`), edited via `GET/PUT /api/v1/admin/mail-settings` (`permission:platform.administer`, no `tenant` middleware). No `PlatformAdmin` user exists yet to actually use it. **Bug fixed same day**: its service provider cached a raw Eloquent model via `Cache::rememberForever()`, which does not reliably survive PHP's native unserialize and crashed every `artisan` command once a stale cache entry turned into a `__PHP_Incomplete_Class` — now caches a plain array instead; see `docs/summaries/2026-10-01-admin-panel.md` |
 | 22 | Product analytics | §36 | — | Phase 2 | Not started | MRR, churn, conversion, usage |
 | 23 | AI voice agent | §19, §29 | — | Phase 3 | Not started | Growth Partner plan only |
 | 24 | Advanced AI + growth intelligence | §17, §29 | — | Phase 3 | Not started | |
@@ -66,6 +66,22 @@ for a salon owner signing up, not a pet owner booking, which is §12's per-tenan
 template's other ~59 pages remain unported. This is the first concrete content for the
 `In progress` §14 Website module (row 14) but is not that module itself — it has no per-tenant
 data binding yet.
+
+## Admin panel — authenticated app (outside the phase table, outside the module system)
+
+Also not a backend module. `GET /admin` + 15 placeholder routes under `auth` middleware
+(`docs/summaries/2026-10-01-admin-panel.md`), Blade-rendered from the owner's Cuba template
+(`tailwind/html-tailwind` variant — a different, later hand-off than the `react_context`
+variant also in that bundle). Same relationship to `D-006` as Frontview above: a separate
+hand-off that does not unblock the eventual React SPA for the owner/staff app. Only `GET
+/admin` (Dashboard) is real — live stat cards and a live "today's schedule" list, read via
+client-side `fetch()` against the already-built `/api/v1/customers`, `/staff`, `/services` and
+`/appointments` endpoints (never a server-side query reaching into another module's model,
+which would break `D-007`). The other 15 nav items (§6) are consistent "not built yet"
+placeholders sharing the same real shell and real sidebar. **Building this surfaced `D-027`**:
+`Referrer-Policy: no-referrer` (set globally since Phase 0) was silently turning every
+Sanctum-authenticated `fetch()` any Blade page makes into a 401 — fixed to `same-origin`,
+affects every future Blade page and the eventual React SPA alike, not just this one.
 
 ## Phase 7 correction and completion, 2026-10-01
 

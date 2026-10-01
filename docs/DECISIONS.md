@@ -896,3 +896,62 @@ credentials for the owner was not this session's call to make. A queue worker th
 running when settings change keeps using the old config until restarted (`php artisan
 queue:restart`) — the cache is per-process-boot, same as any other config-driven setting in this
 codebase.
+
+## D-027 — `Referrer-Policy` relaxed from `no-referrer` to `same-origin`: `no-referrer` silently broke every Sanctum-authenticated request a Blade page makes
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** Building the admin panel (see the session log for that work) was the first time
+anything in this codebase exercised the full real browser flow: log in on one Blade page, land
+on another, and have that second page's own `fetch()` calls succeed against `auth:sanctum`
+API routes using the session cookie `POST /api/v1/login` had just established. That flow failed
+outright — every API call came back `401 Unauthenticated`, despite the same browser tab
+correctly showing the logged-in user server-side (`auth()->user()` inside the Blade view
+itself worked fine). Traced with a throwaway diagnostic route logging request headers: both
+`Referer` and `Origin` arrived as `null` on every fetch, even same-tab, same-origin ones.
+Laravel Sanctum's `EnsureFrontendRequestsAreStateful::fromFrontend()` — the check that decides
+whether to trust the session cookie for an API request at all, versus demanding a bearer token
+— reads exactly those two headers and matches them against `SANCTUM_STATEFUL_DOMAINS`; with
+both absent it returns false unconditionally, and the API guard falls through to "no token,
+unauthenticated." The cause: `SecurityHeaders` (`app/Http/Middleware/SecurityHeaders.php`,
+added in Phase 0) sets `Referrer-Policy: no-referrer` on every response, including every Blade
+page — which tells the browser to send no Referer at all, same-origin or not. A plain
+same-origin `fetch()` also sends no `Origin` header by default (Origin is a cross-origin/unsafe-
+method signal, not a same-origin one), so neither fallback had anything to read.
+
+This had been invisible since Phase 2: every automated test for an authenticated endpoint uses
+`ActsAsTheSpa` (`D-010`'s own testing trait), which sets Origin/Referer explicitly on the test
+request rather than relying on a real browser's defaults — so the suite could not have caught
+a policy that only breaks real browser-originated requests. `frontview/login.blade.php` and
+`register.blade.php` existed before this session but never had anywhere authenticated to
+navigate *to* afterward, so their own successful logins never exercised a second,
+session-dependent request either. This session's dashboard — the first page to log in **and**
+then call the API as itself — is what finally exposed it.
+
+**Decision:** Changed `Referrer-Policy` to `same-origin` (`app/Http/Middleware/
+SecurityHeaders.php`, applies to every response, API and web alike, same as before). `same-
+origin` keeps the original goal intact — a cross-origin request (a link out to another site, an
+image embedded elsewhere) still gets no Referer, so no tenant-identifying URL ever reaches a
+third party — while allowing the browser to send the full Referer on same-origin requests,
+which is exactly the signal Sanctum's own stateful-request detection depends on. No other
+header in `SecurityHeaders` needed to change; `Origin` was never going to be the reliable
+signal here regardless of policy.
+
+**Alternatives considered:**
+- Add `credentials: 'include'` or custom headers to the `fetch()` calls themselves — rejected:
+  `Origin`/`Referer` are forbidden headers under the Fetch spec; no amount of JavaScript can set
+  them, so this had no fix available at the call-site at all. The policy header was the only
+  lever that actually controls whether the browser sends them.
+- Switch Sanctum to token-based (bearer) auth for these same-origin calls instead of session
+  cookies — rejected: that's undoing `D-010`'s entire rationale (no token sitting in
+  localStorage for an XSS payload to steal) to work around a header this application sets on
+  itself, for a problem `same-origin` solves with no such trade-off.
+
+**Consequences:** Every future Blade page that calls the real API the way the admin panel's
+dashboard does — and the eventual React SPA, which will do exactly this from day one — now
+works without each one rediscovering this. Worth flagging for whoever eventually builds or
+audits `D-004`'s per-phase gates: **this means the existing automated suite still cannot catch
+a regression here**, because `ActsAsTheSpa` always supplies the headers the real browser wasn't
+sending; the gap that hid this bug for four phases is still open. A real browser check (the
+`claude-in-chrome`-style verification this session used, or a Dusk/Playwright-style test) is
+the only thing that would catch a future regression of this specific kind.

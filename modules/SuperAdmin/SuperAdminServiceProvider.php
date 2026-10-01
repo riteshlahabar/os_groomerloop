@@ -30,6 +30,13 @@ final class SuperAdminServiceProvider extends ModuleServiceProvider
      * request. Cached (invalidated by `UpdatePlatformMailSettings` on every save) rather than
      * queried every boot — mail config is read far more often than it is written.
      *
+     * Caches a plain array, never the Eloquent model itself: the database cache driver
+     * serializes with PHP's native `serialize()`, and an Eloquent model's internal state
+     * (relations, booted-trait bookkeeping) does not reliably round-trip through that — it can
+     * come back as an unusable `__PHP_Incomplete_Class` on a later, unrelated process if the
+     * class map resolves slightly differently, which is exactly what happened here. A plain
+     * array has no such failure mode.
+     *
      * Wrapped defensively: this runs on every single request, including the very first
      * `php artisan migrate` before this module's own table exists, and a config-loading
      * concern must never be what breaks the whole application's boot.
@@ -37,27 +44,37 @@ final class SuperAdminServiceProvider extends ModuleServiceProvider
     private function applyStoredMailSettings(): void
     {
         try {
-            $settings = Cache::rememberForever(
-                PlatformMailSettings::CACHE_KEY,
-                static fn (): ?PlatformMailSettings => PlatformMailSettings::query()->first(),
-            );
+            $settings = Cache::rememberForever(PlatformMailSettings::CACHE_KEY, static function (): array {
+                $row = PlatformMailSettings::query()->first();
+
+                return [
+                    'is_enabled' => $row?->is_enabled ?? false,
+                    'host' => $row?->host,
+                    'port' => $row?->port,
+                    'username' => $row?->username,
+                    'password' => $row?->password,
+                    'scheme' => $row?->encryption?->mailerScheme(),
+                    'from_address' => $row?->from_address,
+                    'from_name' => $row?->from_name,
+                ];
+            });
         } catch (Throwable) {
             return;
         }
 
-        if ($settings === null || ! $settings->is_enabled) {
+        if (! $settings['is_enabled']) {
             return;
         }
 
         config([
             'mail.default' => 'smtp',
-            'mail.mailers.smtp.host' => $settings->host,
-            'mail.mailers.smtp.port' => $settings->port,
-            'mail.mailers.smtp.username' => $settings->username,
-            'mail.mailers.smtp.password' => $settings->password,
-            'mail.mailers.smtp.scheme' => $settings->encryption?->mailerScheme(),
-            'mail.from.address' => $settings->from_address,
-            'mail.from.name' => $settings->from_name,
+            'mail.mailers.smtp.host' => $settings['host'],
+            'mail.mailers.smtp.port' => $settings['port'],
+            'mail.mailers.smtp.username' => $settings['username'],
+            'mail.mailers.smtp.password' => $settings['password'],
+            'mail.mailers.smtp.scheme' => $settings['scheme'],
+            'mail.from.address' => $settings['from_address'],
+            'mail.from.name' => $settings['from_name'],
         ]);
     }
 }

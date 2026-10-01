@@ -298,8 +298,9 @@
                     var result = await apiPost('/api/v1/login', payload);
 
                     if (result.status === 200 && result.ok) {
-                        showStatus('Signed in. The full dashboard isn\'t built yet — check back soon.', 'success');
+                        showStatus('Signed in. Redirecting…', 'success');
                         submitBtn.textContent = 'Signed in';
+                        window.location.href = '/admin';
                         return;
                     }
 

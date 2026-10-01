@@ -27,8 +27,17 @@ class SecurityHeaders
         // separate, deliberately-framed surface and will relax this for its own routes only.
         'X-Frame-Options' => 'DENY',
 
-        // Do not leak tenant-identifying URLs to third parties via the Referer header.
-        'Referrer-Policy' => 'no-referrer',
+        // Do not leak tenant-identifying URLs to third parties via the Referer header — but
+        // `no-referrer` also strips it on same-origin requests, which is what Sanctum's SPA
+        // cookie auth (D-010) reads to decide a request is first-party at all
+        // (EnsureFrontendRequestsAreStateful::fromFrontend() checks Referer, falling back to
+        // Origin — and a plain same-origin fetch() sends no Origin header either). With
+        // `no-referrer` every API call this application's own Blade pages make gets a clean
+        // 401, masked until now because every automated test uses ActsAsTheSpa, which sets
+        // these headers itself rather than relying on a real browser (see `D-027`).
+        // `same-origin` keeps the original guarantee — a cross-origin request still gets no
+        // Referer at all — while allowing the one legitimate same-origin use.
+        'Referrer-Policy' => 'same-origin',
 
         'X-Permitted-Cross-Domain-Policies' => 'none',
 
