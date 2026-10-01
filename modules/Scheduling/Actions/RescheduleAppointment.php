@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Catalog\Contracts\ServiceCatalog;
+use Modules\Scheduling\Events\AppointmentRescheduled;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Services\AvailabilityEngine;
 use Modules\Team\Contracts\StaffDirectory;
@@ -37,7 +38,7 @@ final class RescheduleAppointment
         $staffMemberId = $appointment->staff_member_id;
         $previousStart = $appointment->starts_at;
 
-        return DB::transaction(function () use ($appointment, $start, $service, $staffMemberId, $previousStart): Appointment {
+        $appointment = DB::transaction(function () use ($appointment, $start, $service, $staffMemberId, $previousStart): Appointment {
             if ($staffMemberId !== null) {
                 $this->staff->lockForBooking($staffMemberId);
             }
@@ -64,5 +65,9 @@ final class RescheduleAppointment
 
             return $appointment->refresh();
         });
+
+        event(new AppointmentRescheduled($appointment->toSummary(), $previousStart->toDateTimeImmutable()));
+
+        return $appointment;
     }
 }

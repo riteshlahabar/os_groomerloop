@@ -4,6 +4,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\RateLimitServiceProvider;
 use Modules\Audit\AuditServiceProvider;
 use Modules\Billing\BillingServiceProvider;
+use Modules\Booking\BookingServiceProvider;
 use Modules\Catalog\CatalogServiceProvider;
 use Modules\Crm\CrmServiceProvider;
 use Modules\Entitlements\EntitlementsServiceProvider;
@@ -70,4 +71,8 @@ return [
     // verifier registry, so it boots last. Booking (§12) will depend on this module's
     // AppointmentScheduler (D-023) rather than building a second appointment engine.
     SchedulingServiceProvider::class,
+
+    // Booking (§12) depends on Scheduling's AppointmentScheduler plus Catalog/Team/Crm/Pets'
+    // read contracts, so it boots after all of them.
+    BookingServiceProvider::class,
 ];

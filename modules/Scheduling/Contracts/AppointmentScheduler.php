@@ -31,6 +31,17 @@ interface AppointmentScheduler
     public function appointmentsFor(int $staffMemberId, DateTimeInterface $from, DateTimeInterface $to): array;
 
     /**
+     * Every slot-occupying appointment in the current tenant starting in a window, regardless of
+     * staff member — the query a tenant-wide sweep (a reminder cron, spec §13) needs and a single
+     * groomer's calendar does not. Reads the ambient `TenantContext`, so a caller sweeping every
+     * business runs this once per tenant inside `TenantContext::runFor()`, the same pattern
+     * `ExpireLapsedSubscriptions` already established for Billing's own clock-driven sweep.
+     *
+     * @return list<AppointmentSummary>
+     */
+    public function startingBetween(DateTimeInterface $from, DateTimeInterface $to): array;
+
+    /**
      * Business hours ∩ the service's own rules ∩ staff availability ∩ no conflicting
      * appointment — the composed answer, server-side, the way invariant #2 requires.
      *

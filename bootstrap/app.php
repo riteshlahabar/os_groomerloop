@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -46,6 +47,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(
             before: SubstituteBindings::class,
             prepend: ResolveTenant::class,
+        );
+
+        // Same guarantee, for the spec §12 public booking routes: there is no authenticated user
+        // to resolve a tenant from, so ResolvePublicTenant reads one from the route's {tenant}
+        // slug instead — but it closes the identical D-014 hole if it does not also run ahead of
+        // SubstituteBindings.
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolvePublicTenant::class,
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {

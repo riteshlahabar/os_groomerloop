@@ -1,0 +1,89 @@
+<?php
+
+namespace Modules\Booking\Actions;
+
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Modules\Audit\Contracts\AuditRecorder;
+use Modules\Booking\Domain\ConfirmationMode;
+use Modules\Booking\Models\BookingSettings;
+use Modules\Crm\Contracts\CustomerDirectory;
+use Modules\Pets\Contracts\PetDirectory;
+use Modules\Scheduling\Contracts\AppointmentScheduler;
+use Modules\Scheduling\Domain\AppointmentStatus;
+use Modules\Scheduling\Domain\AppointmentSummary;
+
+/**
+ * The spec §12 flow's last three steps — "reviews policies", "confirms booking", "receives
+ * confirmation" — landing on the exact same engine the authenticated calendar uses (`D-023`).
+ * Nothing here re-implements availability, locking or conflict detection; it only does what an
+ * anonymous caller cannot: establish who the customer and pet are, and apply the two settings
+ * (lead time, confirmation mode) that only make sense in a channel where nobody is logged in.
+ */
+final class SubmitPublicBooking
+{
+    public function __construct(
+        private readonly AuditRecorder $audit,
+        private readonly AppointmentScheduler $scheduler,
+        private readonly CustomerDirectory $customers,
+        private readonly PetDirectory $pets,
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $attributes  customer: first_name, last_name, email, phone;
+     *                                            pet: pet_name, pet_species, pet_breed (optional), pet_sex (optional); booking:
+     *                                            service_id, staff_member_id (optional), starts_at, customer_notes (optional)
+     */
+    public function execute(array $attributes): AppointmentSummary
+    {
+        $settings = BookingSettings::query()->first();
+        $leadTimeMinutes = $settings?->lead_time_minutes ?? 60;
+        $confirmationMode = $settings?->confirmation_mode ?? ConfirmationMode::Manual;
+
+        $start = Carbon::parse($attributes['starts_at']);
+
+        if ($start->lt(now()->addMinutes($leadTimeMinutes))) {
+            throw ValidationException::withMessages([
+                'starts_at' => "This business needs at least {$leadTimeMinutes} minutes' notice for a booking.",
+            ]);
+        }
+
+        return DB::transaction(function () use ($attributes, $start, $confirmationMode): AppointmentSummary {
+            $customerId = $this->customers->findOrCreateForPublicBooking([
+                'first_name' => $attributes['first_name'],
+                'last_name' => $attributes['last_name'],
+                'email' => $attributes['email'],
+                'phone' => $attributes['phone'] ?? null,
+            ]);
+
+            $petId = $this->pets->createForPublicBooking($customerId, [
+                'name' => $attributes['pet_name'],
+                'species' => $attributes['pet_species'],
+                'breed' => $attributes['pet_breed'] ?? null,
+                'sex' => $attributes['pet_sex'] ?? null,
+            ]);
+
+            $appointment = $this->scheduler->book([
+                'customer_id' => $customerId,
+                'pet_id' => $petId,
+                'service_id' => $attributes['service_id'],
+                'staff_member_id' => $attributes['staff_member_id'] ?? null,
+                'starts_at' => $start,
+                'customer_notes' => $attributes['customer_notes'] ?? null,
+            ]);
+
+            if ($confirmationMode === ConfirmationMode::Automatic) {
+                $appointment = $this->scheduler->updateStatus($appointment->id, AppointmentStatus::Confirmed);
+            }
+
+            $this->audit->record('public_booking.submitted', null, [
+                'appointment_id' => $appointment->id,
+                'customer_id' => $customerId,
+                'confirmation_mode' => $confirmationMode->value,
+            ]);
+
+            return $appointment;
+        });
+    }
+}

@@ -44,6 +44,17 @@ final class EloquentAppointmentScheduler implements AppointmentScheduler
             ->all();
     }
 
+    public function startingBetween(DateTimeInterface $from, DateTimeInterface $to): array
+    {
+        return Appointment::query()
+            ->overlapping($from, $to)
+            ->where('starts_at', '>=', $from)
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn (Appointment $a): AppointmentSummary => $this->summarise($a))
+            ->all();
+    }
+
     public function isSlotAvailable(int $serviceId, ?int $staffMemberId, DateTimeInterface $start): bool
     {
         return $this->availability->isAvailable($serviceId, $staffMemberId, $start);
@@ -75,16 +86,6 @@ final class EloquentAppointmentScheduler implements AppointmentScheduler
 
     private function summarise(Appointment $appointment): AppointmentSummary
     {
-        return new AppointmentSummary(
-            id: (int) $appointment->getKey(),
-            customerId: (int) $appointment->customer_id,
-            petId: (int) $appointment->pet_id,
-            serviceId: (int) $appointment->service_id,
-            staffMemberId: $appointment->staff_member_id === null ? null : (int) $appointment->staff_member_id,
-            startsAt: $appointment->starts_at->toDateTimeImmutable(),
-            endsAt: $appointment->ends_at->toDateTimeImmutable(),
-            status: $appointment->status,
-            customerNotes: $appointment->customer_notes,
-        );
+        return $appointment->toSummary();
     }
 }

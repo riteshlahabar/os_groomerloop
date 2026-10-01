@@ -51,6 +51,7 @@ final class AppointmentController
 
         if (! $request->isRecurring()) {
             $appointment = $book->execute($attributes);
+            $appointment->load(['addOns', 'statusHistory']);
 
             return AppointmentResource::make($appointment)
                 ->response()
@@ -63,6 +64,10 @@ final class AppointmentController
             $request->recurrenceIntervalWeeks(),
             $request->recurrenceOccurrences(),
         );
+
+        foreach ($result['booked'] as $booked) {
+            $booked->load(['addOns', 'statusHistory']);
+        }
 
         return response()->json([
             'data' => [

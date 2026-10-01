@@ -6,6 +6,8 @@ use Modules\Scheduling\Http\Controllers\Api\V1\AppointmentRescheduleController;
 use Modules\Scheduling\Http\Controllers\Api\V1\AppointmentStatusController;
 use Modules\Scheduling\Http\Controllers\Api\V1\AvailabilityController;
 use Modules\Scheduling\Http\Controllers\Api\V1\BusinessHoursController;
+use Modules\Scheduling\Http\Controllers\Api\V1\WaitlistController;
+use Modules\Scheduling\Http\Controllers\Api\V1\WaitlistConversionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +29,11 @@ use Modules\Scheduling\Http\Controllers\Api\V1\BusinessHoursController;
 | No `entitlement:` here, the same reasoning as Catalog and Team: §25's online_booking and
 | appointments_calendar features are included on every plan, Starter included, so gating the
 | calendar behind an entitlement check would refuse nobody and only look load-bearing.
+|
+| Waitlist (§11's "waitlist as configurable feature") shares calendar.view/appointments.manage
+| rather than its own permission pair — it is a view onto, and a write path into, the same
+| calendar those already gate, not a separate resource with its own visibility rules the way
+| pets.internal_notes or staff.view/staff.manage earned theirs.
 */
 
 Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
@@ -36,6 +43,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
         Route::get('appointments', [AppointmentController::class, 'index'])->name('appointments.index');
         Route::get('availability', AvailabilityController::class)->name('availability.show');
         Route::get('business-hours', [BusinessHoursController::class, 'index'])->name('business-hours.index');
+        Route::get('waitlist', [WaitlistController::class, 'index'])->name('waitlist.index');
     });
 
     Route::middleware('permission:appointments.view')->group(function (): void {
@@ -50,6 +58,12 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
 
         Route::put('appointments/{appointment}/reschedule', AppointmentRescheduleController::class)
             ->name('appointments.reschedule');
+
+        // Same bar as booking/rescheduling/cancelling an appointment (Owner, Manager, Front
+        // Desk) — a Groomer progresses their own day but does not manage who is waiting for one.
+        Route::post('waitlist', [WaitlistController::class, 'store'])->name('waitlist.store');
+        Route::delete('waitlist/{waitlistEntry}', [WaitlistController::class, 'destroy'])->name('waitlist.destroy');
+        Route::post('waitlist/{waitlistEntry}/book', WaitlistConversionController::class)->name('waitlist.book');
     });
 
     Route::middleware('permission:appointments.update_status')->group(function (): void {

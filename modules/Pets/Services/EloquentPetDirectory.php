@@ -2,11 +2,14 @@
 
 namespace Modules\Pets\Services;
 
+use Modules\Pets\Actions\CreatePet;
 use Modules\Pets\Contracts\PetDirectory;
 use Modules\Pets\Models\Pet;
 
 final class EloquentPetDirectory implements PetDirectory
 {
+    public function __construct(private readonly CreatePet $create) {}
+
     /**
      * Memoised per request. Scheduling asks about the same pet more than once while validating a
      * booking, and the answer cannot change mid-request.
@@ -84,6 +87,14 @@ final class EloquentPetDirectory implements PetDirectory
         // current(), not every row: a business whose only pet is archived has not populated its
         // pet records, and the onboarding checklist should say so.
         return Pet::query()->current()->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function createForPublicBooking(int $customerId, array $attributes): int
+    {
+        return (int) $this->create->execute($customerId, $attributes)->getKey();
     }
 
     /**

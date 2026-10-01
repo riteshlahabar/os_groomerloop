@@ -2,12 +2,16 @@
 
 namespace Modules\Crm\Services;
 
+use Modules\Crm\Actions\CreateCustomer;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Crm\Domain\CommunicationChannel;
+use Modules\Crm\Domain\CustomerContactDetails;
 use Modules\Crm\Models\Customer;
 
 final class EloquentCustomerDirectory implements CustomerDirectory
 {
+    public function __construct(private readonly CreateCustomer $create) {}
+
     /**
      * Memoised per request. Notifications asks about the same customer once per message
      * type, and the answer cannot change mid-request.
@@ -81,6 +85,33 @@ final class EloquentCustomerDirectory implements CustomerDirectory
     public function mayMarketTo(int $customerId, CommunicationChannel $channel): bool
     {
         return $this->find($customerId)?->allowsMarketingOn($channel) ?? false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function findOrCreateForPublicBooking(array $attributes): int
+    {
+        $email = (string) ($attributes['email'] ?? '');
+
+        $existing = Customer::query()->where('email', $email)->first();
+
+        if ($existing !== null) {
+            return (int) $existing->getKey();
+        }
+
+        return (int) $this->create->execute($attributes)->getKey();
+    }
+
+    public function contactDetailsOf(int $customerId): ?CustomerContactDetails
+    {
+        $customer = $this->find($customerId);
+
+        return $customer === null ? null : new CustomerContactDetails(
+            fullName: $customer->fullName(),
+            email: $customer->email,
+            phone: $customer->phone,
+        );
     }
 
     /**

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Scheduling\Domain\AppointmentStatus;
+use Modules\Scheduling\Events\AppointmentStatusChanged;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Models\AppointmentStatusHistory;
 
@@ -58,6 +59,10 @@ final class UpdateAppointmentStatus
             'to' => $next->value,
         ]);
 
-        return $appointment->refresh();
+        $appointment->refresh();
+
+        event(new AppointmentStatusChanged($appointment->toSummary(), $current, $next));
+
+        return $appointment;
     }
 }

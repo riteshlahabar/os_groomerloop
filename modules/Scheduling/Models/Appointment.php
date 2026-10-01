@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Scheduling\Database\Factories\AppointmentFactory;
 use Modules\Scheduling\Domain\AppointmentStatus;
+use Modules\Scheduling\Domain\AppointmentSummary;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
 /**
@@ -101,5 +102,25 @@ final class Appointment extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The readonly shape this module hands to its own domain events and the `AppointmentScheduler`
+     * contract — never the model itself, so a listener in another module (Notifications, §13)
+     * cannot reach back into Scheduling's own persistence (D-007).
+     */
+    public function toSummary(): AppointmentSummary
+    {
+        return new AppointmentSummary(
+            id: (int) $this->getKey(),
+            customerId: (int) $this->customer_id,
+            petId: (int) $this->pet_id,
+            serviceId: (int) $this->service_id,
+            staffMemberId: $this->staff_member_id === null ? null : (int) $this->staff_member_id,
+            startsAt: $this->starts_at->toDateTimeImmutable(),
+            endsAt: $this->ends_at->toDateTimeImmutable(),
+            status: $this->status,
+            customerNotes: $this->customer_notes,
+        );
     }
 }

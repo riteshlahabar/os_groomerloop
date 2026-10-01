@@ -7,7 +7,9 @@ click-through.
 
 **Last updated:** 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
 outside the module system — see note below the table; row 10 corrected from `Not started` to
-`In progress`, undocumented code found on disk — see note below the table)
+`In progress`/`Built`, undocumented code found on disk — see note below the table; row 10's
+waitlist gap closed; row 12 flagged with a second undocumented module found on disk, see note
+below the table)
 
 ## Foundations
 
@@ -32,9 +34,9 @@ outside the module system — see note below the table; row 10 corrected from `N
 | 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
 | 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
 | 9 | Team + staff availability | §23 | 6 | MVP | **Tested** | Staff records (no login required, `D-018`), working hours, time off, deactivate/reactivate, `staff.view`/`staff.manage` permissions (`D-020`), `D-017` eligibility exposed via `StaffDirectory`, `staff` onboarding verifier (verified + skippable). 9 endpoints, 65 tests |
-| 10 | Calendar + appointment engine | §11 | 7 | MVP | **In progress** | **Critical path.** `Actions/` for book/reschedule/update exist on disk (found 2026-10-01, undocumented) but `SchedulingServiceProvider` is unregistered and the module fails `ModuleBoundaryGuardTest` (reaches `Team\Models\StaffMember` directly) — see note below the table |
-| 11 | Public online booking | §12 | 8 | MVP | Not started | Needs the 20-concurrent-request test on MySQL |
-| 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved |
+| 10 | Calendar + appointment engine | §11 | 7 | MVP | **Built** | Boundary violation fixed, registered, full HTTP surface built (`D-022`). Waitlist (`waitlist_entries`, `JoinWaitlist`/`ConvertWaitlistEntryToAppointment`/`CancelWaitlistEntry`, 4 routes) added 2026-10-01 — closes the one §11 gap a pending-work check found. A partial automated test suite exists (`modules/Scheduling/Tests`) but has not been fully re-verified after the last fixes, and the waitlist has none — treat as Built, not Tested, until a full run confirms it |
+| 11 | Public online booking | §12 | 8 | MVP | **Built** | `modules/Booking` — public widget under `/api/v1/public/{tenant}/...` (`D-024`), reuses Scheduling's engine (`D-023`), no automated tests written this session. Still needs the 20-concurrent-request test on MySQL, and a public self-service cancel-by-token endpoint (deferred, see `D-024`) |
+| 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved. **A substantial `modules/Notifications/` directory was found already on disk 2026-10-01** (mail/SMS provider contracts + fakes, appointment-event listeners, a reminder command, a `notification_logs` migration) — unregistered in `bootstrap/providers.php`, currently failing `ModuleRegistrationGuardTest`. Not verified or touched; see note below the table |
 | 13 | Dashboard + business insights | §16 | 10 | MVP | Not started | Every metric needs a documented formula (invariant #7) |
 | 14 | Website module | §14 | 11 | MVP | Not started | SEO needs prerendering under `D-006`; decision due at this phase |
 | 15 | Responsive hardening | §15, §33 | 12 | MVP | Not started | React SPA responsive pass + §35 acceptance suite |
@@ -65,18 +67,37 @@ template's other ~59 pages remain unported. This is the first concrete content f
 `In progress` §14 Website module (row 14) but is not that module itself — it has no per-tenant
 data binding yet.
 
-## Phase 7 correction, found 2026-10-01
+## Phase 7 correction and completion, 2026-10-01
 
-While verifying an unrelated frontend change, a full `php artisan test` run surfaced a previously
-undocumented `modules/Scheduling/` directory already on disk — `Actions/BookAppointment.php`,
-`RescheduleAppointment.php`, `UpdateAppointment.php`, and a `SchedulingServiceProvider`, from some
-earlier session never recorded here. It is not registered in `bootstrap/providers.php` and fails
-two CI guards: `ModuleBoundaryGuardTest` (its three Actions reach `Modules\Team\Models\
-StaffMember` directly instead of through `Team\Contracts\StaffDirectory`) and
-`ModuleRegistrationGuardTest` (provider unregistered and unbooted). Row 10 above is corrected to
-`In progress` accordingly. Not fixed or registered this session — see
-`docs/summaries/2026-10-01-frontview-pricing-auth-pages.md` for the discovery, and treat bringing
-this module to a tested state as its own Phase 7 session.
+A full `php artisan test` run surfaced a previously undocumented `modules/Scheduling/` directory
+already on disk (domain model, migrations, contracts, actions) from some earlier session never
+recorded here, failing `ModuleBoundaryGuardTest` (three Actions reached `Modules\Team\Models\
+StaffMember` directly) and `ModuleRegistrationGuardTest` (no provider registered). Fixed the same
+session: added `StaffDirectory::lockForBooking()` so the concurrency lock goes through Team's
+contract (`D-022`), fixed two real bugs (`AppointmentStatusHistory`'s missing `appointment_id`
+fillable; `BookAppointment` not validating add-on eligibility) and a migration index-name-too-long
+bug, built the entire missing HTTP layer (5 controllers, 10 routes, 4 resources, an
+`AppointmentPolicy` splitting Groomer's limited status rights from Manager's full cancel/no-show
+rights, the service provider, 2 factories), and registered it. Full suite was 554/554 green and
+all guards passing at that point. A test suite was then drafted for Scheduling's new HTTP layer
+but the verification pass was interrupted before a final confirmed run — see
+`docs/summaries/2026-10-01-frontview-pricing-auth-pages.md` for the full discovery and fix detail.
+
+## Undocumented `modules/Notifications/` found on disk, 2026-10-01
+
+While doing a pending-work check before starting Phase 7's waitlist feature, running the three
+CI guard tests in isolation (`ModelTenancyGuardTest`, `ModuleBoundaryGuardTest`,
+`ModuleRegistrationGuardTest`) surfaced a third undocumented module, the same pattern that
+caught `modules/Scheduling` earlier the same day. `modules/Notifications/` already contains
+`Contracts/MailProvider`, `Contracts/SmsProvider`, `LogMailProvider`/`LogSmsProvider` fakes,
+listeners for `AppointmentBooked`/`AppointmentRescheduled`/`AppointmentStatusChanged`, a
+`SendAppointmentRemindersCommand`, and a `notification_logs` migration — but no
+`NotificationsServiceProvider` entry in `bootstrap/providers.php`, so `ModuleRegistrationGuardTest`
+fails right now. This is genuine Phase 9 progress, not noise, but it was not verified, migrated,
+registered or touched this session — the owner chose to prioritise the waitlist feature instead.
+Whoever next works on Notifications should treat this the same way Scheduling's own
+undocumented code was treated: verify what's there against spec §13 before assuming it's
+correct, then register it deliberately rather than leaving the guard red.
 
 ## Why row 12 reads `Blocked` rather than `Not started`
 

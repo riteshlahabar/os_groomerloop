@@ -3,6 +3,7 @@
 namespace Modules\Crm\Contracts;
 
 use Modules\Crm\Domain\CommunicationChannel;
+use Modules\Crm\Domain\CustomerContactDetails;
 
 /**
  * How other modules look a customer up (D-007).
@@ -66,4 +67,27 @@ interface CustomerDirectory
      * Always at least as strict as mayContact.
      */
     public function mayMarketTo(int $customerId, CommunicationChannel $channel): bool;
+
+    /**
+     * Find this tenant's customer by email, or add them to the book (spec §12 step 4).
+     *
+     * The one write this contract exposes, and deliberately narrow: a public booking widget is
+     * the only caller with no existing customer id to validate, because the person on the other
+     * end has never been in the system before. Matched on email within the tenant so a repeat
+     * online booker does not accumulate a duplicate row every visit; a genuine duplicate beyond
+     * that is what §8's existing merge tooling is for, not this method's job to prevent.
+     *
+     * `Active`, not `Lead`: by the time this is called the booking itself is also being created
+     * in the same request, and `CustomerStatus::Active`'s own definition is "has booked" — a
+     * lead is someone who only enquired.
+     *
+     * @param  array<string, mixed>  $attributes  first_name, last_name, email, phone
+     */
+    public function findOrCreateForPublicBooking(array $attributes): int;
+
+    /**
+     * Where to actually send something, once `mayContact`/`mayMarketTo` has already said yes.
+     * Null for an unknown customer, the same fail-closed shape every other lookup here uses.
+     */
+    public function contactDetailsOf(int $customerId): ?CustomerContactDetails;
 }

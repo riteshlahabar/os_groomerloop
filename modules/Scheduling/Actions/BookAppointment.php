@@ -9,6 +9,7 @@ use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Pets\Contracts\PetDirectory;
+use Modules\Scheduling\Events\AppointmentBooked;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Models\AppointmentStatusHistory;
 use Modules\Scheduling\Services\AvailabilityEngine;
@@ -54,7 +55,7 @@ final class BookAppointment
         $start = Carbon::parse($attributes['starts_at']);
         $staffMemberId = $attributes['staff_member_id'] ?? null;
 
-        return DB::transaction(function () use ($attributes, $recurrenceGroupId, $service, $start, $staffMemberId): Appointment {
+        $appointment = DB::transaction(function () use ($attributes, $recurrenceGroupId, $service, $start, $staffMemberId): Appointment {
             // The serialisation point — see the class docblock. A null staff member has nothing
             // to lock: an unassigned "requested" appointment can't conflict with anything yet.
             if ($staffMemberId !== null) {
@@ -105,6 +106,12 @@ final class BookAppointment
 
             return $appointment;
         });
+
+        // Dispatched after commit, not inside the transaction: a listener that sends a
+        // notification should never act on a booking that could still roll back.
+        event(new AppointmentBooked($appointment->toSummary()));
+
+        return $appointment;
     }
 
     /**

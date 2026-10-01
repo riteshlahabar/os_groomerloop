@@ -713,3 +713,59 @@ whatever public-booking-specific rules spec §12 adds (lead time, cancellation w
 manual confirmation) — not a new appointment engine. Any availability or locking fix made in
 Scheduling automatically applies to the public booking page once it exists, because it is calling
 the same code.
+
+## D-024 — Booking (§12) resolves its tenant from a route slug, not the authenticated user, via a new `ResolvePublicTenant` middleware
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** Phase 8 (`modules/Booking`) is spec §12's public-facing booking widget — the one
+surface in the product a stranger reaches with no account at all. Every existing tenant-scoped
+route resolves its tenant from `$request->user()->tenant` (`ResolveTenant`), which does not exist
+for an anonymous request, and `bootstrap/app.php`'s `ResolveTenant`-ahead-of-`SubstituteBindings`
+priority fix (`D-014`) is itself keyed to that one middleware class — a new middleware for the
+anonymous case would not inherit that guarantee just by existing.
+
+**Decision:** Public routes live under `/api/v1/public/{tenant}/...`, where `{tenant}` is a
+business's `Tenant.slug` (already an existing column). A new `Modules\Tenancy\Http\Middleware\
+ResolvePublicTenant` — shared kernel, alongside `ResolveTenant`, since Website (Phase 11) will
+need the identical mechanism for tenant subdomains/public pages — enforces strict mode, resolves
+`Tenant::where('slug', ...)`, refuses a suspended/cancelled tenant exactly as `ResolveTenant` does
+(same 404 either way, so a wrong slug and an inactive business look identical to a stranger), and
+sets `TenantContext`. It is added to `bootstrap/app.php`'s priority list the same way
+`ResolveTenant` is. `Tenant` itself is not tenant-owned, so binding it by route slug carries none
+of D-014's original hazard; everything downstream (services, staff, the appointment created) is
+validated through each owning module's contract from the request body — the same pattern
+`BookAppointment` already uses — rather than a second tenant-owned route parameter, which is what
+would have actually needed the priority-ordering guarantee.
+
+Two small, deliberately narrow write methods were added to otherwise read-only contracts for this:
+`CustomerDirectory::findOrCreateForPublicBooking()` (matched on email within the tenant, so a
+repeat online booker does not accumulate a duplicate customer row every visit — the result is
+`CustomerStatus::Active`, not `Lead`, because a real appointment is created in the same request,
+and `Active`'s own definition is "has booked") and `PetDirectory::createForPublicBooking()`
+(always creates — a pet name alone is not a safe enough match key to dedupe on, which is what §8's
+existing merge tooling is for).
+
+**Alternatives considered:**
+- A subdomain per tenant (`<slug>.groomerloop.com`) instead of a path segment — this is the
+  target shape CLAUDE.md already names for Phase 11 tenant sites, but it needs real DNS/hosting
+  work this phase does not, and shared cPanel's constraints (`D-011`) make it the wrong thing to
+  block Phase 8 on. A path-based slug can move under a subdomain later without changing how
+  `ResolvePublicTenant` resolves the tenant once it has the value.
+- A signed/opaque booking-widget token instead of a readable slug — rejected: the slug is already
+  a public-facing identifier (same column `D-019`'s marketing-site notes mention as a fallback),
+  and a stranger seeing which salon they are booking is not a secret worth obscuring.
+- Giving `CustomerDirectory`/`PetDirectory` general-purpose `create()` methods usable by any future
+  caller — rejected as wider than this phase needs; a narrowly named method is easier to reason
+  about and to remove if a future module wants different dedup behaviour.
+
+**Consequences:** `modules/Booking` is the first module whose primary routes are deliberately
+*not* behind `auth:sanctum`. §12's "configurable lead time" and "automatic or manual confirmation
+mode" live in a new `booking_settings` table (one row per tenant, same singleton shape as
+`business_profiles`); `OnboardingStep::Policies` — unanswered since Phase 4 — is now discharged by
+`Booking\Services\PoliciesVerifier`, satisfied once that row exists. **Not built this phase, by
+design:** a public self-service view/cancel-by-token endpoint for "configurable cancellation
+window" — the setting is stored and surfaced now, but nothing enforces it yet, since building it
+needs an unguessable per-booking token design of its own and spec §12's own 7-step flow stops at
+"receives confirmation," not "may later cancel online." Add-ons and recurring bookings are also
+out of scope for the public flow, for the same reason — neither appears in those 7 steps.

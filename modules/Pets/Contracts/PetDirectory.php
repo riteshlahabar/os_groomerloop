@@ -64,4 +64,17 @@ interface PetDirectory
      * Does this business have any pets on file? Used by the §7 onboarding checklist (`D-015`).
      */
     public function hasAny(): bool;
+
+    /**
+     * Add a pet to a customer created moments ago by a public booking (spec §12 step 4).
+     *
+     * Always creates: unlike the customer half, there is no identifying field a repeat online
+     * booker types consistently enough to match a pet by (a name alone is not unique even within
+     * one family), so a second booking for "Bella" makes a second `Bella` record rather than
+     * guessing. §8's existing merge tooling is the place to reconcile that later, the same as any
+     * other duplicate.
+     *
+     * @param  array<string, mixed>  $attributes  name, species (required); breed, sex optional
+     */
+    public function createForPublicBooking(int $customerId, array $attributes): int;
 }

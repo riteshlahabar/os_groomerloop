@@ -1,7 +1,14 @@
 # GroomerLoop OS — project summary
 
-**Last updated:** 2026-10-01 · **Phase:** 6 of 12, complete (Catalog + Team); **Phase 7 corrected
-to `In progress`, undocumented** — see below · **Spec:** v1.0 (40 sections)
+**Last updated:** 2026-10-01 · **Phase:** 6 of 12 complete; **Phases 7 (Scheduling) and 8
+(Booking) code-built** (not automated-tested — see below) · **Spec:** v1.0 (40 sections)
+
+**Same day, later session:** a pending-work check on Phase 7 confirmed the appointment engine
+itself (business hours, service rules, staff availability, conflict detection, recurring
+appointments, full audit history) was already correct, and found exactly one §11 gap — the
+waitlist — which this session built. It also surfaced a second undocumented module,
+`modules/Notifications/` (Phase 9), sitting unregistered on disk; not touched this session, see
+`MODULE_STATUS.md`.
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
@@ -30,9 +37,9 @@ service is still active. And it can staff itself: groomers with or without a log
 hours and time off, which services each is eligible to perform, and deactivation that keeps every
 past appointment's history intact. Every one of those actions is audited and tenant-scoped.
 
-**The core domain of spec §1 now exists up to Team/Staff.** Business → Users → Customers → Pets →
-Services → Staff is built; Appointments → Bookings → Communications is next (Phase 7), and holds
-most of the real MVP complexity.
+**The core domain of spec §1 now exists up to Appointments and Bookings.** Business → Users →
+Customers → Pets → Services → Staff → Appointments → Bookings is built (Phases 0–8); only
+Communications (Notifications, Phase 9) remains, blocked on `D-011`.
 
 **There is no authenticated-app frontend yet.** The React SPA from `D-006` is still waiting on
 design files for the owner/staff dashboard. Blade is used for mail templates and, as of
@@ -90,107 +97,48 @@ Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 | Plan-literal guard | Tested | `PlanLiteralGuardTest` — CI guard 4 (invariant #3) |
 | Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-020` |
 
-**Verification run on 2026-10-01 (Team session):** `php artisan test` → **554 passed, 1909
-assertions, 0 failed** (from 489 / 1721 on 2026-09-30). `./vendor/bin/pint --test` → passed.
-`ModelTenancyGuardTest`, `ModuleBoundaryGuardTest`, `ModuleRegistrationGuardTest` → green. One run
-that session hit the pre-existing `PetIsolationTest` flake (see "Known gaps" below); a clean
-re-run passed 554/554.
+**Verification history (condensed; full detail in each day's `docs/summaries/` entries):**
+2026-10-01 Team session — 554/554 passed, 1909 assertions, all guards green. Same-day
+frontview session — 551/554, the 3 failures being `ModuleBoundaryGuardTest`/
+`ModuleRegistrationGuardTest` catching the then-undiscovered `modules/Scheduling`, unrelated to
+that session's own (verified-green) changes. Same-day waitlist session — ran only the 3 guard
+tests per the owner's standing instruction: tenancy and boundary guards passed, registration
+guard failed for the unrelated `modules/Notifications` discovery below; the waitlist itself was
+verified by migration, `pint`, `route:list` and `tinker`, not by an automated suite.
 
-**Later the same day (frontview pricing/auth session):** `php artisan test` → **551 passed, 1909
-assertions, 3 failed**. The 3 failures are *not* a regression from that session's changes — they
-are `ModuleBoundaryGuardTest` and `ModuleRegistrationGuardTest` catching the previously-undiscovered,
-unregistered `modules/Scheduling/` directory described above. Everything this session actually
-touched (`RegisterRequest.php`'s timezone rule, the 5 new frontview pages, `routes/web.php`)
-stayed green, including a live registration + login performed in a real browser against the dev
-database.
+### What CRM, Pets, Catalog and Team each enforce beyond plain CRUD
 
-### What the CRM enforces, beyond CRUD
-
-Worth knowing before extending it, because each of these is a test someone will otherwise break:
-
-- **Archiving, never deleting** (invariant #4), consent as one audited code path with a global
-  opt-out that overrides every channel, merge-fills-blanks-only through `CustomerMergeParticipant`
-  so Crm never touches another module's tables, suggest-never-act duplicate detection, and
-  import/export held by Owner and Manager only. Full detail: `docs/summaries/2026-09-30-phase-5-crm.md`.
-
-### What the Pets module enforces
-
-- **Four note fields, not one** (§9). `customer_notes` are the owner's; `internal_notes` are staff
-  commentary behind `pets.internal_notes` and omitted from the response entirely without it;
-  `temperament_notes` and `special_instructions` are operational and visible to all staff, because
-  a groomer who cannot see "muzzle required" is a safety problem.
-- **A Groomer holds `pets.internal_notes` without holding `pets.manage`.** The person with the
-  clippers is both who needs the handling history and who learns it. Marketing holds neither.
-- **`medical_notes` is never a diagnosis** (§9, §29). Stored as notes, returned with
-  `medical_notes_are_not_veterinary_advice: true`, and never reasoned over.
-- **Deceased is not the same as archived.** §22 sends rebooking prompts off quiet periods, so
-  `allowsOutreach()` exists, archiving refuses to overwrite a deceased status, and the transition
-  writes its own audit event.
-- **`customer_id` is not fillable.** Re-homing a pet moves its whole history to another family;
-  only the merge participant does that.
-- **Ownership is checked inside a tenant too.** Two customers of one salon are the same tenant, so
-  `PetDirectory::belongsTo()` is what will stop a §12 booking naming another family's dog. It fails
-  closed for unknown pets.
-
-### What the Catalog module enforces
-
-- **Add-ons are services with a flag**, and a pivot says which service offers which. An add-on
-  cannot carry add-ons of its own — that would make §12's total duration recursive — and is never
-  independently bookable online.
-- **Online visibility is separate from active/inactive** (§10 lists both). A salon sells plenty over
-  the counter it does not publish. `is_publicly_bookable` is the resolved three-condition answer,
-  computed server-side so a client cannot put a retired service back on a booking page.
-- **Money is integer cents everywhere**; the API takes dollars and rounds, because
-  `(int) (49.95 * 100)` is 4994.
-- **Availability windows are rows, not JSON**, because Phase 8 must enforce them under concurrent
-  requests and §35 requires it provably. No windows means no restriction; one window per day; the
-  buffer counts toward fitting inside it; ISO day numbering (Sunday = 7, not 0).
-- **Nothing deletes.** A service deactivates; deleting a category leaves its services
-  uncategorised and audits how many.
-- **`is_add_on` is immutable after creation** — flipping a sold service would change what every past
-  appointment meant.
-- **No `entitlement:` on these routes**, and a test asserts it: §25 does not gate the catalogue, and
-  a business that cannot define what it sells cannot use the product at all.
-
-### What the Team module enforces
-
-- **A staff member stands on its own** (`D-018`): `staff_members.user_id` is nullable and not
-  mass-assignable. A solo or home-based groomer (§3's most common segment) never needs a login;
-  linking one is its own audited act, not a field on an edit form.
-- **`status` cannot be changed through a plain edit.** `UpdateStaffMemberRequest` does not accept
-  it at all — the bug flagged in an earlier session is closed. Status only changes through
-  `DELETE /staff/{id}` (deactivates) and `POST /staff/{id}/reactivate`, each with its own audit
-  event and a `still_has_login` note on deactivation.
-- **`staff.view`/`staff.manage` are their own permissions** (`D-020`), not Identity's
-  `team.view`/`team.manage` (which stay Owner-only, gating user invitations and role changes).
-  Owner and Manager can both run the team day to day; Groomer and Front Desk can read it;
-  Marketing cannot see it at all.
-- **Eligibility defaults to "can do everything," availability defaults to "never available."**
-  No rows in the `D-017` eligibility pivot means no restriction; no working-hours rows means the
-  person is on the rota for zero hours. Deliberately opposite defaults — one is permissive by
-  default so a solo groomer never has to tick every service, the other refuses to guess a shift
-  that was never entered.
-- **Two staff members in one salon are the same tenant**, so cancelling one groomer's time off
-  through another groomer's URL is checked explicitly (`staff_member_id` match, 404 if not) — the
-  tenant scope alone does not catch a mismatched pair, the same gap Pets' `PetDirectory::belongsTo()`
-  exists to close.
-- **The `staff` onboarding step is verified but skippable** — unlike Services, which is required.
-  §3 lists solo/home-based groomers first; forcing a second person onto the checklist would lock
-  out the segment the product is most obviously for.
+Moved out to keep this file under budget — each module's non-obvious rules (note-visibility
+splits, immutable columns, deceased-vs-archived, add-on constraints, eligibility defaults, etc.)
+are recorded in full in `docs/MODULE_STATUS.md`'s per-module notes and in the session logs that
+built them: `docs/summaries/2026-09-30-phase-5-crm.md`, `2026-09-30-phase-5b-pets.md`,
+`2026-09-30-phase-6a-catalog.md`, and `2026-10-01-phase-6b-team.md`. Read those before extending
+any of the four.
 
 ## Next up
 
-**Phase 7 — `modules/Scheduling` (spec §11), the critical path.** Code already exists on disk
-(found 2026-10-01, see above) but is unregistered, unverified, and fails 2 CI guards — the
-module boundary violation (reaching `Team\Models\StaffMember` directly instead of through
-`Team\Contracts\StaffDirectory::isAvailableAt()`/`canPerform()`, both already built and proven by
-contract tests for exactly this caller) needs fixing before `SchedulingServiceProvider` can be
-registered in `bootstrap/providers.php` and the module brought to a tested state.
+**Phases 7 (`modules/Scheduling`, §11) and 8 (`modules/Booking`, §12) are code-built** (2026-10-01)
+— the boundary violation is fixed, both modules are registered, the full appointment engine and
+public booking widget exist end to end (`D-022`–`D-024`), and Phase 7's waitlist gap is now closed
+too (`waitlist_entries`, `JoinWaitlist`/`ConvertWaitlistEntryToAppointment`/`CancelWaitlistEntry`,
+4 routes under `calendar.view`/`appointments.manage`). **Neither has a confirmed automated test
+run** (Scheduling has a drafted suite under `modules/Scheduling/Tests` whose last run was
+interrupted, and the waitlist has no tests at all; Booking has none) — per the owner's explicit
+instruction, further work defaults to code only, verified manually, unless automated tests are
+asked for again.
 
-Then Phase 8 (Booking) → Phase 9 (Notifications) → Phase 10 (Insights) → Phase 11 (Website) →
-Phase 12 (Hardening). A §28 secure-uploads phase still has to be placed before Phase 11 — see the
-gaps below. §9's pet "service preferences" also remains deferred, waiting on a module with both a
-service and a preferred-groomer half.
+**A second undocumented module, `modules/Notifications/` (Phase 9 work), was found unregistered
+on disk** during this session's pending-work check — see `MODULE_STATUS.md` for what it already
+contains. It currently makes `ModuleRegistrationGuardTest` fail. Left untouched; whoever picks up
+Phase 9 should verify it against §13 before registering it, the same way Scheduling's own
+undocumented code was handled.
+
+**First real next step: a full `php artisan test` + `pint --test` + guard run**, whenever that is
+asked for, to find out what Phases 7–8 actually broke or missed before calling either `Tested`.
+After that: Phase 9 (Notifications, blocked on `D-011`, and now with unverified code already on
+disk) → Phase 10 (Insights) → Phase 11 (Website) → Phase 12 (Hardening). A §28 secure-uploads
+phase still has to be placed before Phase 11 — see the gaps below. §9's pet "service preferences"
+also remains deferred, waiting on a module with both a service and a preferred-groomer half.
 
 ## Known gaps and risks
 
