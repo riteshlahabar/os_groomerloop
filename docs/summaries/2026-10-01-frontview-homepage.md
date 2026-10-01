@@ -161,3 +161,43 @@ committed — `git log` showed `HEAD` and `origin/main` on the same pre-existing
 (`ac07573`, "module updated"). "Up to date" was accurate: there was nothing on the remote to
 pull because nothing had been pushed. Committed and pushed `origin/main` once this session's
 root-route fix was in, so cPanel's next pull will have something to fetch.
+
+## Session 4 — header bar height regression
+
+**Scope:** Owner reported the header bar was too tall compared to the original template and
+asked for it to match.
+**Outcome:** Completed.
+
+### Root cause
+
+The template's logo `<img>` only carries Bootstrap's `img-fluid` (`max-width:100%; height:auto`)
+— it relies on the source file already being a small "logo-sized" image, the same way the
+original vector `logo.svg` had a tiny intrinsic size (218×48). Session 2's replacement
+(`Groomer-Logo.png`, 1608×306) is a full-resolution brand asset, not a pre-sized logo file, so
+the header's flex layout stretched it to fill the available slot — 106px tall at first measure,
+then still 83px even after an initial 520×99 resize attempt, because the logo's flex slot in
+this layout is narrower than it looks (~439px, not the full 558px container width).
+
+### Changed
+
+- `public/frontview-assets/img/logo.png` and `logo-white.png` — re-generated at 240×46
+  intrinsic size (same aspect ratio as the source, scaled down from `Groomer-Logo.png`), close
+  to the original `logo.svg`'s 218×48 footprint. At this size the image renders at its true
+  natural dimensions in every header slot (desktop sticky, mobile, off-canvas, footer) without
+  being stretched by any container, matching the original template's header height.
+
+### Verified
+
+- Measured via `getBoundingClientRect()` before/after: header height 211px → 85.6px (original
+  template, not independently re-measured this session, is expected to be in the same range —
+  the fix target was "logo renders at its natural, un-stretched size," which is now true).
+- Logo renders crisp at both the static top-of-page state and the scrolled/sticky white-logo
+  state; screenshots confirm the header bar is back to a normal compact height.
+- `pint --test` passed.
+
+### Follow-up
+
+- If a sharper logo is wanted on very high-DPI displays, regenerate at 2x (≈480×92) — tested
+  that this is still small enough to display at natural size in every slot (480 < 558, the
+  widest container seen) and should be safe, but wasn't applied since the owner's complaint was
+  about size, not sharpness.
