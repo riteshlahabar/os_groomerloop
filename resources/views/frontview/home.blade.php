@@ -39,6 +39,7 @@
 
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ asset('frontview-assets/css/style.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('frontview-assets/css/groomerloop-overrides.css') }}">
 
 </head>
 

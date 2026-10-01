@@ -90,6 +90,24 @@ needs its own session.
   (→ `blog-details.html`/`blog-grid.html`) are still dead — pre-existing from the original
   2026-10-01 homepage port, outside this session's header/footer/booking scope.
 
+## Addendum — sticky-header logo fix (same day, follow-up request)
+
+The owner reported the header logo turns white and becomes hard to see once the page is
+scrolled. Traced to a bug in the template's own `style.min.css`: `header.header-one.fixed` (the
+scrolled/sticky state) sets a **light**, semi-transparent background
+(`rgba(255,255,255,.8)` + blur) but still swaps to the white logo variant that was meant for a
+dark sticky header, with `!important`, so the logo nearly disappears against the light
+background.
+
+- Added `public/frontview-assets/css/groomerloop-overrides.css` — two rules re-flipping
+  `header.header-one.fixed .navbar .navbar-brand.logo` back to visible and `.logo-white` back to
+  hidden, loaded after `style.min.css` on all 6 pages so it wins the cascade without editing the
+  vendor file.
+- Linked the new stylesheet in all 6 `resources/views/frontview/*.blade.php` files, immediately
+  after the existing `style.min.css` link.
+- Verified live in the browser: scrolled the homepage, confirmed the full-color logo (with
+  tagline) now stays visible in the sticky header instead of fading to white.
+
 ## Follow-ups
 
 - [ ] Run a dedicated Phase 7 session: verify what `modules/Scheduling` already contains against

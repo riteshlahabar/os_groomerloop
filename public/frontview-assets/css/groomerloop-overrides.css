@@ -1,0 +1,18 @@
+/*
+ * Small, deliberate overrides on top of the owner-supplied template's style.min.css.
+ * Loaded after it so these rules win the cascade without editing the vendor file.
+ */
+
+/*
+ * Bug in the template itself: header.header-one.fixed (the scrolled/sticky state) sets a
+ * light, semi-transparent background (rgba(255,255,255,.8)) but still swaps to the white
+ * logo variant meant for a dark sticky header, making the logo nearly invisible on scroll.
+ * Keep the colored logo visible and hide the white one in the fixed state instead.
+ */
+header.header-one.fixed .navbar .navbar-brand.logo {
+    display: block !important;
+}
+
+header.header-one.fixed .navbar .navbar-brand.logo-white {
+    display: none !important;
+}
