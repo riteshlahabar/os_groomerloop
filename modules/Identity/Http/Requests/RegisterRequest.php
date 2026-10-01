@@ -25,7 +25,11 @@ final class RegisterRequest extends FormRequest
             // product enforces the same policy rather than each form inventing its own.
             'password' => ['required', 'confirmed', Password::defaults()],
 
-            'timezone' => ['sometimes', 'string', 'timezone:all', 'max:64'],
+            // "all_with_bc", not "all": a browser's Intl API can report a legacy IANA alias
+            // (e.g. Chrome reports "Asia/Calcutta" for India, not the canonical "Asia/Kolkata"),
+            // and PHP's DateTimeZone::ALL list excludes those aliases even though
+            // DateTimeZone itself accepts and resolves them correctly.
+            'timezone' => ['sometimes', 'string', 'timezone:all_with_bc', 'max:64'],
         ];
     }
 }

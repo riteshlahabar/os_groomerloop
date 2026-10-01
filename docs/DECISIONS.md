@@ -596,3 +596,46 @@ for the two new cases (Owner inherits them automatically via its existing "every
 platform administration" filter). Any future module should default to its own dedicated
 permission namespace rather than borrowing one, unless the capabilities genuinely are the same
 decision wearing two names.
+
+## D-021 — Frontview's primary CTA is "Get Started" → `/register`, not "Book Appointment"
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** The owner-supplied salon template's header/footer CTA is "Book Appointment," which
+404'd (`booking-appointment.html` was never ported) and, once traced, turned out to be the wrong
+action regardless: `app.groomerloop.com`'s frontview pages are GroomerLoop's own landing page for
+a **salon owner signing up for the SaaS** (confirmed with the owner this session), not a specific
+tenant's public site where a **pet owner** books a grooming slot. That per-tenant booking flow is
+spec §12, built per business in the still-`Not started` §14 Website module (Phase 11) — it does
+not exist yet, and would not belong on this page even if it did, since this page has no tenant,
+no groomer and no calendar to book against.
+
+**Decision:** Relabeled the CTA to "Get Started," linking to the real `POST /api/v1/register`
+flow. The wording is the spec's own: §2's commercial-model table (p.1 of the PDF) lists the
+Starter plan's commercial role as "Get started," so this reuses language already chosen for
+exactly this moment rather than inventing marketing copy (and deliberately avoids "Start Free
+Trial" — nothing in the spec promises a free trial; `SubscriptionStatus`'s `trialing` state in
+`Billing` is a payment-timing mechanism, not a marketing claim to put in front of a sign-up
+button). Also trimmed the header's 36-link mega-menu (Shop/Cart/Wishlist, 3 alternate Home demos,
+Blog, Branches, Packages, etc.) down to Home/Pricing/About Us/Contact Us plus a Sign In link —
+none of the removed items correspond to a real GroomerLoop feature, and porting dozens of
+irrelevant e-commerce/blog demo pages to stop them 404ing would have been effort spent making a
+wrong design more complete rather than correct.
+
+**Alternatives considered:**
+- Keep "Book Appointment" as a live product demo of what a tenant's future booking page will look
+  like — rejected for now: Scheduling/Booking (Phases 7–8) don't exist, so it would be a mockup
+  wearing a working-button's clothes; revisit once Phase 8 ships something real to demo.
+- Keep "Book Appointment" wired to a CRM lead-capture form — rejected: the CRM's customer records
+  are tenant-scoped, and there is no tenant context on this page to file a lead against; a
+  platform-level "contact us" concept is a different, smaller thing, handled by the new Contact Us
+  page instead (itself intentionally inert — no mail provider exists, `D-011`).
+- Port all ~36 linked template pages verbatim so nothing ever 404s — rejected: most are generic
+  salon-demo e-commerce/blog content with no product behind them; shipping them as real routes
+  would misrepresent GroomerLoop as having a shop and a blog it does not have.
+
+**Consequences:** Frontview's design now diverges from the supplied template's own information
+architecture rather than reproducing it verbatim, the opposite of the 2026-10-01 homepage port's
+"design as supplied, no edits beyond asset paths" approach (`D-019`). Future pages ported from
+this template should get the same scrutiny — port the visual design, but only keep navigation and
+CTAs that point at something the product actually does.

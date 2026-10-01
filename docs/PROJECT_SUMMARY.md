@@ -1,7 +1,7 @@
 # GroomerLoop OS — project summary
 
-**Last updated:** 2026-10-01 · **Phase:** 6 of 12, complete (Catalog + Team) · **Spec:** v1.0
-(40 sections)
+**Last updated:** 2026-10-01 · **Phase:** 6 of 12, complete (Catalog + Team); **Phase 7 corrected
+to `In progress`, undocumented** — see below · **Spec:** v1.0 (40 sections)
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
@@ -36,9 +36,26 @@ most of the real MVP complexity.
 
 **There is no authenticated-app frontend yet.** The React SPA from `D-006` is still waiting on
 design files for the owner/staff dashboard. Blade is used for mail templates and, as of
-2026-10-01, for one public page: `GET /frontview` renders `index.html` from the owner-supplied
-HTML/CSS template verbatim (`docs/summaries/2026-10-01-frontview-homepage.md`), outside the
-module system — see `MODULE_STATUS.md`. Only that one page is ported so far.
+2026-10-01, for 6 public pages outside the module system (see `MODULE_STATUS.md`): Home, Pricing,
+Login, Register, About Us and Contact Us, ported from the owner-supplied HTML/CSS template
+(`docs/summaries/2026-10-01-frontview-homepage.md`, `docs/summaries/2026-10-01-frontview-pricing-
+auth-pages.md`). Pricing fetches live plans from `GET /api/v1/plans`; Login and Register post to
+the real `POST /api/v1/login` / `POST /api/v1/register` endpoints over Sanctum's CSRF-cookie flow
+and are verified end-to-end (a real registration + login was performed and confirmed in the dev
+DB, then cleaned up). The template's other ~59 pages remain unported. The header's CTA is "Get
+Started" → `/register`, not "Book Appointment" — `D-021` explains why a pet-owner booking action
+doesn't belong on GroomerLoop's own sign-up page.
+
+**Correction to this file's and `MODULE_STATUS.md`'s Phase 7 status, found 2026-10-01 while
+verifying an unrelated change:** a substantial `modules/Scheduling/` directory already exists on
+disk (`BookAppointment`, `RescheduleAppointment`, `UpdateAppointment` Actions, a
+`SchedulingServiceProvider`) from some earlier, unlogged session. It is **not** registered in
+`bootstrap/providers.php` and currently **fails** `ModuleBoundaryGuardTest` (its Actions reach
+directly into `Modules\Team\Models\StaffMember` instead of through `Team\Contracts\
+StaffDirectory`) and `ModuleRegistrationGuardTest`. Phase 7 is therefore `In progress`, not
+`Not started` — but untested, unverified, and currently breaking two CI guards. See
+`docs/summaries/2026-10-01-frontview-pricing-auth-pages.md` for how this was found; it was not
+touched beyond discovery, since verifying and fixing it is a full session of its own.
 
 Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 
@@ -73,10 +90,19 @@ Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 | Plan-literal guard | Tested | `PlanLiteralGuardTest` — CI guard 4 (invariant #3) |
 | Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-020` |
 
-**Verification run on 2026-10-01:** `php artisan test` → **554 passed, 1909 assertions, 0 failed**
-(from 489 / 1721 on 2026-09-30). `./vendor/bin/pint --test` → passed. `ModelTenancyGuardTest`,
-`ModuleBoundaryGuardTest`, `ModuleRegistrationGuardTest` → green. One run that session hit the
-pre-existing `PetIsolationTest` flake (see "Known gaps" below); a clean re-run passed 554/554.
+**Verification run on 2026-10-01 (Team session):** `php artisan test` → **554 passed, 1909
+assertions, 0 failed** (from 489 / 1721 on 2026-09-30). `./vendor/bin/pint --test` → passed.
+`ModelTenancyGuardTest`, `ModuleBoundaryGuardTest`, `ModuleRegistrationGuardTest` → green. One run
+that session hit the pre-existing `PetIsolationTest` flake (see "Known gaps" below); a clean
+re-run passed 554/554.
+
+**Later the same day (frontview pricing/auth session):** `php artisan test` → **551 passed, 1909
+assertions, 3 failed**. The 3 failures are *not* a regression from that session's changes — they
+are `ModuleBoundaryGuardTest` and `ModuleRegistrationGuardTest` catching the previously-undiscovered,
+unregistered `modules/Scheduling/` directory described above. Everything this session actually
+touched (`RegisterRequest.php`'s timezone rule, the 5 new frontview pages, `routes/web.php`)
+stayed green, including a live registration + login performed in a real browser against the dev
+database.
 
 ### What the CRM enforces, beyond CRUD
 
@@ -154,10 +180,12 @@ Worth knowing before extending it, because each of these is a test someone will 
 
 ## Next up
 
-**Phase 7 — `modules/Scheduling` (spec §11), the critical path.** Server-side conflict
-prevention for appointments, consuming `Catalog\Contracts\ServiceCatalog` and
-`Team\Contracts\StaffDirectory::isAvailableAt()`/`canPerform()` — both built and proven by
-contract tests, with no caller yet outside their own module's tests.
+**Phase 7 — `modules/Scheduling` (spec §11), the critical path.** Code already exists on disk
+(found 2026-10-01, see above) but is unregistered, unverified, and fails 2 CI guards — the
+module boundary violation (reaching `Team\Models\StaffMember` directly instead of through
+`Team\Contracts\StaffDirectory::isAvailableAt()`/`canPerform()`, both already built and proven by
+contract tests for exactly this caller) needs fixing before `SchedulingServiceProvider` can be
+registered in `bootstrap/providers.php` and the module brought to a tested state.
 
 Then Phase 8 (Booking) → Phase 9 (Notifications) → Phase 10 (Insights) → Phase 11 (Website) →
 Phase 12 (Hardening). A §28 secure-uploads phase still has to be placed before Phase 11 — see the

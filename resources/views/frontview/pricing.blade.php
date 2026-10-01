@@ -419,7 +419,8 @@
                 if (!res.ok) {
                     throw new Error('bad response');
                 }
-                var plans = await res.json();
+                var body = await res.json();
+                var plans = Array.isArray(body) ? body : (body.data || []);
                 if (!Array.isArray(plans) || plans.length === 0) {
                     container.innerHTML = '<div class="card pricing-item rounded"><div class="card-body text-center py-5"><p class="mb-0">No plans are published right now.</p></div></div>';
                     return;
