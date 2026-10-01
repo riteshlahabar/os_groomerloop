@@ -833,3 +833,66 @@ account exists to test against yet). It documents, but does not fix, a real limi
 shared contract trait for a provider whose declines are card-bound rather than
 description-bound (see the test file's own docblock) — left for whoever configures a real
 Stripe test-mode account to resolve, since verifying either fix needs that account.
+
+## D-026 — Platform SMTP is one row GroomerLoop Admin edits, not per-tenant `.env` config; built as the first slice of `SuperAdmin` (§31)
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** The owner asked for SMTP configuration for outbound notification email. The
+default path — setting `MAIL_MAILER=smtp` and `MAIL_HOST`/`MAIL_USERNAME`/`MAIL_PASSWORD` in
+`.env` — was offered first, but the owner wants credentials stored in a database table and
+editable from an admin panel instead of a server file edit. Two further questions had to be
+settled before any schema could be written: whether this is one setting for the whole platform
+or one per tenant, and which "admin panel" edits it. Asked directly rather than guessed, since
+both answers change the data model: platform-wide (GroomerLoop sends every tenant's
+notification email from one account) needs a table with no `tenant_id`, edited by a
+platform-only role; per-tenant (each salon's email appears to come from its own domain) would
+need a tenant-owned table gated by `settings.manage`, visible on every business's own Settings
+screen. The owner chose platform-wide, edited from a new Super Admin console screen (spec §31 —
+not started before now; Phase 2, not MVP).
+
+**Decision:** Added `modules/SuperAdmin/`, the first code in that module, containing exactly
+one feature: `platform_mail_settings`, a one-row, non-tenant table (no `tenant_id` column at
+all — the same exemption `plans`/`plan_features` already have from `ModelTenancyGuardTest`,
+which only flags a table that actually has the column). `PlatformMailSettings::current()` is
+the only way the row is ever fetched (`firstOrNew`), so there is structurally never more than
+one. The `password` column uses Eloquent's built-in `encrypted` cast (keyed on `APP_KEY`) —
+the one real credential on the row; every other field is plain configuration. Gated by
+`permission:platform.administer` only — **deliberately no `tenant` middleware**, because
+`ResolveTenant` already 403s a null-tenant user (the GroomerLoop Admin role) that reaches a
+tenant-scoped route, so adding it here would refuse the only role that can ever call this
+endpoint. Routes sit under `/api/v1/admin/mail-settings` to keep that visually distinct from
+every tenant-scoped route.
+
+`SuperAdminServiceProvider::boot()` reads the row (cached forever, invalidated by
+`UpdatePlatformMailSettings` on every save — read far more often than written) and overrides
+Laravel's own `mail.*` config at runtime when `is_enabled` is true, so every existing and
+future caller of Laravel's `Mail`/`Notification` facades (already the case for
+`Identity\Notifications\TeamInvitation`) picks it up with no code change elsewhere. `is_enabled`
+defaults to false and the update request refuses to flip it to true without `host`/`port`/
+`from_address` present, so a half-finished edit cannot silently break every outgoing email.
+
+**Alternatives considered:**
+- Keep the `.env`-based `MAIL_MAILER=smtp` approach — rejected per the owner's explicit
+  instruction; a file edit on shared cPanel hosting also needs a terminal/File Manager session,
+  which is exactly the friction a DB-backed admin screen avoids.
+- Put this inside the existing `Platform` module (shared kernel for HTTP, currently just the
+  health endpoint) — rejected: `Platform` "owns no tenant data" but was never meant to hold
+  arbitrary platform *business* configuration either, and `D-007`'s one-module-per-functionality
+  rule argues for a dedicated home, especially since §31's console will need many more screens
+  like this one.
+- Store the row per-tenant anyway, defaulting every tenant to the same values — rejected: it
+  would look like a per-tenant feature (showing up on a tenant's own Settings screen, subject to
+  entitlement gating questions) for something that is not tenant data at all and that no tenant
+  role should ever be able to read or change.
+
+**Consequences:** `modules/SuperAdmin` now exists ahead of its normal Phase 2 position in the
+13-phase build order, with exactly one feature — this does not pull the rest of §31 (a support
+console into tenant accounts, audited and time-bound per its own docblock note on `Role::
+PlatformAdmin`) forward with it. There is currently no seeder or command that creates a real
+`PlatformAdmin` user in this environment, so reaching this endpoint for the first time needs one
+created by hand (e.g. via `php artisan tinker`) — not built this session, since inventing
+credentials for the owner was not this session's call to make. A queue worker that was already
+running when settings change keeps using the old config until restarted (`php artisan
+queue:restart`) — the cache is per-process-boot, same as any other config-driven setting in this
+codebase.

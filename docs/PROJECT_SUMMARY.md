@@ -15,6 +15,12 @@ waitlist — which this session built. It also surfaced a second undocumented mo
 `BILLING_GATEWAY` still defaults to `fake`; switching over needs a real Stripe secret key,
 which this environment does not have.
 
+**Same day, one more session:** built the first slice of `modules/SuperAdmin` (§31) — a
+platform-wide SMTP settings screen (`D-026`), since the owner wants notification-email
+credentials stored in a table and edited from an admin panel rather than `.env`. Verified
+end-to-end via `tinker` across fresh process boundaries. `MAIL_MAILER` still defaults to `log`
+until a real `PlatformAdmin` user (none exists yet) enables real settings.
+
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
 

@@ -13,6 +13,7 @@ use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
 use Modules\Scheduling\SchedulingServiceProvider;
+use Modules\SuperAdmin\SuperAdminServiceProvider;
 use Modules\Team\TeamServiceProvider;
 use Modules\Tenancy\TenancyServiceProvider;
 
@@ -75,4 +76,8 @@ return [
     // Booking (§12) depends on Scheduling's AppointmentScheduler plus Catalog/Team/Crm/Pets'
     // read contracts, so it boots after all of them.
     BookingServiceProvider::class,
+
+    // SuperAdmin (§31, first slice: D-026) depends on nothing but the framework — no other
+    // module's contract — so its position here is arbitrary; listed last as the newest module.
+    SuperAdminServiceProvider::class,
 ];

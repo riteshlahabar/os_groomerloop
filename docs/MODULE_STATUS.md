@@ -45,7 +45,7 @@ below the table)
 | 18 | Customer retention + rebooking | §22 | — | Phase 2 | Not started | Segmentation, inactive-customer detection |
 | 19 | Google + social integrations | §21, §30 | — | Phase 2 | Not started | Official APIs only |
 | 20 | Mobile app | §15 | — | Phase 2 | Not started | React Native can share code with the SPA (`D-006`) |
-| 21 | Super admin console | §31 | — | Phase 2 | Not started | Tenant support with strict audit |
+| 21 | Super admin console | §31 | — | Phase 2 | **In progress** | Tenant support with strict audit — not built. **First slice built 2026-10-01 (`D-026`), ahead of normal order**: `modules/SuperAdmin` holds platform-wide SMTP settings (`platform_mail_settings`, no `tenant_id`), edited via `GET/PUT /api/v1/admin/mail-settings` (`permission:platform.administer`, no `tenant` middleware). No `PlatformAdmin` user exists yet to actually use it |
 | 22 | Product analytics | §36 | — | Phase 2 | Not started | MRR, churn, conversion, usage |
 | 23 | AI voice agent | §19, §29 | — | Phase 3 | Not started | Growth Partner plan only |
 | 24 | Advanced AI + growth intelligence | §17, §29 | — | Phase 3 | Not started | |
