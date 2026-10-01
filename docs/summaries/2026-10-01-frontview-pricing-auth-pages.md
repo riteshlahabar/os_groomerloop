@@ -145,6 +145,22 @@ invisible) and the small watermark logo above each form was still white too.
 - Verified live in the browser on both pages: nav text now reads clearly in dark gray, and the
   colored GroomerLoop logo renders above both forms.
 
+## Addendum 4 — same scroll/logo bug on the plain `.header` pages (same day)
+
+The owner asked to check About Us and Contact Us for the same scroll-turns-the-logo-white issue
+fixed earlier for Home (Addendum 1 only covered `header.header-one`). About Us, Contact Us and
+Pricing use the template's other inner-page variant, plain `<header class="header">` (no
+`header-one`), which has its own, separately-defined fixed-state rule with the identical bug:
+`header.fixed{background:var(--white)}` but `header.fixed .navbar-header .navbar-brand.logo-white
+{display:block}` still swaps to the white logo — invisible against the now-solid-white header.
+
+- Extended `groomerloop-overrides.css` with the same fix scoped to this variant's selectors
+  (`header.fixed .navbar-header .navbar-brand.logo` / `.logo-white`, mirroring the existing
+  `header.header-one.fixed` rules added in Addendum 1).
+- Verified live in the browser on all three affected pages (About Us, Contact Us, Pricing):
+  scrolled each, confirmed the full-color logo now stays visible instead of fading to white.
+  No further pages use a third header variant, so this closes the issue across the whole site.
+
 ## Follow-ups
 
 - [ ] Run a dedicated Phase 7 session: verify what `modules/Scheduling` already contains against

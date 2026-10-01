@@ -18,6 +18,19 @@ header.header-one.fixed .navbar .navbar-brand.logo-white {
 }
 
 /*
+ * Same bug, different header variant: About Us, Contact Us and Pricing use the plain
+ * <header class="header"> (no "header-one"), whose own fixed state (header.fixed) sets a
+ * solid white background but still swaps to the white logo, making it invisible against it.
+ */
+header.fixed .navbar-header .navbar-brand.logo {
+    display: block !important;
+}
+
+header.fixed .navbar-header .navbar-brand.logo-white {
+    display: none !important;
+}
+
+/*
  * Login/Register (body.auth-page) reuse Home's header-one markup, but these pages are always
  * on a light background (bg-light) and never scroll, so header.header-one.fixed — the state
  * the template relies on to darken the nav text for a light background — never gets added.
