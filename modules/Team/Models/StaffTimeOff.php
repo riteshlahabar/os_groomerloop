@@ -4,9 +4,11 @@ namespace Modules\Team\Models;
 
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Modules\Team\Database\Factories\StaffTimeOffFactory;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
 /**
@@ -17,7 +19,10 @@ use Modules\Tenancy\Concerns\BelongsToTenant;
  */
 final class StaffTimeOff extends Model
 {
-    use BelongsToTenant;
+    /** @use HasFactory<StaffTimeOffFactory> */
+    use BelongsToTenant, HasFactory;
+
+    protected static string $factory = StaffTimeOffFactory::class;
 
     protected $table = 'staff_time_off';
 

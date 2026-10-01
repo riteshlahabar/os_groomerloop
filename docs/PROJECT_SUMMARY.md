@@ -1,7 +1,7 @@
 # GroomerLoop OS — project summary
 
-**Last updated:** 2026-10-01 · **Phase:** 6 of 12, in progress (Catalog done, Team Task 1/10) ·
-**Spec:** v1.0 (40 sections)
+**Last updated:** 2026-10-01 · **Phase:** 6 of 12, complete (Catalog + Team) · **Spec:** v1.0
+(40 sections)
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
@@ -9,19 +9,14 @@ Living snapshot of where the project actually stands. Rewritten in place — for
 > Corrected on 2026-09-30: this file and `MODULE_STATUS.md` had been left at Phase 2 while
 > Phases 3, 4 and 5 shipped. Those sessions updated `CLAUDE.md` but not `docs/`. If they
 > disagree again, the repo is the truth.
->
-> Corrected again on 2026-10-01: Team's Task 1/10 and today's frontview homepage were both
-> missing here. The Team entry is transcribed from `CLAUDE.md`'s account of that session, not
-> independently re-verified this session — see `MODULE_STATUS.md` row 9 for detail.
 
 ## Current state
 
-**Phases 0 through 5 are complete, and Phase 6 is in progress — Catalog is built, Team Task 1/10
-(migrations + models) is verified.** The
-application is a modular Laravel 13 JSON API under `/api/v1` with enforced tenant isolation,
-session-cookie authentication, the six roles of spec §5 behind one permission matrix, central plan
-entitlements, the full §24 billing lifecycle, the §7 resumable onboarding checklist, the §8 customer
-book, the §9 pet records and the §10 service menu.
+**Phases 0 through 6 are complete.** The application is a modular Laravel 13 JSON API under
+`/api/v1` with enforced tenant isolation, session-cookie authentication, the six roles of spec §5
+behind one permission matrix, central plan entitlements, the full §24 billing lifecycle, the §7
+resumable onboarding checklist, the §8 customer book, the §9 pet records, the §10 service menu
+and the §23 team roster.
 
 A business can register, log in, invite staff and change their roles; be entitled or refused by
 plan; subscribe, be charged, fall into dunning and recover; work through a resumable setup
@@ -31,11 +26,13 @@ records against those customers, with the handling and safety notes a groomer ne
 notes behind their own permission, and pets that follow the surviving customer when two duplicate
 records are merged. It can also define what it sells — priced, timed, buffered, categorised, with
 add-ons and per-service availability rules, and with online visibility separate from whether the
-service is still active. Every one of those actions is audited and tenant-scoped.
+service is still active. And it can staff itself: groomers with or without a login, their working
+hours and time off, which services each is eligible to perform, and deactivation that keeps every
+past appointment's history intact. Every one of those actions is audited and tenant-scoped.
 
-**The core domain of spec §1 now exists up to Services.** Business → Users → Customers → Pets →
-Services is built; Appointments → Bookings → Communications is next, and Phase 7 holds most of the
-real MVP complexity.
+**The core domain of spec §1 now exists up to Team/Staff.** Business → Users → Customers → Pets →
+Services → Staff is built; Appointments → Bookings → Communications is next (Phase 7), and holds
+most of the real MVP complexity.
 
 **There is no authenticated-app frontend yet.** The React SPA from `D-006` is still waiting on
 design files for the owner/staff dashboard. Blade is used for mail templates and, as of
@@ -43,8 +40,7 @@ design files for the owner/staff dashboard. Blade is used for mail templates and
 HTML/CSS template verbatim (`docs/summaries/2026-10-01-frontview-homepage.md`), outside the
 module system — see `MODULE_STATUS.md`. Only that one page is ported so far.
 
-Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-017`, `D-019`; `D-018` is
-reserved for Team, write-up pending):
+Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 
 - **React SPA + Laravel JSON API** at `/api/v1` (`D-006`).
 - **Modular monolith** (`D-007`): one self-contained folder per functionality under `modules/`,
@@ -71,34 +67,25 @@ reserved for Team, write-up pending):
 | `Crm` | Tested | `customers` + `customer_tags` (+ pivot), 12 endpoints, dedupe + merge, import/export, consent |
 | `Pets` | Tested | `pets`, 7 endpoints, §9 note-visibility split, deceased ≠ archived, merge participant, §7 verifier |
 | `Catalog` | Tested | `services` + categories + add-on pivot + availability windows, 9 endpoints, cents-only money, §7 verifier |
+| `Team` | Tested | `staff_members` (no login required, `D-018`) + working hours + time off + `D-017` eligibility pivot, 9 endpoints, `staff.view`/`staff.manage` (`D-020`), §7 verifier (skippable) |
 | Tenant-isolation guard | Tested | `ModelTenancyGuardTest` — fails the build if a model with a `tenant_id` column omits the trait |
 | Module-boundary guard | Tested | `ModuleBoundaryGuardTest` — CI guard 3, added Phase 5; broken deliberately and confirmed to fail |
 | Plan-literal guard | Tested | `PlanLiteralGuardTest` — CI guard 4 (invariant #3) |
-| Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-017` |
+| Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-020` |
 
-**Verification run on 2026-09-30:** `php artisan test` → **489 passed, 1721 assertions, 0 failed**.
-`./vendor/bin/pint --test` → passed. `php artisan migrate:status` → every module migration `Ran`.
-Both scanning guards have been deliberately broken and confirmed to fail, so neither passes
-vacuously.
+**Verification run on 2026-10-01:** `php artisan test` → **554 passed, 1909 assertions, 0 failed**
+(from 489 / 1721 on 2026-09-30). `./vendor/bin/pint --test` → passed. `ModelTenancyGuardTest`,
+`ModuleBoundaryGuardTest`, `ModuleRegistrationGuardTest` → green. One run that session hit the
+pre-existing `PetIsolationTest` flake (see "Known gaps" below); a clean re-run passed 554/554.
 
 ### What the CRM enforces, beyond CRUD
 
 Worth knowing before extending it, because each of these is a test someone will otherwise break:
 
-- **Archiving, never deleting** (invariant #4). `DELETE /customers/{id}` sets status to archived; a
-  merged duplicate is soft-deleted, never destroyed.
-- **Consent is one code path.** The consent columns are not fillable, so `RecordConsent` is the
-  only way they change and every change is audited. A global opt-out overrides every per-channel
-  flag, in the model, in the API response and in the CSV export (invariant #9). An import cannot
-  opt a book into SMS.
-- **Merging fills blanks only**, concatenates notes, takes the most restrictive consent of the two
-  records, unions tags, and lets other modules move their own rows through
-  `CustomerMergeParticipant` — so Crm never touches another module's tables.
-- **Duplicate detection suggests, never acts**, and a shared name alone is never a match.
-- **Server-side pagination on every list** (§33), with a whitelisted sort column and a stable
-  tiebreak so paging cannot hide a customer.
-- **Import and export have their own permissions**, held by Owner and Manager only. The front desk
-  edits customers all day without being able to download the whole book.
+- **Archiving, never deleting** (invariant #4), consent as one audited code path with a global
+  opt-out that overrides every channel, merge-fills-blanks-only through `CustomerMergeParticipant`
+  so Crm never touches another module's tables, suggest-never-act duplicate detection, and
+  import/export held by Owner and Manager only. Full detail: `docs/summaries/2026-09-30-phase-5-crm.md`.
 
 ### What the Pets module enforces
 
@@ -139,34 +126,43 @@ Worth knowing before extending it, because each of these is a test someone will 
 - **No `entitlement:` on these routes**, and a test asserts it: §25 does not gate the catalogue, and
   a business that cannot define what it sells cannot use the product at all.
 
-## In progress
+### What the Team module enforces
 
-**Phase 6 is in progress.** Catalog is closed; `modules/Team` (§23) has its migrations and models
-verified (Task 1 of a 10-task plan — `CLAUDE.md`'s 2026-10-01 session notes), but no controllers,
-no routes, and no tests of its own yet (Task 9 is where tests land).
+- **A staff member stands on its own** (`D-018`): `staff_members.user_id` is nullable and not
+  mass-assignable. A solo or home-based groomer (§3's most common segment) never needs a login;
+  linking one is its own audited act, not a field on an edit form.
+- **`status` cannot be changed through a plain edit.** `UpdateStaffMemberRequest` does not accept
+  it at all — the bug flagged in an earlier session is closed. Status only changes through
+  `DELETE /staff/{id}` (deactivates) and `POST /staff/{id}/reactivate`, each with its own audit
+  event and a `still_has_login` note on deactivation.
+- **`staff.view`/`staff.manage` are their own permissions** (`D-020`), not Identity's
+  `team.view`/`team.manage` (which stay Owner-only, gating user invitations and role changes).
+  Owner and Manager can both run the team day to day; Groomer and Front Desk can read it;
+  Marketing cannot see it at all.
+- **Eligibility defaults to "can do everything," availability defaults to "never available."**
+  No rows in the `D-017` eligibility pivot means no restriction; no working-hours rows means the
+  person is on the rota for zero hours. Deliberately opposite defaults — one is permissive by
+  default so a solo groomer never has to tick every service, the other refuses to guess a shift
+  that was never entered.
+- **Two staff members in one salon are the same tenant**, so cancelling one groomer's time off
+  through another groomer's URL is checked explicitly (`staff_member_id` match, 404 if not) — the
+  tenant scope alone does not catch a mismatched pair, the same gap Pets' `PetDirectory::belongsTo()`
+  exists to close.
+- **The `staff` onboarding step is verified but skippable** — unlike Services, which is required.
+  §3 lists solo/home-based groomers first; forcing a second person onto the checklist would lock
+  out the segment the product is most obviously for.
 
 ## Next up
 
-**Phase 6b — `modules/Team` (spec §23), continuing from Task 1/10.**
+**Phase 7 — `modules/Scheduling` (spec §11), the critical path.** Server-side conflict
+prevention for appointments, consuming `Catalog\Contracts\ServiceCatalog` and
+`Team\Contracts\StaffDirectory::isAvailableAt()`/`canPerform()` — both built and proven by
+contract tests, with no caller yet outside their own module's tests.
 
-1. Staff records, working hours, availability, time off, deactivation — models and migrations
-   done; controllers and routes next. Registers the `staff` onboarding verifier.
-2. The **`D-017` service↔staff eligibility link** (§10's "eligible groomers/staff"), owned here
-   because Catalog shipped first and cannot validate a staff id. Validates service ids through
-   `Catalog\Contracts\ServiceCatalog`.
-3. §9's **"service preferences"** on a pet, deferred twice now — the useful version is a service
-   *and* a preferred groomer, so it waits for the module that has both.
-4. **Known issue to fix in the controllers:** `UpdateStaffMemberRequest` currently accepts
-   `status` in its mass-update rules, so a plain `PATCH` could flip Active ⇄ Inactive without
-   going through `DeactivateStaffMember`/`reactivate()` — skipping the audit events every other
-   lifecycle entity in this codebase (Pet, Subscription) keeps behind a dedicated action.
-5. **Gate:** isolation through route model binding, server-side pagination on every index, a
-   `permission:` on every route, the onboarding verifier registered and tested, and an eligibility
-   check exposed through a contract for Scheduling to consult.
-
-Then Phase 7 (Scheduling, the critical path) → Phase 8 (Booking) → Phase 9 (Notifications) →
-Phase 10 (Insights) → Phase 11 (Website) → Phase 12 (Hardening). A §28 secure-uploads phase still
-has to be placed before Phase 11 — see the gaps below.
+Then Phase 8 (Booking) → Phase 9 (Notifications) → Phase 10 (Insights) → Phase 11 (Website) →
+Phase 12 (Hardening). A §28 secure-uploads phase still has to be placed before Phase 11 — see the
+gaps below. §9's pet "service preferences" also remains deferred, waiting on a module with both a
+service and a preferred-groomer half.
 
 ## Known gaps and risks
 
@@ -197,6 +193,11 @@ has to be placed before Phase 11 — see the gaps below.
 - **Shared-schema isolation depends on discipline**, mitigated by the two scanning guards and the
   standing rule that every new tenant-owned endpoint is isolation-tested through route model
   binding (`D-014`).
+- **A known, pre-existing flaky test**: `PetIsolationTest::test_another_businesss_pet_cannot_be_updated`
+  fails intermittently in a full-suite run (`PetFactory` has a 1-in-5 chance of randomly drawing
+  the breed `'Collie'`, which collides with the test's own hardcoded blocked-mutation string).
+  Confirmed again 2026-10-01, unrelated to that session's changes. Left for the owner to decide
+  whether to fix (e.g. assert against the pre-mutation value instead of a hardcoded string).
 
 ## Environment notes
 

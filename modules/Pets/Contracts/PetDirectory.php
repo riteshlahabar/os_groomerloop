@@ -33,6 +33,18 @@ interface PetDirectory
     public function nameOf(int $petId): ?string;
 
     /**
+     * Names for many pets at once, keyed by pet id, with null for any the current tenant cannot
+     * see — the same batch shape `CustomerDirectory::namesOf()`/`StaffDirectory::namesOf()`
+     * already use. Exists for the same reason theirs do: a calendar page renders many
+     * appointments, each naming a pet, and resolving that one row at a time is an N+1
+     * `shouldBeStrict()` cannot see because it is not an Eloquent relationship.
+     *
+     * @param  list<int>  $petIds
+     * @return array<int, string|null>
+     */
+    public function namesOf(array $petIds): array;
+
+    /**
      * May the business be prompted to contact anyone about this pet?
      *
      * False for an archived pet and — the case this exists for — a deceased one. §22 sends

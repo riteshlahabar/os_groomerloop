@@ -533,3 +533,66 @@ rejected — `/frontview` is the name the owner used for this concept and the cl
 **Consequences:** Every future page ported from the same template (or any new top-level route)
 needs its static assets under `public/<name>-assets/`, not `public/<name>/assets/`, to avoid the
 same collision.
+
+## D-018 — A staff member is its own tenant resource, not a flag on `users`
+
+**Date:** 2026-10-01 (implemented 2026-09-30/10-01, write-up deferred to the end of Team's
+10-task build; this is that write-up) · **Status:** Accepted
+
+**Context:** Spec §23 needs a bookable groomer that is sometimes, but not always, also a person
+who can log in. A solo or home-based groomer (§3's most common segment) may have no account at
+all; a Saturday junior the owner rotas does not need a login; a bookkeeper who does have a login
+is not a groomer. Modelling staff as a boolean flag or a role value on `users` would force every
+one of those cases to have a `User` row, and would conflate "can log in and do X" (Identity's
+question) with "can be put on a calendar and groom a dog" (Team's question) — two different
+resources that happen to coincide for some people.
+
+**Decision:** `staff_members` is its own table with a nullable, unique `user_id` foreign key to
+`users` (`nullOnDelete`). A staff record stands on its own by default — `StaffMemberFactory`
+does not set `user_id` unless a test explicitly asks for `linkedToUser()` — and `user_id` is
+deliberately **not** mass-assignable: linking or unlinking an account is its own audited act
+(`CreateStaffMember`'s `$userId` parameter, set outside `fill()`), never a field on an edit form,
+because it grants that person a groomer's calendar and a public §12 profile.
+
+**Alternatives considered:**
+- A `role`/`is_staff` flag on `users` — rejected: forces every groomer to have a login, which
+  directly contradicts §3's solo/home-based segment and would make onboarding's `staff` step
+  impossible to satisfy without also running Identity's invitation flow.
+- A single `staff_or_user` polymorphic concept — rejected as needless complexity for a relationship
+  that is just "zero or one," expressed perfectly well by a nullable, unique foreign key.
+
+**Consequences:** Deactivating a staff member (`DeactivateStaffMember`) never touches their login;
+revoking a login is a separate, separately audited act Identity owns. A business can staff its
+whole team before anyone has an account, and §12's public booking page can list a groomer who has
+never logged into anything.
+
+## D-020 — Team gets its own `staff.view`/`staff.manage` permissions, not Identity's `team.*`
+
+**Date:** 2026-10-01 · **Status:** Accepted
+
+**Context:** Building Team's HTTP surface needed a permission to gate it. The only existing
+candidates were Identity's `team.view`/`team.manage`, already in use to gate `POST /invitations`
+and `PUT /team/{user}/role` — user accounts and system roles, a more sensitive capability than
+adding a groomer to the rota. `team.manage` is Owner-only in the existing, tested role matrix.
+
+**Decision:** Added `Permission::ViewStaff` (`staff.view`) and `Permission::ManageStaff`
+(`staff.manage`) to `modules/Identity/Domain/Permission.php`, matching the shape every other
+module already has (`services.*`, `pets.*`, `customers.*`) rather than reusing a permission whose
+established meaning is "manage accounts and roles." Owner and Manager hold `staff.manage`;
+Groomer and Front Desk hold `staff.view` only; Marketing holds neither. `team.view`/`team.manage`
+are untouched and keep gating only Identity's invitation/role-change endpoints.
+
+**Alternatives considered:**
+- Reuse `team.manage` as-is (Owner-only) for Team's own routes — rejected: a Manager could not add
+  or edit a groomer at all, which does not match a Manager's spec §5 operational scope and would
+  make the role mostly decorative for day-to-day team running.
+- Reuse `team.manage`/`team.view` but add Manager to `ManageTeam` — rejected: `ManageTeam` also
+  gates Identity's invitation and role-change endpoints, so this would additionally let a Manager
+  invite users and change their system roles, a materially more sensitive capability than editing
+  a staff record.
+
+**Consequences:** `RolePermissionMatrixTest`'s exhaustive per-role expectations needed updating
+for the two new cases (Owner inherits them automatically via its existing "everything but
+platform administration" filter). Any future module should default to its own dedicated
+permission namespace rather than borrowing one, unless the capabilities genuinely are the same
+decision wearing two names.

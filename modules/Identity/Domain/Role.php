@@ -62,6 +62,7 @@ enum Role: string
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,
                 Permission::ViewTeam,
+                Permission::ViewStaff, Permission::ManageStaff,
                 Permission::ViewReports,
             ],
 
@@ -73,6 +74,7 @@ enum Role: string
                 // most needs and is best placed to add to (spec §9, §5).
                 Permission::ViewPets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
+                Permission::ViewStaff,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments,
                 Permission::UpdateAppointmentStatus,
@@ -82,6 +84,7 @@ enum Role: string
                 Permission::ViewCustomers, Permission::ManageCustomers,
                 Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
+                Permission::ViewStaff,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,

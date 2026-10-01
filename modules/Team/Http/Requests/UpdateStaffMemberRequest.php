@@ -3,8 +3,6 @@
 namespace Modules\Team\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Modules\Team\Domain\StaffStatus;
 
 final class UpdateStaffMemberRequest extends FormRequest
 {
@@ -13,6 +11,11 @@ final class UpdateStaffMemberRequest extends FormRequest
      *
      * `user_id` is absent: linking or unlinking an account changes who can see a groomer's calendar, so
      * it is its own endpoint with its own audit event rather than a field on an edit form.
+     *
+     * `status` is absent too, the same way Catalog's `UpdateServiceRequest` omits `is_add_on`: status
+     * transitions go through `DeactivateStaffMember::execute()`/`reactivate()` only, so the dedicated
+     * `staff.deactivated`/`staff.reactivated` audit events and the `still_has_login` note are never
+     * bypassed by a plain edit.
      *
      * @return array<string, mixed>
      */
@@ -26,7 +29,6 @@ final class UpdateStaffMemberRequest extends FormRequest
             'email' => ['sometimes', 'nullable', 'string', 'email', 'max:255'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
 
-            'status' => ['sometimes', Rule::enum(StaffStatus::class)],
             'is_bookable_online' => ['sometimes', 'boolean'],
             'position' => ['sometimes', 'integer', 'min:0', 'max:9999'],
 

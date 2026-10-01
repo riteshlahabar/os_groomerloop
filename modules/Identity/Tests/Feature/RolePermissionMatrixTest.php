@@ -47,6 +47,7 @@ final class RolePermissionMatrixTest extends TestCase
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,
                 Permission::ViewTeam,
+                Permission::ViewStaff, Permission::ManageStaff,
                 Permission::ViewReports,
             ]],
 
@@ -56,6 +57,7 @@ final class RolePermissionMatrixTest extends TestCase
                 // Read-only on the pet record, but trusted with its handling history (§9).
                 Permission::ViewPets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
+                Permission::ViewStaff,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments,
                 Permission::UpdateAppointmentStatus,
@@ -65,6 +67,7 @@ final class RolePermissionMatrixTest extends TestCase
                 Permission::ViewCustomers, Permission::ManageCustomers,
                 Permission::ViewPets, Permission::ManagePets, Permission::AccessInternalPetNotes,
                 Permission::ViewServices,
+                Permission::ViewStaff,
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,

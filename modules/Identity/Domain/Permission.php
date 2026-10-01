@@ -68,6 +68,15 @@ enum Permission: string
     case ViewTeam = 'team.view';
     case ManageTeam = 'team.manage';
 
+    /**
+     * Staff *records* (spec §23: groomers, their hours, their time off) — distinct from
+     * ViewTeam/ManageTeam, which gate Identity's user-invitation and role-change endpoints. A
+     * manager running the rota day to day is a different, lower-stakes capability than granting
+     * someone a login and a system role.
+     */
+    case ViewStaff = 'staff.view';
+    case ManageStaff = 'staff.manage';
+
     case ViewBilling = 'billing.view';
     case ManageBilling = 'billing.manage';
 

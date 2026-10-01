@@ -75,156 +75,10 @@
                                     </div>
                                 </div>
                                 <ul class="main-nav">
-                                    <li class="has-submenu megamenu active">
-                                        <a href="#">Home <i class="ti ti-chevron-down"></i></a>
-                                        <ul class="submenu mega-submenu home-mega-menu">
-                                            <li>
-                                                <div class="megamenu-wrapper">
-                                                    <div class="row">
-                                                        <div class="col-lg-4">
-                                                            <div class="single-demo active">
-                                                                <div class="demo-img">
-                                                                    <a href="{{ url('/') }}" class="inner-demo-img"><img
-                                                                            src="{{ asset('frontview-assets/img/home/home-01.jpg') }}"
-                                                                            class="img-fluid" alt="home-1"></a>
-                                                                </div>
-                                                                <div class="demo-info">
-                                                                    <a href="{{ url('/') }}" class="inner-demo-img">Luxury
-                                                                        Salon</a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-lg-4">
-                                                            <div class="single-demo">
-                                                                <div class="demo-img">
-                                                                    <a href="index-2.html" class="inner-demo-img"><img
-                                                                            src="{{ asset('frontview-assets/img/home/home-02.jpg') }}"
-                                                                            class="img-fluid" alt="home-2"></a>
-                                                                </div>
-                                                                <div class="demo-info">
-                                                                    <a href="index-2.html" class="inner-demo-img">Hair
-                                                                        Studio & Barber</a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-lg-4">
-                                                            <div class="single-demo">
-                                                                <div class="demo-img">
-                                                                    <a href="index-3.html" class="inner-demo-img"><img
-                                                                            src="{{ asset('frontview-assets/img/home/home-03.jpg') }}"
-                                                                            class="img-fluid" alt="home-3"></a>
-                                                                </div>
-                                                                <div class="demo-info">
-                                                                    <a href="index-3.html" class="inner-demo-img">Spa &
-                                                                        Wellness</a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li class="has-submenu mega-innermenu">
-                                        <a href="#">Services <i class="ti ti-chevron-down"></i></a>
-                                        <ul class="submenu mega-submenu">
-                                            <li>
-                                                <div class="megamenu-wrapper">
-                                                    <ul>
-                                                        <li><a href="services.html">Services Grid</a></li>
-                                                        <li><a href="services-list.html">Services List</a></li>
-                                                        <li><a href="service-categories.html">Service Categories</a>
-                                                        </li>
-                                                        <li><a href="package-grid.html">Package Grid</a></li>
-                                                        <li><a href="package-list.html">Package List</a></li>
-                                                        <li><a href="package-details.html">Package Details</a></li>
-                                                        <li><a href="blog-grid.html">Blog Grid</a></li>
-                                                        <li><a href="blog-list.html">Blog List</a></li>
-                                                        <li><a href="blog-details.html">Blog Details</a></li>
-                                                    </ul>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li class="has-submenu mega-innermenu">
-                                        <a href="#">Booking <i class="ti ti-chevron-down"></i></a>
-                                        <ul class="submenu mega-submenu">
-                                            <li>
-                                                <div class="megamenu-wrapper">
-                                                    <ul>
-                                                        <li><a href="booking-appointment.html">Book Appointment</a></li>
-                                                        <li><a href="booking-multi-step.html">Multi Step Booking</a>
-                                                        </li>
-                                                        <li><a href="booking-details.html">Booking Details</a></li>
-                                                    </ul>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li class="has-submenu mega-innermenu">
-                                        <a href="#">Shop <i class="ti ti-chevron-down"></i></a>
-                                        <ul class="submenu mega-submenu">
-                                            <li>
-                                                <div class="megamenu-wrapper">
-                                                    <ul>
-                                                        <li><a href="products-grid.html">Products Grid</a></li>
-                                                        <li><a href="products-details.html">Product Details</a></li>
-                                                        <li><a href="cart.html">Cart</a></li>
-                                                        <li><a href="checkout.html">Checkout</a></li>
-                                                        <li><a href="wishlist.html">Wishlist</a></li>
-                                                    </ul>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li class="has-submenu mega-innermenu">
-                                        <a href="#">Pages <i class="ti ti-chevron-down"></i></a>
-                                        <ul class="submenu mega-submenu mega-menu-pages">
-                                            <li>
-                                                <div class="megamenu-wrapper">
-                                                    <div class="row">
-                                                        <div class="col-lg-6">
-                                                            <ul>
-                                                                <li><a href="about-us.html">About Us</a>
-                                                                </li>
-                                                                <li><a href="meet-our-experts.html">Meet Our Experts</a>
-                                                                </li>
-                                                                <li><a href="expert-details.html">Expert Details</a>
-                                                                </li>
-                                                                <li><a href="testimonials.html">Testimonials</a></li>
-                                                                <li><a href="faq.html">FAQ</a></li>
-                                                                <li><a href="pricing.html">Pricing</a></li>
-                                                                <li><a href="gallery.html">Gallery</a></li>
-                                                                <li><a href="contact-us.html">Contact Us</a></li>
-                                                                <li><a href="branches.html">Branches</a></li>
-                                                                <li><a href="branch-details.html">Branch Details</a>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                        <div class="col-lg-6">
-                                                            <ul>
-                                                                <li><a href="login.html">Sign In</a></li>
-                                                                <li><a href="register.html">Sign Up</a></li>
-                                                                <li><a href="forgot-password.html">Forgot Password</a>
-                                                                </li>
-                                                                <li><a href="reset-password.html">Reset Password</a>
-                                                                </li>
-                                                                <li><a href="error-404.html">Error 404</a></li>
-                                                                <li><a href="error-500.html">Error 500</a></li>
-                                                                <li><a href="customer-dashboard.html">Customer
-                                                                        Dashboard</a></li>
-                                                                <li><a href="terms-conditions.html">Terms &
-                                                                        Conditions</a></li>
-                                                                <li><a href="privacy-policy.html">Privacy Policy</a>
-                                                                </li>
-                                                                <li><a href="membership.html">Membership</a></li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </li>
+                                    <li><a href="{{ url('/') }}">Home</a></li>
+                                    <li><a href="{{ url('/pricing') }}">Pricing</a></li>
+                                    <li><a href="{{ url('/about-us') }}">About Us</a></li>
+                                    <li><a href="{{ url('/contact-us') }}">Contact Us</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -241,9 +95,11 @@
                                 aria-label="Search">
                                 <i class="ti ti-search"></i>
                             </button>
-                            <a href="booking-appointment.html" class="primary-btn"><i
-                                    class="ti ti-calendar-event me-2"></i>Book
-                                Appointment</a>
+                            <a href="{{ url('/login') }}" class="secondary-btn"><i
+                                    class="ti ti-login me-2"></i>Sign In</a>
+                            <a href="{{ url('/register') }}" class="primary-btn"><i
+                                    class="ti ti-user-plus me-2"></i>Get
+                                Started</a>
                             <button class="topbar-icon custom-icon" data-bs-toggle="offcanvas"
                                 data-bs-target="#about-content" aria-label="About Us">
                                 <i class="ti ti-layout-grid"></i>
@@ -1158,8 +1014,8 @@
                                 </div>
                                 <p class="description">Our salon is dedicated to delivering exceptional grooming and
                                     styling services designed for modern men who value confidence and personal care.</p>
-                                <a href="booking-appointment.html" class="primary-btn"> <i
-                                        class="ti ti-calendar-event"></i>Book Appointment</a>
+                                <a href="{{ url('/register') }}" class="primary-btn"> <i
+                                        class="ti ti-user-plus"></i>Get Started</a>
                             </div>
                         </div>
 
@@ -1170,11 +1026,11 @@
                                         <h3 class="footer-title">Useful Links</h3>
                                         <ul class="footer-menu">
                                             <li><a href="#">Overview</a></li>
-                                            <li><a href="about-us.html">About Us</a></li>
-                                            <li><a href="pricing.html">Pricing</a></li>
+                                            <li><a href="{{ url('/about-us') }}">About Us</a></li>
+                                            <li><a href="{{ url('/pricing') }}">Pricing</a></li>
                                             <li><a href="#">Solutions</a></li>
                                             <li><a href="#">Features</a></li>
-                                            <li><a href="blog-grid.html">Blogs</a></li>
+                                            <li><a href="#">Blogs</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -1214,8 +1070,8 @@
                             AM - 9:30 PM
                         </h3>
                         <div class="privacy">
-                            <a href="privacy-policy.html">Privacy Policy</a> <i class="ti ti-circle-filled"></i><a
-                                href="terms-conditions.html">Terms & Conditions
+                            <a href="#">Privacy Policy</a> <i class="ti ti-circle-filled"></i><a
+                                href="#">Terms & Conditions
                             </a>
                         </div>
                     </div>

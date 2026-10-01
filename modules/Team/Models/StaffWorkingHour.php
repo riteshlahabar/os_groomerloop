@@ -3,8 +3,10 @@
 namespace Modules\Team\Models;
 
 use App\Domain\DayOfWeek;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Team\Database\Factories\StaffWorkingHourFactory;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
 /**
@@ -18,7 +20,10 @@ use Modules\Tenancy\Concerns\BelongsToTenant;
  */
 final class StaffWorkingHour extends Model
 {
-    use BelongsToTenant;
+    /** @use HasFactory<StaffWorkingHourFactory> */
+    use BelongsToTenant, HasFactory;
+
+    protected static string $factory = StaffWorkingHourFactory::class;
 
     protected $table = 'staff_working_hours';
 

@@ -32,6 +32,34 @@ final class EloquentPetDirectory implements PetDirectory
         return $this->find($petId)?->name;
     }
 
+    /**
+     * @param  list<int>  $petIds
+     * @return array<int, string|null>
+     */
+    public function namesOf(array $petIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $petIds)));
+        $unresolved = array_values(array_diff($ids, array_keys($this->resolved)));
+
+        if ($unresolved !== []) {
+            foreach (Pet::query()->whereKey($unresolved)->get() as $pet) {
+                $this->resolved[(int) $pet->getKey()] = $pet;
+            }
+
+            foreach ($unresolved as $id) {
+                $this->resolved[$id] ??= null;
+            }
+        }
+
+        $names = [];
+
+        foreach ($ids as $id) {
+            $names[$id] = $this->resolved[$id]?->name;
+        }
+
+        return $names;
+    }
+
     public function allowsOutreach(int $petId): bool
     {
         return $this->find($petId)?->allowsOutreach() ?? false;

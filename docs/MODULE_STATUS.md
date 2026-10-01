@@ -5,8 +5,8 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-10-01 (Team Task 1/10 — migrations + models verified; frontview homepage
-added outside the module system — see note below the table)
+**Last updated:** 2026-10-01 (Phase 6 complete — Team finished; frontview homepage added outside
+the module system — see note below the table)
 
 ## Foundations
 
@@ -30,7 +30,7 @@ added outside the module system — see note below the table)
 | 6 | Customer CRM | §8 | 5 | MVP | **Tested** | Search/filter/sort + pagination, dedupe + merge, import/export, tags, consent |
 | 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
 | 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
-| 9 | Team + staff availability | §23 | 6 | MVP | In progress | Task 1/10 (migrations + models) verified 2026-10-01; `TeamServiceProvider` registered. Controllers, the `D-017` service↔staff eligibility link, §9's pet service preferences and the `staff` onboarding verifier are still outstanding — see `CLAUDE.md` session notes for 2026-10-01 |
+| 9 | Team + staff availability | §23 | 6 | MVP | **Tested** | Staff records (no login required, `D-018`), working hours, time off, deactivate/reactivate, `staff.view`/`staff.manage` permissions (`D-020`), `D-017` eligibility exposed via `StaffDirectory`, `staff` onboarding verifier (verified + skippable). 9 endpoints, 65 tests |
 | 10 | Calendar + appointment engine | §11 | 7 | MVP | Not started | **Critical path.** Server-side conflict prevention |
 | 11 | Public online booking | §12 | 8 | MVP | Not started | Needs the 20-concurrent-request test on MySQL |
 | 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved |

@@ -1,0 +1,90 @@
+<?php
+
+namespace Modules\Scheduling\Services;
+
+use DateTimeInterface;
+use Illuminate\Support\Carbon;
+use Modules\Scheduling\Actions\BookAppointment;
+use Modules\Scheduling\Actions\RescheduleAppointment;
+use Modules\Scheduling\Actions\UpdateAppointmentStatus;
+use Modules\Scheduling\Contracts\AppointmentScheduler;
+use Modules\Scheduling\Domain\AppointmentStatus;
+use Modules\Scheduling\Domain\AppointmentSummary;
+use Modules\Scheduling\Models\Appointment;
+
+final class EloquentAppointmentScheduler implements AppointmentScheduler
+{
+    public function __construct(
+        private readonly AvailabilityEngine $availability,
+        private readonly BookAppointment $booker,
+        private readonly RescheduleAppointment $rescheduler,
+        private readonly UpdateAppointmentStatus $statusUpdater,
+    ) {}
+
+    public function exists(int $appointmentId): bool
+    {
+        return Appointment::query()->whereKey($appointmentId)->exists();
+    }
+
+    public function find(int $appointmentId): ?AppointmentSummary
+    {
+        $appointment = Appointment::query()->find($appointmentId);
+
+        return $appointment === null ? null : $this->summarise($appointment);
+    }
+
+    public function appointmentsFor(int $staffMemberId, DateTimeInterface $from, DateTimeInterface $to): array
+    {
+        return Appointment::query()
+            ->forStaff($staffMemberId)
+            ->overlapping($from, $to)
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn (Appointment $a): AppointmentSummary => $this->summarise($a))
+            ->all();
+    }
+
+    public function isSlotAvailable(int $serviceId, ?int $staffMemberId, DateTimeInterface $start): bool
+    {
+        return $this->availability->isAvailable($serviceId, $staffMemberId, $start);
+    }
+
+    public function book(array $attributes): AppointmentSummary
+    {
+        return $this->summarise($this->booker->execute($attributes));
+    }
+
+    public function reschedule(int $appointmentId, DateTimeInterface $start): AppointmentSummary
+    {
+        $appointment = Appointment::query()->findOrFail($appointmentId);
+
+        return $this->summarise($this->rescheduler->execute($appointment, Carbon::parse($start)));
+    }
+
+    public function cancel(int $appointmentId): AppointmentSummary
+    {
+        return $this->updateStatus($appointmentId, AppointmentStatus::Cancelled);
+    }
+
+    public function updateStatus(int $appointmentId, AppointmentStatus $status, ?string $note = null): AppointmentSummary
+    {
+        $appointment = Appointment::query()->findOrFail($appointmentId);
+
+        return $this->summarise($this->statusUpdater->execute($appointment, $status, $note));
+    }
+
+    private function summarise(Appointment $appointment): AppointmentSummary
+    {
+        return new AppointmentSummary(
+            id: (int) $appointment->getKey(),
+            customerId: (int) $appointment->customer_id,
+            petId: (int) $appointment->pet_id,
+            serviceId: (int) $appointment->service_id,
+            staffMemberId: $appointment->staff_member_id === null ? null : (int) $appointment->staff_member_id,
+            startsAt: $appointment->starts_at->toDateTimeImmutable(),
+            endsAt: $appointment->ends_at->toDateTimeImmutable(),
+            status: $appointment->status,
+            customerNotes: $appointment->customer_notes,
+        );
+    }
+}
