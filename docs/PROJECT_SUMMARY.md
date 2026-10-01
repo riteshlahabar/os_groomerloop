@@ -21,7 +21,7 @@ credentials stored in a table and edited from an admin panel rather than `.env`.
 end-to-end via `tinker` across fresh process boundaries. `MAIL_MAILER` still defaults to `log`
 until a real `PlatformAdmin` user (none exists yet) enables real settings.
 
-**Same day, final session:** built the authenticated admin panel (`GET /admin` + 15 nav
+**Same day, final session (part 1):** built the authenticated admin panel (`GET /admin` + 15 nav
 placeholders), Blade-rendered from the owner's Cuba template — see "Admin panel" in
 `MODULE_STATUS.md`. Verified fully live end-to-end in a real browser (login → real stat cards →
 live count change after creating real data → logout → redirect enforcement). That verification
@@ -31,6 +31,13 @@ was silently 401-ing every Sanctum-authenticated `fetch()` any Blade page makes 
 existing automated suite is structurally blind to a regression of it (see `D-027`). Also fixed a
 real crash in last session's `SuperAdminServiceProvider` (cached a raw Eloquent model; now
 caches a plain array).
+
+**Same day, final session (part 2):** made 4 more nav items real — Customers, Pets, Services,
+Team — each full create/list/search/filter/edit/archive against the live API, verified the same
+way (real browser, real test data, cleaned up after). Found and fixed a third real bug:
+Catalog's `buffer_minutes` column is NOT NULL with a DB default, but its own validation rule
+says `nullable` — an explicit `null` (which the rule promises is fine) hit a raw SQL error.
+Fixed in `CreateService`/`UpdateService`. 5 of 16 nav items are now real; 11 remain placeholders.
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.

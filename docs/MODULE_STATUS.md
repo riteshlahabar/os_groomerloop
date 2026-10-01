@@ -69,19 +69,23 @@ data binding yet.
 
 ## Admin panel — authenticated app (outside the phase table, outside the module system)
 
-Also not a backend module. `GET /admin` + 15 placeholder routes under `auth` middleware
-(`docs/summaries/2026-10-01-admin-panel.md`), Blade-rendered from the owner's Cuba template
-(`tailwind/html-tailwind` variant — a different, later hand-off than the `react_context`
-variant also in that bundle). Same relationship to `D-006` as Frontview above: a separate
-hand-off that does not unblock the eventual React SPA for the owner/staff app. Only `GET
-/admin` (Dashboard) is real — live stat cards and a live "today's schedule" list, read via
-client-side `fetch()` against the already-built `/api/v1/customers`, `/staff`, `/services` and
-`/appointments` endpoints (never a server-side query reaching into another module's model,
-which would break `D-007`). The other 15 nav items (§6) are consistent "not built yet"
-placeholders sharing the same real shell and real sidebar. **Building this surfaced `D-027`**:
-`Referrer-Policy: no-referrer` (set globally since Phase 0) was silently turning every
-Sanctum-authenticated `fetch()` any Blade page makes into a 401 — fixed to `same-origin`,
-affects every future Blade page and the eventual React SPA alike, not just this one.
+Also not a backend module. `GET /admin` + routes under `auth` middleware
+(`docs/summaries/2026-10-01-admin-panel.md`, `2026-10-01-admin-crud-pages.md`), Blade-rendered
+from the owner's Cuba template (`tailwind/html-tailwind` variant — a different, later hand-off
+than the `react_context` variant also in that bundle). Same relationship to `D-006` as Frontview
+above: a separate hand-off that does not unblock the eventual React SPA for the owner/staff app.
+**5 of 16 §6 nav items are real** (Dashboard, Customers, Pets, Services, Team) — each reads and
+writes live via client-side `fetch()` against the already-built `/api/v1` endpoints, never a
+server-side query reaching into another module's model (`D-007`); the remaining 11 are
+consistent "not built yet" placeholders sharing the same real shell and sidebar. **Building
+Dashboard surfaced `D-027`**: `Referrer-Policy: no-referrer` (set globally since Phase 0) was
+silently turning every Sanctum-authenticated `fetch()` any Blade page makes into a 401 — fixed
+to `same-origin`, affects every future Blade page and the eventual React SPA alike. **Building
+Services surfaced a second, unrelated bug**: Catalog's `buffer_minutes` column is NOT NULL with
+a DB default, but `StoreServiceRequest`/`UpdateServiceRequest` validate it as `nullable` — an
+explicit `null` (any well-behaved client taking the rule at its word) hit a raw SQL constraint
+violation. Fixed in `CreateService`/`UpdateService` to coalesce `null` to `0` before Eloquent
+ever sees it.
 
 ## Phase 7 correction and completion, 2026-10-01
 

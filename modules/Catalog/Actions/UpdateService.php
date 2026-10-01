@@ -26,6 +26,14 @@ final class UpdateService
      */
     public function execute(Service $service, array $attributes, ?array $addOnIds = null): Service
     {
+        // Same reasoning as CreateService: `buffer_minutes` is nullable in the request but NOT
+        // NULL in the schema (default 0). An absent key correctly leaves the stored value alone
+        // (`sometimes`); an explicit `null` means "clear the buffer", which must become 0, not a
+        // raw SQL constraint violation.
+        if (array_key_exists('buffer_minutes', $attributes) && $attributes['buffer_minutes'] === null) {
+            $attributes['buffer_minutes'] = 0;
+        }
+
         return DB::transaction(function () use ($service, $attributes, $addOnIds): Service {
             $priceBefore = (int) $service->price_cents;
 

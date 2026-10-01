@@ -22,6 +22,13 @@ final class CreateService
      */
     public function execute(array $attributes, ?array $addOnIds = null): Service
     {
+        // `buffer_minutes` is validated `nullable` (no buffer is a real, common answer), but the
+        // column is NOT NULL with a DB-level default of 0 — a default only applies when a column
+        // is omitted from the INSERT, not when it is explicitly set to NULL. A caller that sends
+        // the key at all with `null` (any well-behaved client taking the nullable rule at its
+        // word) hit a raw SQL "column cannot be null" otherwise.
+        $attributes['buffer_minutes'] ??= 0;
+
         return DB::transaction(function () use ($attributes, $addOnIds): Service {
             $service = Service::create($attributes);
 

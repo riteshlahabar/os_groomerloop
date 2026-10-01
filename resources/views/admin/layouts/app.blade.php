@@ -211,9 +211,73 @@
           return { ok: res.ok, status: res.status, body: json };
         }
 
+        function escapeHtml(value) {
+          var div = document.createElement('div');
+          div.textContent = value === null || value === undefined ? '' : String(value);
+          return div.innerHTML;
+        }
+
+        function debounce(fn, waitMs) {
+          var timer = null;
+          return function () {
+            var args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function () { fn.apply(null, args); }, waitMs);
+          };
+        }
+
+        function openModal(id) {
+          var modal = document.getElementById(id);
+          modal.style.display = 'block';
+          modal.classList.add('show');
+          document.body.classList.add('modal-open');
+        }
+
+        function closeModal(id) {
+          var modal = document.getElementById(id);
+          modal.style.display = 'none';
+          modal.classList.remove('show');
+          document.body.classList.remove('modal-open');
+        }
+
+        // Renders "showing X–Y of Z" plus Prev/Next buttons from a standard Laravel
+        // paginator's `meta` block, and wires them to call `onPage(pageNumber)`.
+        function renderPagination(containerId, meta, onPage) {
+          var el = document.getElementById(containerId);
+          if (!el || !meta) {
+            return;
+          }
+
+          var from = meta.total === 0 ? 0 : (meta.from || 0);
+          var to = meta.total === 0 ? 0 : (meta.to || 0);
+
+          el.innerHTML =
+            '<span class="f-light">Showing ' + from + '–' + to + ' of ' + meta.total + '</span>' +
+            '<span>' +
+            '<button type="button" class="btn btn-light btn-sm" id="' + containerId + 'Prev" ' + (meta.current_page <= 1 ? 'disabled' : '') + '>Prev</button> ' +
+            '<button type="button" class="btn btn-light btn-sm" id="' + containerId + 'Next" ' + (meta.current_page >= meta.last_page ? 'disabled' : '') + '>Next</button>' +
+            '</span>';
+
+          var prevBtn = document.getElementById(containerId + 'Prev');
+          var nextBtn = document.getElementById(containerId + 'Next');
+          if (prevBtn) {
+            prevBtn.addEventListener('click', function () { onPage(meta.current_page - 1); });
+          }
+          if (nextBtn) {
+            nextBtn.addEventListener('click', function () { onPage(meta.current_page + 1); });
+          }
+        }
+
         return {
           get: function (url) { return apiRequest('GET', url); },
           post: function (url, body) { return apiRequest('POST', url, body); },
+          put: function (url, body) { return apiRequest('PUT', url, body); },
+          del: function (url) { return apiRequest('DELETE', url); },
+          escapeHtml: escapeHtml,
+          debounce: debounce,
+          openModal: openModal,
+          closeModal: closeModal,
+          renderPagination: renderPagination,
         };
       })();
 
@@ -221,6 +285,19 @@
         e.preventDefault();
         await window.GroomerLoopAdmin.post('/api/v1/logout');
         window.location.href = '/login';
+      });
+
+      // Any element with data-dismiss="modal" closes its nearest .modal ancestor — covers
+      // every modal's own × button and Cancel button with one listener instead of per-page
+      // wiring.
+      document.addEventListener('click', function (e) {
+        var dismiss = e.target.closest('[data-dismiss="modal"]');
+        if (dismiss) {
+          var modal = dismiss.closest('.modal');
+          if (modal) {
+            window.GroomerLoopAdmin.closeModal(modal.id);
+          }
+        }
       });
     </script>
     @stack('scripts')

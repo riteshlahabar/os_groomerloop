@@ -53,12 +53,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         return view('admin.dashboard');
     })->name('dashboard');
 
+    // Real pages — each reads/writes the already-tested /api/v1 endpoints client-side, same
+    // as Dashboard. No server-side query here (D-007).
+    Route::get('customers', fn () => view('admin.customers'))->name('customers');
+    Route::get('pets', fn () => view('admin.pets'))->name('pets');
+    Route::get('services', fn () => view('admin.services'))->name('services');
+    Route::get('team', fn () => view('admin.team'))->name('team');
+
     $comingSoon = [
         'calendar' => ['Calendar', 'calendar'],
         'appointments' => ['Appointments', 'task'],
-        'customers' => ['Customers', 'contact'],
-        'pets' => ['Pets', 'file'],
-        'services' => ['Services', 'package'],
         'booking' => ['Online Booking', 'bookmark'],
         'website' => ['Website', 'landing-page'],
         'messages' => ['Messages', 'chat'],
@@ -66,7 +70,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         'growth' => ['Growth', 'activity'],
         'reports' => ['Reports & Insights', 'report'],
         'automation' => ['AI & Automation', 'api'],
-        'team' => ['Team', 'user'],
         'settings' => ['Settings', 'form'],
         'billing' => ['Billing & Plan', 'subscribe'],
     ];
