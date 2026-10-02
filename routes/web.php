@@ -44,9 +44,20 @@ Route::get('/contact-us', function () {
 | break the D-007 module-boundary rule, and client-side fetch is also how a future React SPA
 | will talk to this exact same API.
 |
-| `auth` (the session/web guard) is sufficient to gate these — Sanctum's SPA cookie auth signs
+| `auth` (the session/web guard) establishes who the viewer is — Sanctum's SPA cookie auth signs
 | a user into the same session the web guard reads, so no `tenant` middleware is needed on the
 | page itself; each API call made from the page re-establishes tenant scope on its own.
+|
+| Each page additionally carries the `permission:` gate its own content requires, mirroring the
+| §5 matrix the way the sidebar in admin/layouts/app.blade.php does. The sidebar hides what a
+| role cannot use; this is what makes that real rather than cosmetic, so typing the URL directly
+| is refused too. Several permissions on one route mean "any one of these is enough".
+|
+| Dashboard carries none: every role lands somewhere after login, and its own content is already
+| permission-aware. The placeholders for modules that do not exist yet (Messages §13, Reviews
+| §20, AI & Automation §18/§19) carry none either — there is no permission in the enum for an
+| unbuilt module, and inventing one here would be deciding §5 policy outside the matrix that
+| owns it. They reveal nothing; each says only that the screen is not built.
 */
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/', function () {
@@ -55,28 +66,46 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
 
     // Real pages — each reads/writes the already-tested /api/v1 endpoints client-side, same
     // as Dashboard. No server-side query here (D-007).
-    Route::get('customers', fn () => view('admin.customers'))->name('customers');
-    Route::get('pets', fn () => view('admin.pets'))->name('pets');
-    Route::get('services', fn () => view('admin.services'))->name('services');
-    Route::get('team', fn () => view('admin.team'))->name('team');
-    Route::get('calendar', fn () => view('admin.calendar'))->name('calendar');
-    Route::get('appointments', fn () => view('admin.appointments'))->name('appointments');
-    Route::get('settings', fn () => view('admin.settings'))->name('settings');
+    Route::get('customers', fn () => view('admin.customers'))
+        ->middleware('permission:customers.view')->name('customers');
+    Route::get('pets', fn () => view('admin.pets'))
+        ->middleware('permission:pets.view')->name('pets');
+    Route::get('services', fn () => view('admin.services'))
+        ->middleware('permission:services.view')->name('services');
+    Route::get('team', fn () => view('admin.team'))
+        ->middleware('permission:staff.view')->name('team');
+    Route::get('calendar', fn () => view('admin.calendar'))
+        ->middleware('permission:calendar.view')->name('calendar');
+    Route::get('appointments', fn () => view('admin.appointments'))
+        ->middleware('permission:appointments.view')->name('appointments');
+    Route::get('settings', fn () => view('admin.settings'))
+        ->middleware('permission:settings.manage')->name('settings');
 
+    // Two halves, two audiences: the booking-requests queue needs appointments.manage, the
+    // rules form needs settings.manage. The page renders whichever half the viewer holds.
+    Route::get('booking', fn () => view('admin.booking'))
+        ->middleware('permission:appointments.manage,settings.manage')->name('booking');
+
+    Route::get('billing', fn () => view('admin.billing'))
+        ->middleware('permission:billing.view')->name('billing');
+
+    // slug => [title, icon, permission or null]
     $comingSoon = [
-        'booking' => ['Online Booking', 'bookmark'],
-        'website' => ['Website', 'landing-page'],
-        'messages' => ['Messages', 'chat'],
-        'reviews' => ['Reviews', 'social'],
-        'growth' => ['Growth', 'activity'],
-        'reports' => ['Reports & Insights', 'report'],
-        'automation' => ['AI & Automation', 'api'],
-        'billing' => ['Billing & Plan', 'subscribe'],
+        'website' => ['Website', 'landing-page', 'permission:website.manage'],
+        'messages' => ['Messages', 'chat', null],
+        'reviews' => ['Reviews', 'social', null],
+        'growth' => ['Growth', 'activity', 'permission:growth.manage'],
+        'reports' => ['Reports & Insights', 'report', 'permission:reports.view'],
+        'automation' => ['AI & Automation', 'api', null],
     ];
 
-    foreach ($comingSoon as $slug => [$title, $icon]) {
-        Route::get($slug, function () use ($title, $icon) {
+    foreach ($comingSoon as $slug => [$title, $icon, $permission]) {
+        $route = Route::get($slug, function () use ($title, $icon) {
             return view('admin.placeholder', ['pageTitle' => $title, 'icon' => $icon]);
         })->name($slug);
+
+        if ($permission !== null) {
+            $route->middleware($permission);
+        }
     }
 });

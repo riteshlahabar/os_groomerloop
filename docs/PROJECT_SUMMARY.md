@@ -37,7 +37,20 @@ Team — each full create/list/search/filter/edit/archive against the live API, 
 way (real browser, real test data, cleaned up after). Found and fixed a third real bug:
 Catalog's `buffer_minutes` column is NOT NULL with a DB default, but its own validation rule
 says `nullable` — an explicit `null` (which the rule promises is fine) hit a raw SQL error.
-Fixed in `CreateService`/`UpdateService`. 5 of 16 nav items are now real; 11 remain placeholders.
+Fixed in `CreateService`/`UpdateService`.
+
+**2026-10-02:** audited the admin panel against the code and found this file, `MODULE_STATUS.md`
+and `CLAUDE.md` all stale — Settings, Calendar and Appointments had shipped after the last doc
+update, and CLAUDE.md did not mention the admin panel at all. All three corrected. Then built
+the **Online Booking** page (§12): a pending booking-requests queue with Confirm/Decline, the
+booking-rules form, the public booking address, and a read-only "bookable online" list.
+**9 of 16 nav items are now real; 7 remain placeholders, and only Billing & Plan among them has
+a finished backend.** The audit's full list of built-but-unsurfaced endpoints and two
+cross-cutting defects (unfiltered sidebar, no `permission:` on `/admin/*`) is in CLAUDE.md's
+"Open / next steps" and `summaries/2026-10-02-admin-online-booking.md`. The same session
+switched verification away from browser automation to `scripts/api.sh` (authenticated curl) on
+the owner's instruction — see "Verifying a change" in CLAUDE.md for what that does and does not
+prove.
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.

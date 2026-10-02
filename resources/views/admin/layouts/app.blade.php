@@ -70,11 +70,17 @@
                   </div>
                 </div>
                 <ul class="profile-dropdown onhover-show-div">
-                  <li>
-                    <a class="flex items-center" href="{{ route('admin.settings') }}">
-                      <i data-feather="settings"></i><span>Settings</span>
-                    </a>
-                  </li>
+                  {{-- Same gate as the sidebar item and the route itself: without it this
+                       dropdown is a second, unfiltered way into a screen the route then 403s,
+                       which is how a Groomer still saw a Settings link after the nav was
+                       filtered. --}}
+                  @can('settings.manage')
+                    <li>
+                      <a class="flex items-center" href="{{ route('admin.settings') }}">
+                        <i data-feather="settings"></i><span>Settings</span>
+                      </a>
+                    </li>
+                  @endcan
                   <li>
                     <a class="flex items-center" href="#" id="adminLogoutLink">
                       <i data-feather="log-in"></i><span>Log out</span>
@@ -103,24 +109,54 @@
                   @php
                     // The spec §6 navigation (16 items), each mapped to a route name and an
                     // icon that actually exists in admin-assets/svg/icon-sprite.svg.
+                    //
+                    // `permission` names what the viewer must hold for the item to appear at
+                    // all, mirroring the §5 matrix in Modules\Identity\Domain\Role. Several
+                    // permissions mean "any one of these is enough", matching how the
+                    // `permission:` middleware on the matching route behaves. Hiding the link is
+                    // cosmetic on its own — the route carries the same gate, so typing the URL
+                    // is refused too.
+                    //
+                    // `null` means deliberately ungated: Dashboard, which every role gets, and
+                    // the placeholders for modules that do not exist yet (Messages §13, Reviews
+                    // §20, AI & Automation §18/§19) and therefore have no permission in the
+                    // enum. Inventing a permission for an unbuilt module would be deciding §5
+                    // policy here, in a view, rather than in the matrix that owns it — and the
+                    // placeholder reveals nothing anyway.
                     $adminNav = [
-                      ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'home'],
-                      ['label' => 'Calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
-                      ['label' => 'Appointments', 'route' => 'admin.appointments', 'icon' => 'task'],
-                      ['label' => 'Customers', 'route' => 'admin.customers', 'icon' => 'contact'],
-                      ['label' => 'Pets', 'route' => 'admin.pets', 'icon' => 'file'],
-                      ['label' => 'Services', 'route' => 'admin.services', 'icon' => 'package'],
-                      ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark'],
-                      ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page'],
-                      ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat'],
-                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social'],
-                      ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity'],
-                      ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report'],
-                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api'],
-                      ['label' => 'Team', 'route' => 'admin.team', 'icon' => 'user'],
-                      ['label' => 'Settings', 'route' => 'admin.settings', 'icon' => 'form'],
-                      ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe'],
+                      ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'home', 'permission' => null],
+                      ['label' => 'Calendar', 'route' => 'admin.calendar', 'icon' => 'calendar', 'permission' => ['calendar.view']],
+                      ['label' => 'Appointments', 'route' => 'admin.appointments', 'icon' => 'task', 'permission' => ['appointments.view']],
+                      ['label' => 'Customers', 'route' => 'admin.customers', 'icon' => 'contact', 'permission' => ['customers.view']],
+                      ['label' => 'Pets', 'route' => 'admin.pets', 'icon' => 'file', 'permission' => ['pets.view']],
+                      ['label' => 'Services', 'route' => 'admin.services', 'icon' => 'package', 'permission' => ['services.view']],
+                      // Two halves, two audiences: the requests queue needs appointments.manage,
+                      // the rules form needs settings.manage. Either one earns the link.
+                      ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark', 'permission' => ['appointments.manage', 'settings.manage']],
+                      ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page', 'permission' => ['website.manage']],
+                      ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat', 'permission' => null],
+                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null],
+                      ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage']],
+                      ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view']],
+                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => null],
+                      ['label' => 'Team', 'route' => 'admin.team', 'icon' => 'user', 'permission' => ['staff.view']],
+                      ['label' => 'Settings', 'route' => 'admin.settings', 'icon' => 'form', 'permission' => ['settings.manage']],
+                      ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe', 'permission' => ['billing.view']],
                     ];
+
+                    $adminNav = array_filter($adminNav, static function (array $item): bool {
+                      if ($item['permission'] === null) {
+                        return true;
+                      }
+
+                      foreach ($item['permission'] as $permission) {
+                        if (auth()->user()->can($permission)) {
+                          return true;
+                        }
+                      }
+
+                      return false;
+                    });
                   @endphp
                   @foreach ($adminNav as $item)
                     <li class="sidebar-list">
@@ -306,7 +342,9 @@
           get: function (url) { return apiRequest('GET', url); },
           post: function (url, body) { return apiRequest('POST', url, body); },
           put: function (url, body) { return apiRequest('PUT', url, body); },
-          del: function (url) { return apiRequest('DELETE', url); },
+          // DELETE takes an optional body: §24's cancellation carries `immediately` and
+          // `reason`, which belong in the request rather than a query string.
+          del: function (url, body) { return apiRequest('DELETE', url, body); },
           escapeHtml: escapeHtml,
           debounce: debounce,
           openModal: openModal,

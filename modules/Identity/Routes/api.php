@@ -9,6 +9,7 @@ use Modules\Identity\Http\Controllers\Api\V1\LogoutController;
 use Modules\Identity\Http\Controllers\Api\V1\NewPasswordController;
 use Modules\Identity\Http\Controllers\Api\V1\PasswordResetLinkController;
 use Modules\Identity\Http\Controllers\Api\V1\RegisterController;
+use Modules\Identity\Http\Controllers\Api\V1\TeamMemberController;
 use Modules\Identity\Http\Controllers\Api\V1\UserRoleController;
 
 /*
@@ -41,6 +42,13 @@ Route::middleware('throttle:auth')->group(function (): void {
 Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::post('logout', LogoutController::class)->name('logout');
     Route::get('me', CurrentUserController::class)->name('me');
+
+    // Reading the roster is a wider permission than changing it: §5 gives `team.view` to Owner
+    // and Manager, while `team.manage` below is Owner alone. A Manager sees who is in the
+    // business and cannot change anyone's role, which is the intended split.
+    Route::middleware('permission:team.view')->group(function (): void {
+        Route::get('team', [TeamMemberController::class, 'index'])->name('team.index');
+    });
 
     // Team management. Gated by middleware at the route level and by policy where the decision
     // depends on which record is being touched.

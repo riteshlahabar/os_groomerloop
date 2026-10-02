@@ -5,7 +5,12 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
+**Last updated:** 2026-10-02 — admin panel: Online Booking and Billing & Plan pages built,
+navigation permission-gated against the §5 matrix at both sidebar and route, Team gained a
+"Users & access" section, and Identity gained `GET /api/v1/team` (the missing read half of
+`PUT /team/{user}/role`). See `docs/summaries/2026-10-02-admin-billing-access.md`.
+
+Previously, 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
 outside the module system — see note below the table; row 10 corrected from `Not started` to
 `In progress`/`Built`, undocumented code found on disk — see note below the table; row 10's
 waitlist gap closed; row 12 flagged with a second undocumented module found on disk, see note
@@ -70,14 +75,28 @@ data binding yet.
 ## Admin panel — authenticated app (outside the phase table, outside the module system)
 
 Also not a backend module. `GET /admin` + routes under `auth` middleware
-(`docs/summaries/2026-10-01-admin-panel.md`, `2026-10-01-admin-crud-pages.md`), Blade-rendered
+(`docs/summaries/2026-10-01-admin-panel.md`, `2026-10-01-admin-crud-pages.md`,
+`2026-10-02-admin-online-booking.md`, `2026-10-02-admin-billing-access.md`), Blade-rendered
 from the owner's Cuba template (`tailwind/html-tailwind` variant — a different, later hand-off
 than the `react_context` variant also in that bundle). Same relationship to `D-006` as Frontview
 above: a separate hand-off that does not unblock the eventual React SPA for the owner/staff app.
-**5 of 16 §6 nav items are real** (Dashboard, Customers, Pets, Services, Team) — each reads and
+**10 of 16 §6 nav items are real** (Dashboard, Calendar, Appointments, Customers, Pets, Services,
+Team, Settings, Online Booking, Billing & Plan) — each reads and
 writes live via client-side `fetch()` against the already-built `/api/v1` endpoints, never a
-server-side query reaching into another module's model (`D-007`); the remaining 11 are
-consistent "not built yet" placeholders sharing the same real shell and sidebar. **Building
+server-side query reaching into another module's model (`D-007`); the remaining 7 (Website,
+Messages, Reviews, Growth, Reports & Insights, AI & Automation, Billing & Plan) are
+consistent "not built yet" placeholders sharing the same real shell and sidebar — **of those,
+only Billing & Plan has a finished backend waiting on a screen**.
+
+**A 2026-10-02 audit recorded what is still missing**, in full in CLAUDE.md's "Open / next
+steps": a long list of built, reachable endpoints with no UI (the whole Scheduling waitlist,
+recurring appointments, `GET /availability`, **all of Identity's invitations and role changes**,
+the entire §7 onboarding checklist, Crm merge/import/export, Team working hours and time off,
+Catalog add-ons and availability windows, Pets internal notes and photos), plus two
+cross-cutting defects: **the sidebar renders all 16 items to every role and `/admin/*` carries
+no `permission:` middleware** (data is safe — the API enforces §5 — but the nav misrepresents
+it), and the dashboard still has no documented metric formulas, leaving CI guard 5
+(`MetricDefinition`) absent rather than green. **Building
 Dashboard surfaced `D-027`**: `Referrer-Policy: no-referrer` (set globally since Phase 0) was
 silently turning every Sanctum-authenticated `fetch()` any Blade page makes into a 401 — fixed
 to `same-origin`, affects every future Blade page and the eventual React SPA alike. **Building
