@@ -16,72 +16,75 @@
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/feather-icon.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/scrollbar.css') }}">
     <link rel="stylesheet" href="{{ asset('admin-assets/css/style.css') }}">
+    <style>
+      /*
+        A deliberately self-contained header/nav, NOT the Cuba template's `page-header` /
+        `header-wrapper` / `page-wrapper` structural classes. Those assume the full
+        sidebar-based "compact-wrapper" scaffold (admin/layouts/app.blade.php has it); without
+        that scaffold, `.page-header` renders as a fixed-position bar that overlapped the nav
+        row directly beneath it, hiding the first two links ("Dashboard", "Tenants") behind it —
+        a real defect the owner caught from a live screenshot, not a hypothetical. The `card`,
+        `btn`, `table`, `badge`, `alert` and `form-control` component classes used on every page
+        below are unaffected by this — they are standalone visual components, not part of the
+        fixed-positioning system — so only the shell here needed to stop borrowing Cuba's markup.
+      */
+      .pf-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 24px; background: #fff; border-bottom: 1px solid #e9ecef;
+      }
+      .pf-header a.pf-brand { display: flex; align-items: center; text-decoration: none; color: #1a1a1a; font-weight: 700; }
+      .pf-header a.pf-brand img { height: 28px; margin-right: 8px; }
+      .pf-nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 24px 0; }
+      .pf-nav a { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 14px; color: #1a1a1a; background: #f4f4f6; }
+      .pf-nav a.active { background: #7366ff; color: #fff; }
+      .pf-content { padding: 16px 24px 48px; }
+      .pf-footer { text-align: center; padding: 16px; color: #9aa1ab; font-size: 13px; }
+    </style>
     @stack('styles')
   </head>
   <body>
     <!--
       This is a SEPARATE console from /admin — GroomerLoop's own staff (spec §5 PlatformAdmin
-      role), never a tenant business. It reuses the admin-assets bundle for visual consistency
-      and because its `card`/`btn`/`table`/`badge`/`alert` component classes already exist, but
-      it is its own minimal shell (no sidebar, no tenant-business-name header) rather than a
-      reuse of admin/layouts/app.blade.php, whose header hardcodes `auth()->user()->tenant` and
-      whose sidebar nav is the §6 business navigation — neither applies to a user who belongs to
-      no tenant at all.
+      role), never a tenant business. It reuses admin-assets' `card`/`btn`/`table`/`badge`/
+      `alert`/`form-control` component classes for visual consistency, but the page shell itself
+      (header, nav, footer) is custom CSS above, not a reuse of admin/layouts/app.blade.php's
+      sidebar-based structure — see the style block's own note on why.
     -->
-    <div class="page-wrapper" id="pageWrapper">
-      <div class="page-header">
-        <div class="header-wrapper grid grid-cols-12 m-0" style="padding: 12px 20px">
-          <div class="col-span-6">
-            <a href="{{ route('platform.dashboard') }}" class="flex items-center">
-              <img class="max-w-full h-auto" style="height:28px" src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop">
-              <span class="ms-2 fw-bold">GroomerLoop Platform</span>
-            </a>
-          </div>
-          <div class="col-span-6 text-end">
-            <span class="f-light me-3">{{ auth()->user()->name }} &middot; {{ auth()->user()->role?->label() }}</span>
-            <a href="#" id="platformLogoutLink"><i data-feather="log-out"></i> Log out</a>
-          </div>
-        </div>
+    <header class="pf-header">
+      <a href="{{ route('platform.dashboard') }}" class="pf-brand">
+        <img src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop">
+        GroomerLoop Platform
+      </a>
+      <div>
+        <span class="f-light me-3">{{ auth()->user()->name }} &middot; {{ auth()->user()->role?->label() }}</span>
+        <a href="#" id="platformLogoutLink"><i data-feather="log-out"></i> Log out</a>
+      </div>
+    </header>
+
+    @php
+      $platformNav = [
+        ['label' => 'Dashboard', 'route' => 'platform.dashboard'],
+        ['label' => 'Tenants', 'route' => 'platform.tenants'],
+        ['label' => 'Audit Log', 'route' => 'platform.audit-log'],
+        ['label' => 'Mail Settings', 'route' => 'platform.mail-settings'],
+        ['label' => 'Platform Health', 'route' => 'platform.health'],
+      ];
+    @endphp
+    <nav class="pf-nav">
+      @foreach ($platformNav as $item)
+        <a href="{{ route($item['route']) }}" class="{{ request()->routeIs($item['route']) ? 'active' : '' }}">{{ $item['label'] }}</a>
+      @endforeach
+    </nav>
+
+    <div class="pf-content">
+      <div class="page-title mb-3">
+        <h3>@yield('page-heading', 'Dashboard')</h3>
       </div>
 
-      <div class="container" style="margin-top: 16px">
-        <nav class="mb-4">
-          @php
-            $platformNav = [
-              ['label' => 'Dashboard', 'route' => 'platform.dashboard'],
-              ['label' => 'Tenants', 'route' => 'platform.tenants'],
-              ['label' => 'Audit Log', 'route' => 'platform.audit-log'],
-              ['label' => 'Mail Settings', 'route' => 'platform.mail-settings'],
-              ['label' => 'Platform Health', 'route' => 'platform.health'],
-            ];
-          @endphp
-          <ul class="nav" style="gap: 4px">
-            @foreach ($platformNav as $item)
-              <li>
-                <a class="btn btn-sm {{ request()->routeIs($item['route']) ? 'btn-primary' : 'btn-light' }}"
-                   href="{{ route($item['route']) }}">{{ $item['label'] }}</a>
-              </li>
-            @endforeach
-          </ul>
-        </nav>
-
-        <div class="page-title mb-3">
-          <h3>@yield('page-heading', 'Dashboard')</h3>
-        </div>
-
-        @yield('content')
-      </div>
-
-      <footer class="footer">
-        <div class="container mx-auto w-full">
-          <div class="gird grid-cols-12">
-            <div class="col-span-12 footer-copyright text-center">
-              <p class="mb-0">&copy; {{ date('Y') }} GroomerLoop — internal platform console</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      @yield('content')
     </div>
+
+    <footer class="pf-footer">&copy; {{ date('Y') }} GroomerLoop — internal platform console</footer>
 
     <script src="{{ asset('admin-assets/js/jquery.min.js') }}"></script>
     <script src="{{ asset('admin-assets/js/icons/feather-icon/feather.min.js') }}"></script>

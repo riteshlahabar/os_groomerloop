@@ -140,3 +140,52 @@ don't apply.
       a platform-wide aggregate (e.g. when dunning reporting is built).
 - [ ] A real browser/visual pass on every `/platform/*` page whenever the owner wants to spend
       credit on it.
+
+## Session 2 — two real defects found from a live screenshot (same day)
+
+The owner deployed this to the real host (`os.groomerloop.com`) and sent a screenshot of
+`/platform`. It showed a 500 error banner and a visibly broken nav (only 3 of 5 links showing).
+Both were real bugs this session's verification had missed — recorded honestly rather than
+folded invisibly into the section above.
+
+**Bug 1 — `PlatformOverviewController` 500'd on any tenant with no plan assigned.**
+`modules/SuperAdmin/Http/Controllers/Api/V1/PlatformOverviewController.php`'s `$byPlan`
+computation used `->pluck('total', 'plan_id')->mapWithKeys(function (int $total, ?int $planId) ...)`.
+**A `null` array key is not possible in PHP** — indexing an array with a `null` key silently
+rewrites it to the empty string `""`. So a tenant with `plan_id = NULL` (never subscribed) came
+back through `mapWithKeys` as the string `""`, not `null`, and `""` cannot coerce to the
+`?int $planId` parameter — "Argument #2 ($planId) must be of type ?int, string given." **This
+session's own dev-database verification never caught it because the only tenant in that database
+(Happy Paws Grooming) already had a plan assigned** — the null-key path was never exercised.
+Fixed by switching to `->get()->mapWithKeys(fn ($row) => ...)`, which returns plain row objects
+rather than an array keyed by the nullable column, with an explicit `$row->plan_id === null ||
+$row->plan_id === ''` check before casting. Reproduced the exact production error locally first
+(created a tenant with no plan, confirmed the same TypeError), then confirmed the fix against it.
+
+**Bug 2 — the nav visually broke outside the Cuba template's full sidebar scaffold.**
+`resources/views/platform/layouts/app.blade.php` originally reused Cuba's `page-wrapper` /
+`page-header` / `header-wrapper` classes for a quick top bar, without the `compact-wrapper`
+sidebar structure those classes are designed around. `.page-header` renders fixed-position in
+that CSS, and with no sidebar underneath it to push content down, it overlapped the nav row
+directly beneath it — hiding "Dashboard" and "Tenants" (the first two links) under the fixed
+bar while "Audit Log"/"Mail Settings"/"Platform Health" peeked out below. **Not something text
+verification (`pint`, `route:list`, `view:cache`, grepping rendered HTML) could have caught** —
+every link was present in the markup the whole time; only the CSS cascade was wrong. Fixed by
+writing a small, self-contained `<style>` block (`.pf-header`/`.pf-nav`/`.pf-content`/`.pf-footer`)
+with no dependency on Cuba's structural classes, keeping only the standalone component classes
+(`card`, `btn`, `table`, `badge`, `alert`, `form-control`) that don't have this coupling.
+
+**Lesson for any future `/platform` or similar non-`/admin` page**: admin-assets' *component*
+classes (`card`, `btn`, `table`, `form-control`, `badge`, `alert`) are safe to reuse anywhere.
+Its *structural/layout* classes (`page-wrapper`, `page-header`, `header-wrapper`, the sidebar
+system) assume the full Cuba scaffold and should not be borrowed piecemeal — write custom CSS
+for a layout shell that doesn't include the whole sidebar, the way this layout now does.
+
+**Verified (same method as before — no browser):** reproduced bug 1 locally with a tenant
+created via `tinker` with no `plan_id` (confirmed the exact error first, then the fix); confirmed
+the same tenant renders correctly in both the overview and the tenant list/detail endpoints
+afterward; grepped the rendered `/platform` HTML for all 5 nav link labels and the new `pf-*`
+classes, all present. `pint --test` clean except the pre-existing `modules/Notifications` drift;
+`view:cache` clean. **The visual fix for bug 2 is still not confirmed by an actual browser** —
+only that the correct markup and CSS are now present; left for the owner to confirm when they
+redeploy.

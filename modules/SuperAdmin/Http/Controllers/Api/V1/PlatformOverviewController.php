@@ -30,14 +30,21 @@ final class PlatformOverviewController
             ->groupBy('status')
             ->pluck('total', 'status');
 
+        // Grouped and fetched as rows, never plucked into an array keyed by plan_id: a null
+        // plan_id (a tenant that has never subscribed) would become the array key "" the moment
+        // it was used to index a PHP array — null and only null coerces to a nullable-typed
+        // parameter, and "" does not, which is exactly what threw "must be of type ?int, string
+        // given" on every environment with at least one unsubscribed tenant (none existed in the
+        // dev database this was first verified against).
         $byPlan = Tenant::query()
             ->selectRaw('plan_id, count(*) as total')
             ->groupBy('plan_id')
-            ->pluck('total', 'plan_id')
-            ->mapWithKeys(function (int $total, ?int $planId) use ($plans): array {
+            ->get()
+            ->mapWithKeys(function ($row) use ($plans): array {
+                $planId = $row->plan_id === null || $row->plan_id === '' ? null : (int) $row->plan_id;
                 $plan = $planId === null ? $plans->default() : $plans->findById($planId);
 
-                return [$plan?->key ?? 'none' => $total];
+                return [$plan?->key ?? 'none' => (int) $row->total];
             });
 
         return response()->json(['data' => [
