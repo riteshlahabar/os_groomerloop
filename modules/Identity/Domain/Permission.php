@@ -83,6 +83,15 @@ enum Permission: string
     case ManageSettings = 'settings.manage';
     case ManageWebsite = 'website.manage';
 
+    /**
+     * Spec §13's Messages screen. Two capabilities, because reading the delivery log and causing a
+     * message to go out to a customer are different stakes: `messages.view` is "what did we send and
+     * did it arrive", `messages.send` is a deliberate outbound message (today, retrying a failed one).
+     * See `D-031` for why the §6 Messages nav item needed its own permission at all.
+     */
+    case ViewMessages = 'messages.view';
+    case SendMessages = 'messages.send';
+
     case ViewReports = 'reports.view';
     case ManageGrowth = 'growth.manage';
 

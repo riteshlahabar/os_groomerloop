@@ -121,9 +121,13 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('website', fn () => view('admin.website'))
         ->middleware('permission:website.manage')->name('website');
 
+    // §13. The delivery log — what went out, to whom, and what failed. Retrying is gated separately
+    // at the API (`messages.send`, D-031); the page hides the button for a viewer who lacks it.
+    Route::get('messages', fn () => view('admin.messages'))
+        ->middleware('permission:messages.view')->name('messages');
+
     // slug => [title, icon, permission or null]
     $comingSoon = [
-        'messages' => ['Messages', 'chat', null],
         'reviews' => ['Reviews', 'social', null],
         'growth' => ['Growth', 'activity', 'permission:growth.manage'],
         'reports' => ['Reports & Insights', 'report', 'permission:reports.view'],

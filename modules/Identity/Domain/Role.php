@@ -64,6 +64,10 @@ enum Role: string
                 Permission::ViewTeam,
                 Permission::ViewStaff, Permission::ManageStaff,
                 Permission::ViewReports,
+
+                // §13: a manager answers for whether the customer was told, so they both read the
+                // delivery log and may push a failed message out again (`D-031`).
+                Permission::ViewMessages, Permission::SendMessages,
             ],
 
             self::Groomer => [
@@ -88,6 +92,10 @@ enum Role: string
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,
+
+                // §13: front desk is the role that fields "did you get my confirmation?", so it needs
+                // both the log and the ability to resend a failure (`D-031`).
+                Permission::ViewMessages, Permission::SendMessages,
             ],
 
             self::Marketing => [
@@ -95,6 +103,12 @@ enum Role: string
                 Permission::ManageWebsite,
                 Permission::ManageGrowth,
                 Permission::ViewReports,
+
+                // Read-only on §13: marketing needs to see deliverability, but every message type
+                // that exists today is transactional and belongs to operations, not to them. When
+                // §20 review requests and §22 announcements land, revisit whether they get
+                // `messages.send` for those types (`D-031`).
+                Permission::ViewMessages,
             ],
 
             self::PlatformAdmin => [

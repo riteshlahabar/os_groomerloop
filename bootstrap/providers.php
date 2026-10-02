@@ -9,6 +9,7 @@ use Modules\Catalog\CatalogServiceProvider;
 use Modules\Crm\CrmServiceProvider;
 use Modules\Entitlements\EntitlementsServiceProvider;
 use Modules\Identity\IdentityServiceProvider;
+use Modules\Notifications\NotificationsServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
@@ -77,6 +78,13 @@ return [
     // Booking (§12) depends on Scheduling's AppointmentScheduler plus Catalog/Team/Crm/Pets'
     // read contracts, so it boots after all of them.
     BookingServiceProvider::class,
+
+    // Notifications (§13) listens for Scheduling's domain events and reads Crm's consent and contact
+    // details plus Catalog's service names, so it boots after all of them. Nothing depends on this
+    // module in return — Scheduling books an appointment without knowing it exists, which is the
+    // point of the event boundary (D-007). Registered 2026-10-02; before that the folder was on disk
+    // with no provider at all and therefore dead code.
+    NotificationsServiceProvider::class,
 
     // Website (§14) depends on Catalog's ServiceCatalog, Team's StaffDirectory and Onboarding's
     // BusinessProfileDirectory to render a tenant's public site, so it boots after all three. It

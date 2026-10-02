@@ -49,6 +49,9 @@ final class RolePermissionMatrixTest extends TestCase
                 Permission::ViewTeam,
                 Permission::ViewStaff, Permission::ManageStaff,
                 Permission::ViewReports,
+
+                // §13 Messages, added with the module on 2026-10-02 (`D-031`).
+                Permission::ViewMessages, Permission::SendMessages,
             ]],
 
             'groomer reads the day and moves appointments through statuses' => [Role::Groomer, [
@@ -71,6 +74,9 @@ final class RolePermissionMatrixTest extends TestCase
                 Permission::ViewCalendar,
                 Permission::ViewAppointments, Permission::ManageAppointments,
                 Permission::UpdateAppointmentStatus,
+
+                // §13 Messages, added with the module on 2026-10-02 (`D-031`).
+                Permission::ViewMessages, Permission::SendMessages,
             ]],
 
             'marketing touches presence and growth, never the calendar' => [Role::Marketing, [
@@ -78,6 +84,10 @@ final class RolePermissionMatrixTest extends TestCase
                 Permission::ManageWebsite,
                 Permission::ManageGrowth,
                 Permission::ViewReports,
+
+                // Deliverability is visible to marketing; sending transactional messages is not
+                // theirs (`D-031`).
+                Permission::ViewMessages,
             ]],
 
             'platform admin gets no tenant data at all' => [Role::PlatformAdmin, [

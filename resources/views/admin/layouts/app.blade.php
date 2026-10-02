@@ -168,11 +168,12 @@
                     // is refused too.
                     //
                     // `null` means deliberately ungated: Dashboard, which every role gets, and
-                    // the placeholders for modules that do not exist yet (Messages §13, Reviews
-                    // §20, AI & Automation §18/§19) and therefore have no permission in the
-                    // enum. Inventing a permission for an unbuilt module would be deciding §5
-                    // policy here, in a view, rather than in the matrix that owns it — and the
-                    // placeholder reveals nothing anyway.
+                    // the placeholders for modules that do not exist yet (Reviews §20, AI &
+                    // Automation §18/§19) and therefore have no permission in the enum.
+                    // Inventing a permission for an unbuilt module would be deciding §5 policy
+                    // here, in a view, rather than in the matrix that owns it — and the
+                    // placeholder reveals nothing anyway. Messages (§13) left that set on
+                    // 2026-10-02: the module is real, so it has real permissions (`D-031`).
                     $adminNav = [
                       ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'home', 'permission' => null],
                       ['label' => 'Calendar', 'route' => 'admin.calendar', 'icon' => 'calendar', 'permission' => ['calendar.view']],
@@ -184,7 +185,7 @@
                       // the rules form needs settings.manage. Either one earns the link.
                       ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark', 'permission' => ['appointments.manage', 'settings.manage']],
                       ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page', 'permission' => ['website.manage']],
-                      ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat', 'permission' => null],
+                      ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat', 'permission' => ['messages.view']],
                       ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null],
                       ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage']],
                       ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view']],

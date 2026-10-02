@@ -9,7 +9,7 @@ namespace Modules\Notifications\Contracts;
 interface SmsProvider
 {
     /**
-     * @return bool  true if the message was accepted for delivery
+     * @return bool true if the message was accepted for delivery
      */
     public function send(string $toPhone, string $body): bool;
 }

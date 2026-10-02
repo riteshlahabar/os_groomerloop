@@ -29,12 +29,33 @@ return new class extends Migration
             $table->string('recipient')->nullable();
             $table->string('subject')->nullable();
 
+            // The values the message was rendered from (service name, start time). Kept because
+            // spec §35 requires a failed notification to be *retryable*, and a retry has to be able
+            // to rebuild the same message — the alternative is re-deriving it from an appointment
+            // that may since have been rescheduled, which would send the customer a "reminder"
+            // about a time that is no longer true.
+            $table->json('context')->nullable();
+
+            // Why the provider refused, when it said. Shown on the §13 Messages screen: "failed" with
+            // no reason is not something a salon owner can act on.
+            $table->string('failure_reason')->nullable();
+
+            // 1 for the original send, 2 for its first retry, and so on. A retry appends a new row
+            // rather than mutating this one — the log stays append-only (invariant #8's spirit), so
+            // the history of what was attempted when survives.
+            $table->unsignedTinyInteger('attempt')->default(1);
+            $table->foreignId('retry_of_id')->nullable()
+                ->constrained('notification_logs')->nullOnDelete();
+
             $table->foreignId('appointment_id')->nullable()->constrained()->nullOnDelete();
 
             $table->timestamps();
 
             $table->index(['tenant_id', 'customer_id']);
             $table->index(['tenant_id', 'type']);
+
+            // The retry sweep's query, and the Messages screen's default filter.
+            $table->index(['tenant_id', 'status']);
         });
     }
 

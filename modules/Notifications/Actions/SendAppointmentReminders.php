@@ -2,6 +2,7 @@
 
 namespace Modules\Notifications\Actions;
 
+use Illuminate\Support\Collection;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Notifications\Domain\NotificationType;
 use Modules\Notifications\Models\NotificationLog;
@@ -72,7 +73,7 @@ final class SendAppointmentReminders
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Tenant>
+     * @return Collection<int, Tenant>
      */
     private function activeTenants()
     {

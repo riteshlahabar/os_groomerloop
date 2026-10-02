@@ -12,7 +12,7 @@ namespace Modules\Notifications\Contracts;
 interface MailProvider
 {
     /**
-     * @return bool  true if the message was accepted for delivery
+     * @return bool true if the message was accepted for delivery
      */
     public function send(string $toEmail, string $toName, string $subject, string $body): bool;
 }
