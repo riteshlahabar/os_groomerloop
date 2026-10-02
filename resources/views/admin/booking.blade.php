@@ -155,19 +155,32 @@
             already live.
           </p>
 
+          <h6 class="mt-3">Page to hand your customers</h6>
+          <div class="flex" style="gap:8px">
+            <input type="text" class="form-control" id="bkPublicUrl" value="{{ url('/book/'.$bookingTenant->slug) }}" readonly>
+            <a href="{{ url('/book/'.$bookingTenant->slug) }}" target="_blank" class="btn btn-light">Open</a>
+            <button type="button" class="btn btn-light" id="bkCopyUrl">Copy</button>
+          </div>
+          <p class="f-light mt-1 mb-0" style="font-size:12px">
+            Share this link anywhere — your website, social bio, email signature. It walks a
+            customer through choosing a service, a groomer, a time, and their own and their pet's
+            details, then submits the same booking API below.
+          </p>
+
           <h6 class="mt-3">Live booking endpoints</h6>
           <ul class="f-light mb-0" style="font-size:12px;word-break:break-all;list-style:disc;padding-left:18px">
             <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/services') }}</code></li>
             <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/staff') }}</code></li>
             <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/availability') }}</code></li>
+            <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/availability/open-slots') }}</code></li>
             <li><code>POST {{ url('/api/v1/public/'.$bookingTenant->slug.'/appointments') }}</code></li>
           </ul>
 
-          <div class="alert alert-warning mt-3 mb-0" style="font-size:12px">
-            <strong>There is no customer-facing booking page yet.</strong> The booking API above
-            is built and live, but the mobile-first public page and the embeddable widget (§12)
-            have not been built — so there is no link to hand a customer today. These endpoints
-            return JSON, not a page.
+          <div class="alert alert-info mt-3 mb-0" style="font-size:12px">
+            <strong>There is still no self-service cancellation.</strong> Your cancellation
+            window above is stored but not enforced anywhere yet — a customer who wants to
+            cancel or reschedule has to contact you directly, which is what the booking page
+            itself tells them.
           </div>
         </div>
       </div>
@@ -506,21 +519,26 @@
 
       /* --------------------------------------------------------------------- slug copy ---- */
 
-      document.getElementById('bkCopySlug').addEventListener('click', async function () {
-        var input = document.getElementById('bkSlug');
-        var button = this;
+      function wireCopyButton(buttonId, inputId) {
+        document.getElementById(buttonId).addEventListener('click', async function () {
+          var input = document.getElementById(inputId);
+          var button = this;
 
-        try {
-          // Only available on a secure context; the fallback below covers plain-HTTP dev.
-          await navigator.clipboard.writeText(input.value);
-        } catch (err) {
-          input.select();
-          input.setSelectionRange(0, input.value.length);
-        }
+          try {
+            // Only available on a secure context; the fallback below covers plain-HTTP dev.
+            await navigator.clipboard.writeText(input.value);
+          } catch (err) {
+            input.select();
+            input.setSelectionRange(0, input.value.length);
+          }
 
-        button.textContent = 'Copied';
-        setTimeout(function () { button.textContent = 'Copy'; }, 1500);
-      });
+          button.textContent = 'Copied';
+          setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+        });
+      }
+
+      wireCopyButton('bkCopySlug', 'bkSlug');
+      wireCopyButton('bkCopyUrl', 'bkPublicUrl');
 
       loadSettings();
       loadRequests(1);

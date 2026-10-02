@@ -2,6 +2,7 @@
 
 namespace Modules\Scheduling\Contracts;
 
+use DateTimeImmutable;
 use DateTimeInterface;
 use Modules\Scheduling\Domain\AppointmentStatus;
 use Modules\Scheduling\Domain\AppointmentSummary;
@@ -49,6 +50,22 @@ interface AppointmentScheduler
      * also a real question (the future public booking page's "no preference" option).
      */
     public function isSlotAvailable(int $serviceId, ?int $staffMemberId, DateTimeInterface $start): bool;
+
+    /**
+     * Every bookable start time on one calendar day for a service (optionally narrowed to one
+     * staff member) — the same composed check `isSlotAvailable` answers one candidate at a time,
+     * asked across a whole day so a caller never has to probe it slot by slot to draw one. Spec
+     * §12's booking page needs this to show a day of open times; the authenticated calendar's own
+     * "pick a time" step has the identical need and can reuse it through this same contract.
+     *
+     * Business-hours and service/staff-availability only (invariant #2's composed answer) — a
+     * caller-specific notion of "too soon to book" (§12's lead time) is not this contract's
+     * concern and is applied by whoever asks, the same split `SubmitPublicBooking` already uses
+     * for lead time against a single slot.
+     *
+     * @return list<DateTimeImmutable>
+     */
+    public function openSlotsFor(int $serviceId, ?int $staffMemberId, DateTimeInterface $date): array;
 
     /**
      * @param  array<string, mixed>  $attributes  customer_id, pet_id, service_id, staff_member_id

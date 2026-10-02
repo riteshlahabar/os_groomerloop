@@ -955,3 +955,48 @@ a regression here**, because `ActsAsTheSpa` always supplies the headers the real
 sending; the gap that hid this bug for four phases is still open. A real browser check (the
 `claude-in-chrome`-style verification this session used, or a Dusk/Playwright-style test) is
 the only thing that would catch a future regression of this specific kind.
+
+## D-028 — The §12 public booking page is a custom wizard at `/book/{tenant}`, not a port of the owner's `booking-multi-step.html` template
+
+**Date:** 2026-10-02 · **Status:** Accepted
+
+**Context:** Every other public-facing page in this app (`/frontview/*`) is a direct port of an
+owner-supplied Bootstrap template, per the standing convention recorded throughout `CLAUDE.md`'s
+session notes. The owner's template zip does include booking pages (`booking.html`,
+`booking-appointment.html`, `booking-multi-step.html`, among others), so the default move was to
+port one of those the same way. On inspection, `booking-multi-step.html` (and its siblings)
+implement a multi-service shopping-cart checkout: a customer adds several services from an
+accordion of categories, assigns a staff member per service, applies a coupon code, and pays a
+combined total through a `booking-checkout.html` page. GroomerLoop's actual data model (§11, §12)
+books **one service per appointment** (its own add-ons aside, which `PublicBookingRequest` never
+accepted in the first place), has no coupon concept, and collects payment separately through
+Billing, not at booking time.
+
+Separately, the template's own routing style — multi-page navigation (`booking-multi-step.html`
+→ `booking-multi-two.html` → `booking-checkout.html`) with static HTML files — doesn't fit this
+app's single-URL-per-page Blade routing, and the public tenant slug (`D-024`) has to appear in
+every API call the page makes, which the static template has no mechanism for at all.
+
+**Decision:** Build a new, custom six-panel wizard (`resources/views/frontview/booking.blade.php`)
+implementing spec §12's own 7-step flow exactly (service → groomer → date/time → customer/pet
+details → review/policies → confirm → confirmation) as one page with client-side step
+transitions, served at its own route `GET /book/{tenant}`. It reuses the same asset bundle
+(`frontview-assets`: Bootstrap, Tabler icons, `groomerloop-overrides.css`) as every ported page,
+for visual consistency, but the markup itself is original rather than lifted from any one
+template file.
+
+**Alternatives considered:**
+- Port `booking-multi-step.html` verbatim and strip the cart/coupon/multi-service parts down to
+  one selection — rejected: by the time the cart, coupon, and per-service-staff-assignment
+  machinery is removed, almost nothing of the original 1200-line file survives, so "porting" it
+  would be nominal; writing the six panels actually needed, directly, was less work and produces
+  markup that matches what the API actually returns rather than carrying dead selectors.
+- Use `booking.html` or `booking-appointment.html` instead — not materially different; both are
+  the same multi-step cart pattern under a different page name.
+
+**Consequences:** This is the one public page in the app that is not a traceable port of a
+specific template file, which a future session diffing `/frontview` against the owner's zip
+should not mistake for a missed port — there is no single source file it corresponds to. If the
+owner later wants the page to visually match the template's booking flow more closely (the
+step-banner-with-illustration layout, for instance), that is a deliberate follow-up, not a
+"finish the port" task.

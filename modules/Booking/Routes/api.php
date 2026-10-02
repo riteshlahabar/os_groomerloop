@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Booking\Http\Controllers\Api\V1\BookingSettingsController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicAvailabilityController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicBookingController;
+use Modules\Booking\Http\Controllers\Api\V1\PublicOpenSlotsController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicServiceController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicStaffController;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
@@ -31,6 +32,7 @@ Route::prefix('public/{tenant}')
         Route::get('services', [PublicServiceController::class, 'index'])->name('public.services.index');
         Route::get('staff', [PublicStaffController::class, 'index'])->name('public.staff.index');
         Route::get('availability', PublicAvailabilityController::class)->name('public.availability.show');
+        Route::get('availability/open-slots', PublicOpenSlotsController::class)->name('public.availability.open-slots');
         Route::post('appointments', [PublicBookingController::class, 'store'])->name('public.appointments.store');
     });
 

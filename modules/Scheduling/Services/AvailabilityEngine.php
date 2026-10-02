@@ -26,10 +26,63 @@ use Modules\Team\Contracts\StaffDirectory;
  */
 final class AvailabilityEngine
 {
+    /**
+     * The candidate grid a day's slots are generated on. Narrower than most service durations
+     * (the shortest is a nail trim), so no business-hours window boundary is ever skipped over —
+     * finer than this buys precision no grooming business books at the cost of a query per
+     * candidate; coarser could step past a window that only just opens or closes.
+     */
+    private const SLOT_GRANULARITY_MINUTES = 15;
+
     public function __construct(
         private readonly ServiceCatalog $catalog,
         private readonly StaffDirectory $staff,
     ) {}
+
+    /**
+     * Every start time on one day that would pass {@see isAvailable} — the same four composed
+     * checks, asked once per candidate on a fixed grid across each business-hours window, rather
+     * than loading the day on the business-hours-and-nothing-else shortcut this method deliberately
+     * avoids: business hours alone would offer a time the service's own rules or the staff
+     * member's rota already refuse.
+     *
+     * @return list<DateTimeImmutable>
+     */
+    public function openSlotsOn(int $serviceId, ?int $staffMemberId, DateTimeInterface $date): array
+    {
+        $service = $this->catalog->find($serviceId);
+
+        if ($service === null) {
+            return [];
+        }
+
+        $day = Carbon::parse($date)->startOfDay();
+
+        $windows = BusinessHour::query()
+            ->where('day_of_week', DayOfWeek::fromDate($day)->value)
+            ->get();
+
+        $slots = [];
+
+        foreach ($windows as $window) {
+            $windowStart = $day->copy()->setTimeFromTimeString($window->startsAtString());
+            $windowEnd = $day->copy()->setTimeFromTimeString($window->endsAtString());
+
+            for (
+                $candidate = $windowStart->copy();
+                $candidate->copy()->addMinutes($service->occupiesMinutes)->lte($windowEnd);
+                $candidate = $candidate->addMinutes(self::SLOT_GRANULARITY_MINUTES)
+            ) {
+                if ($this->isAvailable($serviceId, $staffMemberId, $candidate)) {
+                    $slots[] = $candidate->toDateTimeImmutable();
+                }
+            }
+        }
+
+        usort($slots, fn (DateTimeInterface $a, DateTimeInterface $b): int => $a <=> $b);
+
+        return $slots;
+    }
 
     public function isAvailable(
         int $serviceId,

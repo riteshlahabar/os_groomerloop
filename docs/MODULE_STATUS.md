@@ -5,17 +5,21 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-10-02 — admin panel: Online Booking and Billing & Plan pages built,
-navigation permission-gated against the §5 matrix at both sidebar and route, Team gained a
-"Users & access" section, and Identity gained `GET /api/v1/team` (the missing read half of
-`PUT /team/{user}/role`). See `docs/summaries/2026-10-02-admin-billing-access.md`. Later the
-same day the Team page gained the **staff working hours and time off UI** plus a `Rota` column
-warning on staff with no hours — see `docs/summaries/2026-10-02-admin-staff-schedule.md` — and
-the **shared header was rebuilt against the Cuba template** (12-column grid restored, duplicate
-logo removed, correctly-sized brand assets instead of inline-styled oversized ones) — see
-`docs/summaries/2026-10-02-admin-header.md`. The **Calendar screen now uses the template's real
-FullCalendar v5.11.3 widget** (month/week/day/list views fed from `GET /api/v1/appointments`)
-instead of the seven-card week strip — see
+**Last updated:** 2026-10-02 — the §12 customer-facing public booking page now exists:
+`GET /book/{tenant}`, a mobile-first wizard, plus the "open slots for a day" endpoint it needed
+(`AppointmentScheduler::openSlotsFor()`, `GET /api/v1/public/{tenant}/availability/open-slots`).
+Also fixed a pre-existing 500 in `SubmitPublicBooking` (a NOT-NULL `pets.sex` column fed an
+explicit null whenever a public booking omitted it). See
+`docs/summaries/2026-10-02-public-booking-page.md`.
+
+Earlier the same day: admin panel gained Online Booking and Billing & Plan pages, navigation
+permission-gated against the §5 matrix at both sidebar and route, a Team "Users & access"
+section, and Identity's `GET /api/v1/team` (the missing read half of `PUT /team/{user}/role`) —
+see `docs/summaries/2026-10-02-admin-billing-access.md`. The Team page also gained **staff
+working hours and time off UI** plus a `Rota` column warning on staff with no hours — see
+`docs/summaries/2026-10-02-admin-staff-schedule.md` — the **shared header was rebuilt against
+the Cuba template** — see `docs/summaries/2026-10-02-admin-header.md` — and the **Calendar
+screen now uses the template's real FullCalendar v5.11.3 widget** — see
 `docs/summaries/2026-10-02-admin-calendar-fullcalendar.md`.
 
 Previously, 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
@@ -48,7 +52,7 @@ below the table)
 | 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
 | 9 | Team + staff availability | §23 | 6 | MVP | **Tested** | Staff records (no login required, `D-018`), working hours, time off, deactivate/reactivate, `staff.view`/`staff.manage` permissions (`D-020`), `D-017` eligibility exposed via `StaffDirectory`, `staff` onboarding verifier (verified + skippable). 9 endpoints, 65 tests. **Admin UI 2026-10-02**: working hours (replace-all rota editor, split shifts, overlap refusal surfaced) and time off (list/add/cancel) now have a `Schedule` modal on the Team page, read-only for `staff.view`-without-`staff.manage`; the roster warns when a staff member has no hours and is therefore never bookable. `D-017` service eligibility still has no UI |
 | 10 | Calendar + appointment engine | §11 | 7 | MVP | **Built** | Boundary violation fixed, registered, full HTTP surface built (`D-022`). Waitlist (`waitlist_entries`, `JoinWaitlist`/`ConvertWaitlistEntryToAppointment`/`CancelWaitlistEntry`, 4 routes) added 2026-10-01 — closes the one §11 gap a pending-work check found. A partial automated test suite exists (`modules/Scheduling/Tests`) but has not been fully re-verified after the last fixes, and the waitlist has none — treat as Built, not Tested, until a full run confirms it |
-| 11 | Public online booking | §12 | 8 | MVP | **Built** | `modules/Booking` — public widget under `/api/v1/public/{tenant}/...` (`D-024`), reuses Scheduling's engine (`D-023`), no automated tests written this session. Still needs the 20-concurrent-request test on MySQL, and a public self-service cancel-by-token endpoint (deferred, see `D-024`) |
+| 11 | Public online booking | §12 | 8 | MVP | **Built** | `modules/Booking` — public API under `/api/v1/public/{tenant}/...` (`D-024`), reuses Scheduling's engine (`D-023`), now including `GET .../availability/open-slots` (2026-10-02). **The actual customer-facing page now exists**: `GET /book/{tenant}` (`resources/views/frontview/booking.blade.php`), a mobile-first wizard covering all 7 §12 steps — see `docs/summaries/2026-10-02-public-booking-page.md`. No automated tests written. Still needs the 20-concurrent-request test on MySQL, and a public self-service cancel-by-token endpoint (deferred, see `D-024`) |
 | 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved. **A substantial `modules/Notifications/` directory was found already on disk 2026-10-01** (mail/SMS provider contracts + fakes, appointment-event listeners, a reminder command, a `notification_logs` migration) — unregistered in `bootstrap/providers.php`, currently failing `ModuleRegistrationGuardTest`. Not verified or touched; see note below the table |
 | 13 | Dashboard + business insights | §16 | 10 | MVP | Not started | Every metric needs a documented formula (invariant #7) |
 | 14 | Website module | §14 | 11 | MVP | Not started | SEO needs prerendering under `D-006`; decision due at this phase |

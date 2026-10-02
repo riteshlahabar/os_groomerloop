@@ -60,6 +60,11 @@ final class EloquentAppointmentScheduler implements AppointmentScheduler
         return $this->availability->isAvailable($serviceId, $staffMemberId, $start);
     }
 
+    public function openSlotsFor(int $serviceId, ?int $staffMemberId, DateTimeInterface $date): array
+    {
+        return $this->availability->openSlotsOn($serviceId, $staffMemberId, $date);
+    }
+
     public function book(array $attributes): AppointmentSummary
     {
         return $this->summarise($this->booker->execute($attributes));

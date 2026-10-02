@@ -57,12 +57,21 @@ final class SubmitPublicBooking
                 'phone' => $attributes['phone'] ?? null,
             ]);
 
-            $petId = $this->pets->createForPublicBooking($customerId, [
+            $petAttributes = [
                 'name' => $attributes['pet_name'],
                 'species' => $attributes['pet_species'],
                 'breed' => $attributes['pet_breed'] ?? null,
-                'sex' => $attributes['pet_sex'] ?? null,
-            ]);
+            ];
+
+            // Omitted entirely rather than passed as an explicit null when the stranger didn't
+            // pick one: unlike `breed`, `sex` has a NOT NULL column with a database-level default
+            // (PetSex::Unknown) — Eloquent's fill()+save() sends an explicit null straight through
+            // an INSERT, bypassing that default and violating the column.
+            if (! empty($attributes['pet_sex'])) {
+                $petAttributes['sex'] = $attributes['pet_sex'];
+            }
+
+            $petId = $this->pets->createForPublicBooking($customerId, $petAttributes);
 
             $appointment = $this->scheduler->book([
                 'customer_id' => $customerId,

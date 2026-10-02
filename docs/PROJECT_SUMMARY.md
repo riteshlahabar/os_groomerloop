@@ -15,6 +15,7 @@ Living snapshot of where the project actually stands. Rewritten in place — for
 
 | Date | Work | Log |
 | --- | --- | --- |
+| 2026-10-02 | Public booking page (§12) — the headline gap: a stranger could not book anywhere before this. New `GET /book/{tenant}` wizard page, a new `AppointmentScheduler::openSlotsFor()` contract method + `GET .../availability/open-slots` endpoint, and a fixed pre-existing 500 in `SubmitPublicBooking` (a NOT-NULL `pets.sex` column fed an explicit null) | `2026-10-02-public-booking-page.md` |
 | 2026-10-02 | Admin panel: staff working hours + time off UI (§23), `Rota` warning column. One Blade file; no backend change. Closed a functional hole — staff availability feeds every `AvailabilityEngine` check, so a groomer with no hours is never bookable, and the roster used to read `Online: Yes` anyway | `2026-10-02-admin-staff-schedule.md` |
 | 2026-10-02 | Admin panel: Billing & Plan page, sidebar + route permission gating against the §5 matrix, Team "Users & access" section, new `GET /api/v1/team` | `2026-10-02-admin-billing-access.md` |
 | 2026-10-02 | Admin-panel audit (found `docs/` and `CLAUDE.md` stale), Online Booking page (§12), and the switch from browser verification to `scripts/api.sh` on the owner's instruction | `2026-10-02-admin-online-booking.md` |
@@ -107,14 +108,12 @@ Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 | Plan-literal guard | Tested | `PlanLiteralGuardTest` — CI guard 4 (invariant #3) |
 | Project documentation | Built | `CLAUDE.md`, `INSTRUCTION.md`, `docs/` tree, `D-001`–`D-020` |
 
-**Verification history (condensed; full detail in each day's `docs/summaries/` entries):**
-2026-10-01 Team session — 554/554 passed, 1909 assertions, all guards green. Every session
-since then on the same day (frontview, waitlist, Stripe, SuperAdmin, admin panel) ran only the
-relevant guard tests (per the owner's standing instruction to avoid routine full-suite runs),
-not the full suite — each found green on its own touched area except `ModuleRegistrationGuardTest`,
-which has failed consistently since the frontview session purely because of the still-unregistered
-`modules/Notifications` discovery (unrelated to any of that work). The admin-panel session's own
-verification was a full real-browser walkthrough instead of PHPUnit — see `D-027`.
+**Verification history (condensed; full detail in each day's `docs/summaries/` entries):** last
+confirmed full `php artisan test` run was 2026-10-01 (Team session, 554/554, 1909 assertions, all
+guards green). Every session since has run only the relevant guard tests or manual checks (no
+automated tests, per the owner's standing instruction) — each green on its own touched area
+except `ModuleRegistrationGuardTest`, which has failed consistently since the frontview session
+purely because of the still-unregistered `modules/Notifications` discovery.
 
 ### What CRM, Pets, Catalog and Team each enforce beyond plain CRUD
 
@@ -129,10 +128,14 @@ any of the four.
 
 **Phases 7 (`modules/Scheduling`, §11) and 8 (`modules/Booking`, §12) are code-built** (2026-10-01)
 — the boundary violation is fixed, both modules are registered, the full appointment engine and
-public booking widget exist end to end (`D-022`–`D-024`), and Phase 7's waitlist gap is now closed
+public booking API exist end to end (`D-022`–`D-024`), and Phase 7's waitlist gap is now closed
 too (`waitlist_entries`, `JoinWaitlist`/`ConvertWaitlistEntryToAppointment`/`CancelWaitlistEntry`,
-4 routes under `calendar.view`/`appointments.manage`). **Neither has a confirmed automated test
-run** (Scheduling has a drafted suite under `modules/Scheduling/Tests` whose last run was
+4 routes under `calendar.view`/`appointments.manage`). **As of 2026-10-02, §12's actual
+customer-facing page exists too** — `GET /book/{tenant}`, a mobile-first booking wizard, plus
+the "open slots for a day" endpoint it needed (`AppointmentScheduler::openSlotsFor()`,
+`GET .../availability/open-slots`) — see `2026-10-02-public-booking-page.md`. A stranger can now
+actually book an appointment; the remaining §12 gap is self-service cancellation, which still has
+no endpoint. **Neither has a confirmed automated test run** (Scheduling has a drafted suite under `modules/Scheduling/Tests` whose last run was
 interrupted, and the waitlist has no tests at all; Booking has none) — per the owner's explicit
 instruction, further work defaults to code only, verified manually, unless automated tests are
 asked for again.

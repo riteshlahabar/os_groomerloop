@@ -1,10 +1,37 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Tenancy\Models\Tenant;
 
 Route::get('/', function () {
     return view('frontview.home');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Public booking page (spec §12)
+|--------------------------------------------------------------------------
+|
+| The mobile-first page a stranger actually books from — the gap flagged in
+| docs/PROJECT_SUMMARY.md: the public API (modules/Booking) has existed since Phase 8, but
+| nothing rendered it as a page a business could hand a customer. This route only resolves the
+| tenant by slug for a friendly 404 (the same Tenant::allowsAccess() check ResolvePublicTenant
+| uses) and passes it to the view; every booking action itself still goes through
+| /api/v1/public/{tenant}/... client-side, same as every other Blade page in this app (D-007) —
+| this route does not read any tenant-owned data, only the Tenant row itself.
+|
+| Deliberately its own top-level path, not under /public/{tenant} — colliding with the
+| public/frontview-assets directory is exactly the trap D-019 already documents.
+*/
+Route::get('/book/{tenant}', function (string $tenant) {
+    $business = Tenant::query()->where('slug', $tenant)->first();
+
+    if ($business === null || ! $business->allowsAccess()) {
+        abort(404);
+    }
+
+    return view('frontview.booking', ['tenant' => $business]);
+})->name('public-booking');
 
 Route::get('/frontview', function () {
     return view('frontview.home');
