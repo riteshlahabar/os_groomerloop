@@ -1,0 +1,570 @@
+@extends('admin.layouts.app')
+
+@section('title', 'Website')
+@section('page-heading', 'Website')
+
+@section('content')
+  {{--
+    §14 Website editor.
+
+    Client-side fetch against /api/v1/website only (D-007) — no server-side query here. The public
+    site this publishes is the one server-rendered surface in the product (D-030) and lives in
+    modules/Website; this screen never renders tenant content itself, it only edits it.
+
+    The form is built from the metadata the API sends with each page (`fields`, `lists`), not from a
+    hard-coded field list, so adding a field to PageKey::contentFields() surfaces here with no change
+    to this file.
+  --}}
+  <div class="grid grid-cols-12 card-gap">
+
+    {{-- Publication state --}}
+    <div class="col-span-12">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>Your website</h5>
+        </div>
+        <div class="card-body pt-0">
+          <div id="wsError" class="alert alert-danger" style="display:none"></div>
+          <div id="wsOk" class="alert alert-success" style="display:none"></div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="mb-1" id="wsStatus">Loading…</p>
+              <p class="f-light mb-0" id="wsUrl"></p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="wsActions"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{-- Template picker --}}
+    <div class="col-span-12">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>Choose a look</h5>
+          <p class="f-light mb-0">Switching templates changes only the design — nothing you have written is lost.</p>
+        </div>
+        <div class="card-body pt-0">
+          <div class="grid grid-cols-12 card-gap" id="wsTemplates"></div>
+        </div>
+      </div>
+    </div>
+
+    {{-- Site-wide settings --}}
+    <div class="col-span-12 xl:col-span-6">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>Branding &amp; search</h5>
+        </div>
+        <div class="card-body pt-0">
+          <form id="wsSettingsForm">
+            <div class="mb-3">
+              <label class="form-label" for="wsSeoTitle">Search title</label>
+              <input type="text" class="form-control" id="wsSeoTitle" maxlength="255">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="wsSeoDescription">Search description</label>
+              <textarea class="form-control" id="wsSeoDescription" rows="2" maxlength="320"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="wsLogoUrl">Logo image link</label>
+              <input type="url" class="form-control" id="wsLogoUrl" maxlength="2048" placeholder="https://…">
+              <small class="f-light">Paste a link for now — uploading files from this screen arrives with secure uploads.</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="wsHeroUrl">Main photo link</label>
+              <input type="url" class="form-control" id="wsHeroUrl" maxlength="2048" placeholder="https://…">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="wsColor">Accent colour</label>
+              <input type="color" class="form-control" id="wsColor" style="max-width:120px">
+            </div>
+            <button type="submit" class="btn btn-primary" id="wsSettingsSubmit">Save</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {{-- Social links --}}
+    <div class="col-span-12 xl:col-span-6">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>Social links</h5>
+          <p class="f-light mb-0">Shown in the footer of every page. Leave blank to hide.</p>
+        </div>
+        <div class="card-body pt-0">
+          <form id="wsSocialForm">
+            <div id="wsSocialFields"></div>
+            <button type="submit" class="btn btn-primary" id="wsSocialSubmit">Save</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {{-- Pages --}}
+    <div class="col-span-12">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>Pages</h5>
+          <p class="f-light mb-0">Your services and team are pulled in automatically and stay up to date — you never retype them here.</p>
+        </div>
+        <div class="card-body pt-0">
+          <div id="wsPages"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+@endsection
+
+@push('scripts')
+  <script>
+    (function () {
+      var api = window.GroomerLoopAdmin;
+
+      // Labels and input kinds for the content fields PageKey declares. A field the API reports that
+      // is missing here still renders — it falls back to a titleised label and a text input — so a new
+      // backend field is never invisible, only unpolished.
+      var FIELD_META = {
+        eyebrow: { label: 'Small line above the headline', kind: 'text' },
+        headline: { label: 'Headline', kind: 'text' },
+        subheadline: { label: 'Sub-headline', kind: 'text' },
+        intro: { label: 'Intro paragraph', kind: 'textarea' },
+        cta_label: { label: 'Button text', kind: 'text' },
+        body: { label: 'Body text', kind: 'textarea' },
+        image_url: { label: 'Image link', kind: 'url' },
+        map_embed_url: { label: 'Map embed link', kind: 'url' },
+        title: { label: 'Title', kind: 'text' },
+        text: { label: 'Text', kind: 'textarea' },
+        name: { label: 'Customer name', kind: 'text' },
+        quote: { label: 'What they said', kind: 'textarea' },
+        url: { label: 'Image link', kind: 'url' },
+        caption: { label: 'Caption', kind: 'text' }
+      };
+
+      var SOCIAL_NETWORKS = ['facebook', 'instagram', 'google', 'tiktok', 'youtube', 'x'];
+
+      var site = null;
+
+      function meta(field) {
+        return FIELD_META[field] || { label: field.replace(/_/g, ' '), kind: 'text' };
+      }
+
+      function showError(message) {
+        var el = document.getElementById('wsError');
+        el.textContent = message;
+        el.style.display = 'block';
+        document.getElementById('wsOk').style.display = 'none';
+      }
+
+      function showOk(message) {
+        var el = document.getElementById('wsOk');
+        el.textContent = message;
+        el.style.display = 'block';
+        document.getElementById('wsError').style.display = 'none';
+      }
+
+      function firstErrorFrom(result, fallback) {
+        if (result.body && result.body.errors) {
+          var keys = Object.keys(result.body.errors);
+          if (keys.length) {
+            return result.body.errors[keys[0]][0];
+          }
+        }
+        if (result.body && result.body.message) {
+          return result.body.message;
+        }
+        return fallback;
+      }
+
+      function fieldInput(id, field, value) {
+        var m = meta(field);
+        var safeValue = api.escapeHtml(value || '');
+
+        if (m.kind === 'textarea') {
+          return '<label class="form-label" for="' + id + '">' + api.escapeHtml(m.label) + '</label>' +
+            '<textarea class="form-control" id="' + id + '" rows="3">' + safeValue + '</textarea>';
+        }
+
+        return '<label class="form-label" for="' + id + '">' + api.escapeHtml(m.label) + '</label>' +
+          '<input type="' + (m.kind === 'url' ? 'url' : 'text') + '" class="form-control" id="' + id + '" value="' + safeValue + '">';
+      }
+
+      // ---- status -------------------------------------------------------------------------------
+
+      function renderStatus() {
+        var badge = site.is_published
+          ? '<span class="badge badge-light-success">Published</span>'
+          : '<span class="badge badge-light-warning">Draft — not public yet</span>';
+
+        var published = site.published_at
+          ? ' Last published ' + api.wallClockDateLabel(site.published_at) + ' at ' + api.wallClockTimeLabel(site.published_at) + '.'
+          : '';
+
+        document.getElementById('wsStatus').innerHTML = badge + '<span class="f-light ms-2">' + api.escapeHtml(published) + '</span>';
+
+        document.getElementById('wsUrl').innerHTML = site.is_published
+          ? 'Your address: <a href="' + api.escapeHtml(site.public_url) + '" target="_blank" rel="noopener">' + api.escapeHtml(site.public_url) + '</a>'
+          : 'Your address once published: <span class="f-light">' + api.escapeHtml(site.public_url) + '</span>';
+
+        var actions =
+          '<a class="btn btn-light" href="' + api.escapeHtml(site.preview_url) + '" target="_blank" rel="noopener">Preview draft</a>' +
+          (site.is_published
+            ? '<button type="button" class="btn btn-primary" id="wsPublish">Publish changes</button>' +
+              '<button type="button" class="btn btn-light" id="wsUnpublish">Take offline</button>'
+            : '<button type="button" class="btn btn-primary" id="wsPublish">Publish site</button>');
+
+        document.getElementById('wsActions').innerHTML = actions;
+
+        document.getElementById('wsPublish').addEventListener('click', publish);
+
+        var offline = document.getElementById('wsUnpublish');
+        if (offline) {
+          offline.addEventListener('click', unpublish);
+        }
+      }
+
+      async function publish() {
+        var result = await api.post('/api/v1/website/publication');
+        if (!result.ok) {
+          showError(firstErrorFrom(result, 'Could not publish the site.'));
+          return;
+        }
+        site = result.body.data;
+        renderAll();
+        showOk('Your website is live.');
+      }
+
+      async function unpublish() {
+        var result = await api.del('/api/v1/website/publication');
+        if (!result.ok) {
+          showError(firstErrorFrom(result, 'Could not take the site offline.'));
+          return;
+        }
+        site = result.body.data;
+        renderAll();
+        showOk('Your website is offline. Nothing you wrote has been deleted.');
+      }
+
+      // ---- templates ----------------------------------------------------------------------------
+
+      function renderTemplates() {
+        document.getElementById('wsTemplates').innerHTML = site.templates.map(function (template) {
+          var isCurrent = template.key === site.template_key;
+          return '<div class="col-span-12 md:col-span-4">' +
+            '<div class="card ' + (isCurrent ? 'border-primary' : '') + '" style="height:100%">' +
+            '<div class="card-body">' +
+            '<div class="flex items-center justify-between mb-2">' +
+            '<h6 class="mb-0">' + api.escapeHtml(template.label) + '</h6>' +
+            (isCurrent ? '<span class="badge badge-light-primary">In use</span>' : '') +
+            '</div>' +
+            '<p class="f-light">' + api.escapeHtml(template.description) + '</p>' +
+            (isCurrent
+              ? ''
+              : '<button type="button" class="btn btn-light btn-sm" data-template="' + api.escapeHtml(template.key) + '">Use this look</button>') +
+            '</div></div></div>';
+        }).join('');
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-template]'), function (button) {
+          button.addEventListener('click', async function () {
+            var result = await api.put('/api/v1/website', { template_key: this.dataset.template });
+            if (!result.ok) {
+              showError(firstErrorFrom(result, 'Could not change the template.'));
+              return;
+            }
+            site = result.body.data;
+            renderAll();
+            showOk('Template changed. Publish when you are ready for visitors to see it.');
+          });
+        });
+      }
+
+      // ---- settings -----------------------------------------------------------------------------
+
+      function renderSettings() {
+        document.getElementById('wsSeoTitle').value = site.seo_title || '';
+        document.getElementById('wsSeoDescription').value = site.seo_description || '';
+        document.getElementById('wsLogoUrl').value = site.logo_url || '';
+        document.getElementById('wsHeroUrl').value = site.hero_image_url || '';
+        document.getElementById('wsColor').value = site.primary_color || '#0f766e';
+
+        document.getElementById('wsSocialFields').innerHTML = SOCIAL_NETWORKS.map(function (network) {
+          var value = api.escapeHtml((site.social && site.social[network]) || '');
+          return '<div class="mb-3">' +
+            '<label class="form-label" for="wsSocial_' + network + '">' + network.charAt(0).toUpperCase() + network.slice(1) + '</label>' +
+            '<input type="url" class="form-control" id="wsSocial_' + network + '" maxlength="2048" value="' + value + '">' +
+            '</div>';
+        }).join('');
+      }
+
+      async function saveSettings(event) {
+        event.preventDefault();
+
+        var result = await api.put('/api/v1/website', {
+          seo_title: document.getElementById('wsSeoTitle').value || null,
+          seo_description: document.getElementById('wsSeoDescription').value || null,
+          logo_url: document.getElementById('wsLogoUrl').value || null,
+          hero_image_url: document.getElementById('wsHeroUrl').value || null,
+          primary_color: document.getElementById('wsColor').value || null
+        });
+
+        if (!result.ok) {
+          showError(firstErrorFrom(result, 'Could not save your branding.'));
+          return;
+        }
+
+        site = result.body.data;
+        renderAll();
+        showOk('Saved. Publish to put the change live.');
+      }
+
+      async function saveSocial(event) {
+        event.preventDefault();
+
+        var social = {};
+        SOCIAL_NETWORKS.forEach(function (network) {
+          social[network] = document.getElementById('wsSocial_' + network).value || null;
+        });
+
+        var result = await api.put('/api/v1/website', { social: social });
+
+        if (!result.ok) {
+          showError(firstErrorFrom(result, 'Could not save your social links.'));
+          return;
+        }
+
+        site = result.body.data;
+        renderAll();
+        showOk('Saved. Publish to put the change live.');
+      }
+
+      // ---- pages --------------------------------------------------------------------------------
+
+      function listRowsHtml(pageKey, listField, definition, rows) {
+        var html = '<div class="mb-2"><strong>' + api.escapeHtml(listField.replace(/_/g, ' ')) + '</strong> ' +
+          '<span class="f-light">(up to ' + definition.max + ')</span></div>' +
+          '<div id="wsList_' + pageKey + '_' + listField + '">';
+
+        rows.forEach(function (row, index) {
+          html += listRowHtml(pageKey, listField, definition, row, index);
+        });
+
+        html += '</div>' +
+          '<button type="button" class="btn btn-light btn-sm mb-3" data-add-row="' + pageKey + '" data-list="' + listField + '">Add</button>';
+
+        return html;
+      }
+
+      function listRowHtml(pageKey, listField, definition, row, index) {
+        var inputs = definition.fields.map(function (field) {
+          var id = 'wsRow_' + pageKey + '_' + listField + '_' + index + '_' + field;
+          return '<div class="col-span-12 md:col-span-5">' + fieldInput(id, field, row ? row[field] : '') + '</div>';
+        }).join('');
+
+        return '<div class="grid grid-cols-12 card-gap items-end mb-2" data-row="' + index + '">' +
+          inputs +
+          '<div class="col-span-12 md:col-span-2">' +
+          '<button type="button" class="btn btn-light btn-sm" data-remove-row="1">Remove</button>' +
+          '</div></div>';
+      }
+
+      function renderPages() {
+        document.getElementById('wsPages').innerHTML = site.pages.map(function (page) {
+          var content = page.content || {};
+
+          var fields = page.fields.map(function (field) {
+            return '<div class="col-span-12 md:col-span-6 mb-3">' +
+              fieldInput('wsField_' + page.key + '_' + field, field, content[field]) +
+              '</div>';
+          }).join('');
+
+          var lists = Object.keys(page.lists || {}).map(function (listField) {
+            var definition = page.lists[listField];
+            var rows = Array.isArray(content[listField]) ? content[listField] : [];
+            return '<div class="col-span-12">' + listRowsHtml(page.key, listField, definition, rows) + '</div>';
+          }).join('');
+
+          var toggle = page.is_mandatory
+            ? '<span class="badge badge-light-primary">Always on</span>'
+            : '<div class="form-check form-switch mb-0">' +
+              '<input class="form-check-input" type="checkbox" id="wsEnabled_' + page.key + '"' + (page.is_enabled ? ' checked' : '') + '>' +
+              '<label class="form-check-label" for="wsEnabled_' + page.key + '">Show this page</label>' +
+              '</div>';
+
+          return '<div class="card mb-3" data-page="' + page.key + '">' +
+            '<div class="card-header card-no-border pb-2">' +
+            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+            '<h6 class="mb-0">' + api.escapeHtml(page.label) + '</h6>' + toggle +
+            '</div></div>' +
+            '<div class="card-body pt-0">' +
+            '<div id="wsPageError_' + page.key + '" class="alert alert-danger" style="display:none"></div>' +
+            '<div class="grid grid-cols-12 card-gap">' +
+            '<div class="col-span-12 md:col-span-6 mb-3">' +
+            '<label class="form-label" for="wsTitle_' + page.key + '">Menu title</label>' +
+            '<input type="text" class="form-control" id="wsTitle_' + page.key + '" value="' + api.escapeHtml(page.title || '') + '">' +
+            '</div>' +
+            fields + lists +
+            '<div class="col-span-12 md:col-span-6 mb-3">' +
+            '<label class="form-label" for="wsPageSeoTitle_' + page.key + '">Search title</label>' +
+            '<input type="text" class="form-control" id="wsPageSeoTitle_' + page.key + '" value="' + api.escapeHtml(page.seo_title || '') + '">' +
+            '</div>' +
+            '<div class="col-span-12 md:col-span-6 mb-3">' +
+            '<label class="form-label" for="wsPageSeoDesc_' + page.key + '">Search description</label>' +
+            '<input type="text" class="form-control" id="wsPageSeoDesc_' + page.key + '" value="' + api.escapeHtml(page.seo_description || '') + '">' +
+            '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-primary" data-save-page="' + page.key + '">Save page</button> ' +
+            '<a class="btn btn-light" href="' + api.escapeHtml(site.preview_url.replace(/\/preview\/.*$/, '/preview/' + page.key)) + '" target="_blank" rel="noopener">Preview</a>' +
+            '</div></div>';
+        }).join('');
+
+        wirePageControls();
+      }
+
+      function wirePageControls() {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-save-page]'), function (button) {
+          button.addEventListener('click', function () { savePage(this.dataset.savePage); });
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-add-row]'), function (button) {
+          button.addEventListener('click', function () {
+            var pageKey = this.dataset.addRow;
+            var listField = this.dataset.list;
+            var page = site.pages.filter(function (p) { return p.key === pageKey; })[0];
+            var definition = page.lists[listField];
+            var container = document.getElementById('wsList_' + pageKey + '_' + listField);
+            var index = container.querySelectorAll('[data-row]').length;
+
+            if (index >= definition.max) {
+              showError('You can add up to ' + definition.max + ' of these.');
+              return;
+            }
+
+            container.insertAdjacentHTML('beforeend', listRowHtml(pageKey, listField, definition, null, index));
+            wireRemoveButtons();
+          });
+        });
+
+        wireRemoveButtons();
+      }
+
+      function wireRemoveButtons() {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-remove-row]'), function (button) {
+          if (button.dataset.wired) {
+            return;
+          }
+          button.dataset.wired = '1';
+          button.addEventListener('click', function () {
+            var row = this.closest('[data-row]');
+            if (row) {
+              row.parentNode.removeChild(row);
+            }
+          });
+        });
+      }
+
+      function collectContent(page) {
+        var content = {};
+
+        page.fields.forEach(function (field) {
+          var el = document.getElementById('wsField_' + page.key + '_' + field);
+          content[field] = el && el.value !== '' ? el.value : null;
+        });
+
+        Object.keys(page.lists || {}).forEach(function (listField) {
+          var definition = page.lists[listField];
+          var container = document.getElementById('wsList_' + page.key + '_' + listField);
+          var rows = [];
+
+          Array.prototype.forEach.call(container.querySelectorAll('[data-row]'), function (rowEl) {
+            var index = rowEl.dataset.row;
+            var row = {};
+            var hasValue = false;
+
+            definition.fields.forEach(function (field) {
+              var el = document.getElementById('wsRow_' + page.key + '_' + listField + '_' + index + '_' + field);
+              var value = el && el.value !== '' ? el.value : null;
+              row[field] = value;
+              if (value) {
+                hasValue = true;
+              }
+            });
+
+            // A row the owner added and left empty is dropped rather than sent: `url` is required on
+            // a gallery row, so an empty one would fail validation and block the whole save.
+            if (hasValue) {
+              rows.push(row);
+            }
+          });
+
+          content[listField] = rows;
+        });
+
+        return content;
+      }
+
+      async function savePage(pageKey) {
+        var page = site.pages.filter(function (p) { return p.key === pageKey; })[0];
+        var errorEl = document.getElementById('wsPageError_' + pageKey);
+        errorEl.style.display = 'none';
+
+        var payload = {
+          title: document.getElementById('wsTitle_' + pageKey).value || null,
+          seo_title: document.getElementById('wsPageSeoTitle_' + pageKey).value || null,
+          seo_description: document.getElementById('wsPageSeoDesc_' + pageKey).value || null,
+          content: collectContent(page)
+        };
+
+        // Home has no off switch, and the API prohibits the key rather than ignoring it.
+        if (!page.is_mandatory) {
+          payload.is_enabled = document.getElementById('wsEnabled_' + pageKey).checked;
+        }
+
+        var result = await api.put('/api/v1/website/pages/' + pageKey, payload);
+
+        if (!result.ok) {
+          errorEl.textContent = firstErrorFrom(result, 'Could not save this page.');
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        // Keep the local copy in step so the next save sends current state, without re-rendering the
+        // whole page list and throwing away the owner's scroll position.
+        site.pages = site.pages.map(function (p) {
+          return p.key === pageKey ? result.body.data : p;
+        });
+
+        showOk('Saved “' + (result.body.data.display_title || pageKey) + '”. Publish to put it live.');
+      }
+
+      // ---- boot ---------------------------------------------------------------------------------
+
+      function renderAll() {
+        renderStatus();
+        renderTemplates();
+        renderSettings();
+        renderPages();
+      }
+
+      async function load() {
+        var result = await api.get('/api/v1/website');
+
+        if (!result.ok) {
+          // 402 is the entitlement answer, not an error the owner can fix by retrying.
+          showError(result.status === 402
+            ? 'Your plan does not include the website builder.'
+            : firstErrorFrom(result, 'Could not load your website.'));
+          return;
+        }
+
+        site = result.body.data;
+        renderAll();
+      }
+
+      document.getElementById('wsSettingsForm').addEventListener('submit', saveSettings);
+      document.getElementById('wsSocialForm').addEventListener('submit', saveSocial);
+
+      load();
+    })();
+  </script>
+@endpush

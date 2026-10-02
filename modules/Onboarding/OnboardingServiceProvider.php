@@ -3,8 +3,10 @@
 namespace Modules\Onboarding;
 
 use App\Support\ModuleServiceProvider;
+use Modules\Onboarding\Contracts\BusinessProfileDirectory;
 use Modules\Onboarding\Contracts\OnboardingStatus;
 use Modules\Onboarding\Services\ChecklistStatus;
+use Modules\Onboarding\Services\EloquentBusinessProfileDirectory;
 use Modules\Onboarding\Services\StepVerifiers;
 use Modules\Onboarding\Verifiers\AccountVerifier;
 use Modules\Onboarding\Verifiers\BusinessDetailsVerifier;
@@ -28,6 +30,11 @@ final class OnboardingServiceProvider extends ModuleServiceProvider
         $this->app->singleton(StepVerifiers::class);
 
         $this->app->bind(OnboardingStatus::class, ChecklistStatus::class);
+
+        // Singleton so the per-request memo is shared: §14's public site reads the same business
+        // profile from its header, its footer and its contact section (D-007).
+        $this->app->singleton(EloquentBusinessProfileDirectory::class);
+        $this->app->alias(EloquentBusinessProfileDirectory::class, BusinessProfileDirectory::class);
     }
 
     public function boot(): void

@@ -116,9 +116,13 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('billing', fn () => view('admin.billing'))
         ->middleware('permission:billing.view')->name('billing');
 
+    // §14. The editor screen; the public site it publishes and the owner's draft preview are
+    // server-rendered web routes owned by modules/Website itself (D-030).
+    Route::get('website', fn () => view('admin.website'))
+        ->middleware('permission:website.manage')->name('website');
+
     // slug => [title, icon, permission or null]
     $comingSoon = [
-        'website' => ['Website', 'landing-page', 'permission:website.manage'],
         'messages' => ['Messages', 'chat', null],
         'reviews' => ['Reviews', 'social', null],
         'growth' => ['Growth', 'activity', 'permission:growth.manage'],

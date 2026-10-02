@@ -16,6 +16,7 @@ use Modules\Scheduling\SchedulingServiceProvider;
 use Modules\SuperAdmin\SuperAdminServiceProvider;
 use Modules\Team\TeamServiceProvider;
 use Modules\Tenancy\TenancyServiceProvider;
+use Modules\Website\WebsiteServiceProvider;
 
 return [
     // Shared kernel.
@@ -76,6 +77,12 @@ return [
     // Booking (§12) depends on Scheduling's AppointmentScheduler plus Catalog/Team/Crm/Pets'
     // read contracts, so it boots after all of them.
     BookingServiceProvider::class,
+
+    // Website (§14) depends on Catalog's ServiceCatalog, Team's StaffDirectory and Onboarding's
+    // BusinessProfileDirectory to render a tenant's public site, so it boots after all three. It
+    // owns no service, staff or appointment data of its own and links every call to action to §12's
+    // booking wizard rather than building a second one (D-023, D-030).
+    WebsiteServiceProvider::class,
 
     // SuperAdmin (§31, first slice: D-026) depends on nothing but the framework — no other
     // module's contract — so its position here is arbitrary; listed last as the newest module.
