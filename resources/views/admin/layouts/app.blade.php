@@ -209,8 +209,21 @@
                     });
                   @endphp
                   @foreach ($adminNav as $item)
+                    {{--
+                      `link-nav` is the template's marker for "this item has no submenu", and it
+                      is what suppresses the expand arrow. `sidebar-menu.js` appends a
+                      `.according-menu` arrow to EVERY `.sidebar-title` unconditionally, and the
+                      only thing that hides it is the stylesheet's
+                      `&.link-nav { .according-menu { display: none } }`. Without the class, all
+                      16 nav items showed an arrow promising a submenu that does not exist.
+
+                      Driven off `children` rather than hardcoded, so the rule is the real one —
+                      an arrow when there is something to expand, none when there isn't. Every
+                      §6 item is currently a flat link, so none of them gets an arrow today; add
+                      a `children` key and the arrow comes back on its own.
+                    --}}
                     <li class="sidebar-list">
-                      <a class="sidebar-link sidebar-title {{ request()->routeIs($item['route'] ?? '') ? 'active' : '' }}" href="{{ isset($item['route']) ? route($item['route']) : '#' }}">
+                      <a class="sidebar-link sidebar-title {{ empty($item['children'] ?? []) ? 'link-nav' : '' }} {{ request()->routeIs($item['route'] ?? '') ? 'active' : '' }}" href="{{ isset($item['route']) ? route($item['route']) : '#' }}">
                         <svg class="stroke-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-{{ $item['icon'] }}"></use></svg>
                         <svg class="fill-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#fill-{{ $item['icon'] }}"></use></svg>
                         <span>{{ $item['label'] }}</span>
