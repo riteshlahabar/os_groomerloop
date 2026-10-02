@@ -10,7 +10,10 @@ navigation permission-gated against the §5 matrix at both sidebar and route, Te
 "Users & access" section, and Identity gained `GET /api/v1/team` (the missing read half of
 `PUT /team/{user}/role`). See `docs/summaries/2026-10-02-admin-billing-access.md`. Later the
 same day the Team page gained the **staff working hours and time off UI** plus a `Rota` column
-warning on staff with no hours — see `docs/summaries/2026-10-02-admin-staff-schedule.md`.
+warning on staff with no hours — see `docs/summaries/2026-10-02-admin-staff-schedule.md` — and
+the **shared header was rebuilt against the Cuba template** (12-column grid restored, duplicate
+logo removed, correctly-sized brand assets instead of inline-styled oversized ones) — see
+`docs/summaries/2026-10-02-admin-header.md`.
 
 Previously, 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
 outside the module system — see note below the table; row 10 corrected from `Not started` to

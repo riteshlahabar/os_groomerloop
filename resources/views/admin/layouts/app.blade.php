@@ -39,14 +39,46 @@
       <!-- Page Header Start-->
       <div class="page-header">
         <div class="header-wrapper grid grid-cols-12 m-0">
-          <div class="header-logo-wrapper col-auto p-0">
+          {{--
+            `hidden ... lg:block` is the template's own pairing and is deliberate. Cuba's
+            breakpoints are DESKTOP-FIRST (`tailwind.config.js`: `lg: {max: "991px"}`), so this
+            reads "hidden by default, shown at ≤991px" — the opposite of stock Tailwind. On
+            desktop the sidebar carries the logo and the header carries none; below 991px the
+            sidebar collapses and the header logo takes over. Dropping `hidden lg:block` here
+            (as this layout previously did) renders the header logo *and* the sidebar logo at
+            the same time on desktop and eats the width the nav needs.
+
+            Assets are sized to the template's own footprint — 183×35, Cuba's logo.png height
+            with our wordmark's aspect — rather than a full-resolution brand file squeezed by an
+            inline `height:`. The header CSS is just `max-w-full h-auto`, so it relies on the
+            source file already being logo-sized; the frontview header hit exactly this and
+            inflated to ~211px tall (see the 2026-10-01 frontview notes).
+          --}}
+          <div class="header-logo-wrapper hidden col-auto p-0 lg:block">
             <div class="logo-wrapper"><a href="{{ route('admin.dashboard') }}">
-                <img class="max-w-full h-auto for-light" style="height:34px" src="{{ asset('frontview-assets/img/logo.png') }}" alt="GroomerLoop">
-                <img class="max-w-full h-auto for-dark" style="height:34px" src="{{ asset('frontview-assets/img/logo-white.png') }}" alt="GroomerLoop">
+                <img class="max-w-full h-auto for-light" src="{{ asset('admin-assets/images/logo/logo.png') }}" alt="GroomerLoop">
+                <img class="max-w-full h-auto for-dark" src="{{ asset('admin-assets/images/logo/logo_dark.png') }}" alt="GroomerLoop">
               </a></div>
             <div class="toggle-sidebar"><i class="status_toggle middle sidebar-toggle" data-feather="align-center"></i></div>
           </div>
-          <div class="nav-right col-span-11 float-right right-header p-0 ms-auto">
+
+          {{--
+            The template's middle column. Cuba fills it with a vendor promo slider, which has no
+            place here, but the slot itself is load-bearing: `header-wrapper` is a 12-column
+            grid, and the column spans below are the vendor's. Leaving it out while giving
+            `nav-right` 11 columns (as this layout previously did) asks for 11 columns plus an
+            `col-auto` logo out of 12, which overflows the row and is what pushed the header
+            icons out of alignment. The business name is genuinely useful here and costs nothing.
+          --}}
+          <div class="left-header col-span-5 xxl:col-span-6 xl:col-span-5 lg:col-span-4 md:col-span-3">
+            {{-- `loadMissing`, not a bare `->tenant`: AppServiceProvider calls
+                 Model::shouldBeStrict() outside production, which turns lazy loading into a
+                 thrown LazyLoadingViolationException — a bare relation access here would 500
+                 every admin page in dev while working in production, the worst way round. --}}
+            <h6 class="mb-0 f-light truncate">{{ auth()->user()->loadMissing('tenant')->tenant?->name }}</h6>
+          </div>
+
+          <div class="nav-right col-span-7 xxl:col-span-6 xl:col-span-7 md:col-span-11 float-right right-header p-0 ms-auto">
             <ul class="nav-menus">
               <li>
                 <div class="mode">
@@ -64,7 +96,10 @@
               </li>
               <li class="profile-nav onhover-dropdown !py-0 !pe-0">
                 <div class="flex profile-media items-center">
-                  <img src="{{ asset('frontview-assets/img/favicon.png') }}" alt="{{ auth()->user()->name }}" style="width:35px;height:35px;border-radius:50%">
+                  {{-- 35×35 on disk, matching the template's own profile.png. The vendor CSS
+                       sizes and rounds `.profile-media img` itself, so the previous inline
+                       width/height/border-radius on a 270×270 favicon was fighting it. --}}
+                  <img class="max-w-full h-auto" src="{{ asset('admin-assets/images/logo/avatar.png') }}" alt="{{ auth()->user()->name }}">
                   <div class="profile-content"><span>{{ auth()->user()->name }}</span>
                     <p class="mb-0">{{ auth()->user()->role?->label() }} <i class="align-middle fa-solid fa-angle-down"></i></p>
                   </div>
@@ -98,7 +133,22 @@
         <!-- Page Sidebar Start-->
         <div class="sidebar-wrapper" data-sidebar-layout="stroke-svg">
           <div>
-            <div class="logo-icon-wrapper"><a href="{{ route('admin.dashboard') }}"><img class="max-w-full h-auto" style="height:28px" src="{{ asset('frontview-assets/img/favicon.png') }}" alt="GroomerLoop"></a></div>
+            {{--
+              The sidebar's own logo, which the template has and this layout was missing. It is
+              what makes hiding the header logo on desktop correct: Cuba shows `logo-wrapper`
+              while the sidebar is expanded and `logo-icon-wrapper` once it collapses, so the
+              full GroomerLoop wordmark is always visible exactly once. Previously only the icon
+              wrapper existed here, which is why the header logo had to stay on at every width
+              and why the two competed for the header row.
+            --}}
+            <div class="logo-wrapper"><a href="{{ route('admin.dashboard') }}">
+                <img class="max-w-full h-auto for-light" src="{{ asset('admin-assets/images/logo/logo.png') }}" alt="GroomerLoop">
+                <img class="max-w-full h-auto for-dark" src="{{ asset('admin-assets/images/logo/logo_dark.png') }}" alt="GroomerLoop">
+              </a>
+              <div class="back-btn hidden lg:block"><i class="fa-solid fa-angle-left"></i></div>
+              <div class="toggle-sidebar"><i class="status_toggle middle sidebar-toggle" data-feather="grid"></i></div>
+            </div>
+            <div class="logo-icon-wrapper"><a href="{{ route('admin.dashboard') }}"><img class="max-w-full h-auto" src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop"></a></div>
             <nav class="sidebar-main">
               <div class="left-arrow" id="left-arrow"><i data-feather="arrow-left"></i></div>
               <div id="sidebar-menu">
