@@ -1,59 +1,28 @@
 # GroomerLoop OS — project summary
 
-**Last updated:** 2026-10-01 · **Phase:** 6 of 12 complete; **Phases 7 (Scheduling) and 8
+**Last updated:** 2026-10-02 · **Phase:** 6 of 12 complete; **Phases 7 (Scheduling) and 8
 (Booking) code-built** (not automated-tested — see below) · **Spec:** v1.0 (40 sections)
-
-**Same day, later session:** a pending-work check on Phase 7 confirmed the appointment engine
-itself (business hours, service rules, staff availability, conflict detection, recurring
-appointments, full audit history) was already correct, and found exactly one §11 gap — the
-waitlist — which this session built. It also surfaced a second undocumented module,
-`modules/Notifications/` (Phase 9), sitting unregistered on disk; not touched this session, see
-`MODULE_STATUS.md`.
-
-**Same day, yet another session:** added `StripeGateway` as Billing's first real
-`PaymentGateway` driver (`D-025`) — the owner wants Stripe for payment collection.
-`BILLING_GATEWAY` still defaults to `fake`; switching over needs a real Stripe secret key,
-which this environment does not have.
-
-**Same day, one more session:** built the first slice of `modules/SuperAdmin` (§31) — a
-platform-wide SMTP settings screen (`D-026`), since the owner wants notification-email
-credentials stored in a table and edited from an admin panel rather than `.env`. Verified
-end-to-end via `tinker` across fresh process boundaries. `MAIL_MAILER` still defaults to `log`
-until a real `PlatformAdmin` user (none exists yet) enables real settings.
-
-**Same day, final session (part 1):** built the authenticated admin panel (`GET /admin` + 15 nav
-placeholders), Blade-rendered from the owner's Cuba template — see "Admin panel" in
-`MODULE_STATUS.md`. Verified fully live end-to-end in a real browser (login → real stat cards →
-live count change after creating real data → logout → redirect enforcement). That verification
-is what surfaced **`D-027`**: the app's own `Referrer-Policy: no-referrer` (global since Phase 0)
-was silently 401-ing every Sanctum-authenticated `fetch()` any Blade page makes — fixed to
-`same-origin`. This affects every future Blade page and the eventual React SPA alike, and the
-existing automated suite is structurally blind to a regression of it (see `D-027`). Also fixed a
-real crash in last session's `SuperAdminServiceProvider` (cached a raw Eloquent model; now
-caches a plain array).
-
-**Same day, final session (part 2):** made 4 more nav items real — Customers, Pets, Services,
-Team — each full create/list/search/filter/edit/archive against the live API, verified the same
-way (real browser, real test data, cleaned up after). Found and fixed a third real bug:
-Catalog's `buffer_minutes` column is NOT NULL with a DB default, but its own validation rule
-says `nullable` — an explicit `null` (which the rule promises is fine) hit a raw SQL error.
-Fixed in `CreateService`/`UpdateService`.
-
-**2026-10-02:** audited the admin panel against the code and found this file, `MODULE_STATUS.md`
-and `CLAUDE.md` all stale — Settings, Calendar and Appointments had shipped after the last doc
-update, and CLAUDE.md did not mention the admin panel at all. All three corrected. Then built
-the **Online Booking** page (§12): a pending booking-requests queue with Confirm/Decline, the
-booking-rules form, the public booking address, and a read-only "bookable online" list.
-**9 of 16 nav items are now real; 7 remain placeholders, and only Billing & Plan among them has
-a finished backend.** The audit's full list of built-but-unsurfaced endpoints and two
-cross-cutting defects (unfiltered sidebar, no `permission:` on `/admin/*`) is in CLAUDE.md's
-"Open / next steps" and `summaries/2026-10-02-admin-online-booking.md`. The same session
-switched verification away from browser automation to `scripts/api.sh` (authenticated curl) on
-the owner's instruction — see "Verifying a change" in CLAUDE.md for what that does and does not
-prove.
 
 Living snapshot of where the project actually stands. Rewritten in place — for history, see
 `summaries/`.
+
+> Condensed on 2026-10-02: this header had accumulated eight "same day, later session"
+> paragraphs of narrative history, which is what the session logs are for and which pushed the
+> file well past its ~200-line budget. The per-session detail now lives only in
+> `summaries/`, indexed below; nothing was lost.
+
+**Recent sessions, newest first** — each line links the log that holds the detail:
+
+| Date | Work | Log |
+| --- | --- | --- |
+| 2026-10-02 | Admin panel: staff working hours + time off UI (§23), `Rota` warning column. One Blade file; no backend change. Closed a functional hole — staff availability feeds every `AvailabilityEngine` check, so a groomer with no hours is never bookable, and the roster used to read `Online: Yes` anyway | `2026-10-02-admin-staff-schedule.md` |
+| 2026-10-02 | Admin panel: Billing & Plan page, sidebar + route permission gating against the §5 matrix, Team "Users & access" section, new `GET /api/v1/team` | `2026-10-02-admin-billing-access.md` |
+| 2026-10-02 | Admin-panel audit (found `docs/` and `CLAUDE.md` stale), Online Booking page (§12), and the switch from browser verification to `scripts/api.sh` on the owner's instruction | `2026-10-02-admin-online-booking.md` |
+| 2026-10-01 | Admin panel built from the Cuba template — `GET /admin` + Dashboard, then Customers/Pets/Services/Team/Settings/Calendar/Appointments. Surfaced **`D-027`** (`Referrer-Policy: no-referrer` silently 401-ing every Blade `fetch()`) and a `buffer_minutes` NOT-NULL-vs-`nullable` bug in Catalog | `2026-10-01-admin-panel.md`, `2026-10-01-admin-crud-pages.md` |
+| 2026-10-01 | `modules/SuperAdmin` first slice (§31): platform-wide SMTP settings (`D-026`) | `2026-10-01-platform-mail-settings.md` |
+| 2026-10-01 | `StripeGateway`, Billing's first real `PaymentGateway` driver (`D-025`). `BILLING_GATEWAY` still defaults to `fake` — no real secret key in this environment | `2026-10-01-stripe-gateway.md` |
+| 2026-10-01 | Phase 7 pending-work check: the appointment engine was already correct, the waitlist was the one §11 gap and was built. Also found `modules/Notifications/` unregistered on disk | `2026-10-01-scheduling-waitlist.md` |
+| 2026-10-01 | Frontview public pages (6 Blade routes) and Phase 6b Team completion | `2026-10-01-frontview-homepage.md`, `2026-10-01-frontview-pricing-auth-pages.md`, `2026-10-01-phase-6b-team.md` |
 
 > Corrected on 2026-09-30: this file and `MODULE_STATUS.md` had been left at Phase 2 while
 > Phases 3, 4 and 5 shipped. Those sessions updated `CLAUDE.md` but not `docs/`. If they
@@ -95,16 +64,15 @@ DB, then cleaned up). The template's other ~59 pages remain unported. The header
 Started" → `/register`, not "Book Appointment" — `D-021` explains why a pet-owner booking action
 doesn't belong on GroomerLoop's own sign-up page.
 
-**Correction to this file's and `MODULE_STATUS.md`'s Phase 7 status, found 2026-10-01 while
-verifying an unrelated change:** a substantial `modules/Scheduling/` directory already exists on
-disk (`BookAppointment`, `RescheduleAppointment`, `UpdateAppointment` Actions, a
-`SchedulingServiceProvider`) from some earlier, unlogged session. It is **not** registered in
-`bootstrap/providers.php` and currently **fails** `ModuleBoundaryGuardTest` (its Actions reach
-directly into `Modules\Team\Models\StaffMember` instead of through `Team\Contracts\
-StaffDirectory`) and `ModuleRegistrationGuardTest`. Phase 7 is therefore `In progress`, not
-`Not started` — but untested, unverified, and currently breaking two CI guards. See
-`docs/summaries/2026-10-01-frontview-pricing-auth-pages.md` for how this was found; it was not
-touched beyond discovery, since verifying and fixing it is a full session of its own.
+> Corrected on 2026-10-02: this file previously carried a paragraph here saying Phase 7's
+> `modules/Scheduling/` was unregistered and failing `ModuleBoundaryGuardTest` and
+> `ModuleRegistrationGuardTest`. That was true when it was written, mid-day on 2026-10-01, and
+> was resolved later the same day — the boundary violation was fixed via
+> `StaffDirectory::lockForBooking()` (`D-022`) and the module was registered in
+> `bootstrap/providers.php`. "Next up" below has described it as code-built since then, so the
+> file contradicted itself. The history is in
+> `summaries/2026-10-01-frontview-pricing-auth-pages.md` and `MODULE_STATUS.md`'s "Phase 7
+> correction and completion" section.
 
 Architecture decided and recorded in `DECISIONS.md` (`D-001`–`D-020`):
 

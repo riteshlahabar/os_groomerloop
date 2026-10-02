@@ -8,7 +8,9 @@ click-through.
 **Last updated:** 2026-10-02 — admin panel: Online Booking and Billing & Plan pages built,
 navigation permission-gated against the §5 matrix at both sidebar and route, Team gained a
 "Users & access" section, and Identity gained `GET /api/v1/team` (the missing read half of
-`PUT /team/{user}/role`). See `docs/summaries/2026-10-02-admin-billing-access.md`.
+`PUT /team/{user}/role`). See `docs/summaries/2026-10-02-admin-billing-access.md`. Later the
+same day the Team page gained the **staff working hours and time off UI** plus a `Rota` column
+warning on staff with no hours — see `docs/summaries/2026-10-02-admin-staff-schedule.md`.
 
 Previously, 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
 outside the module system — see note below the table; row 10 corrected from `Not started` to
@@ -38,7 +40,7 @@ below the table)
 | 6 | Customer CRM | §8 | 5 | MVP | **Tested** | Search/filter/sort + pagination, dedupe + merge, import/export, tags, consent |
 | 7 | Pet profiles | §9 | 5 | MVP | **Tested** | First-class records; 4 note fields with §9's permission split; deceased ≠ archived; `customers_and_pets` verifier discharges `D-015`. **Photo column exists, no upload path — `D-016`** |
 | 8 | Services / catalog | §10 | 6 | MVP | **Tested** | Price, duration, buffer, categories, add-ons as flagged services, per-service availability windows, online visibility ≠ status, `services` onboarding verifier. **Staff eligibility is Team's — `D-017`** |
-| 9 | Team + staff availability | §23 | 6 | MVP | **Tested** | Staff records (no login required, `D-018`), working hours, time off, deactivate/reactivate, `staff.view`/`staff.manage` permissions (`D-020`), `D-017` eligibility exposed via `StaffDirectory`, `staff` onboarding verifier (verified + skippable). 9 endpoints, 65 tests |
+| 9 | Team + staff availability | §23 | 6 | MVP | **Tested** | Staff records (no login required, `D-018`), working hours, time off, deactivate/reactivate, `staff.view`/`staff.manage` permissions (`D-020`), `D-017` eligibility exposed via `StaffDirectory`, `staff` onboarding verifier (verified + skippable). 9 endpoints, 65 tests. **Admin UI 2026-10-02**: working hours (replace-all rota editor, split shifts, overlap refusal surfaced) and time off (list/add/cancel) now have a `Schedule` modal on the Team page, read-only for `staff.view`-without-`staff.manage`; the roster warns when a staff member has no hours and is therefore never bookable. `D-017` service eligibility still has no UI |
 | 10 | Calendar + appointment engine | §11 | 7 | MVP | **Built** | Boundary violation fixed, registered, full HTTP surface built (`D-022`). Waitlist (`waitlist_entries`, `JoinWaitlist`/`ConvertWaitlistEntryToAppointment`/`CancelWaitlistEntry`, 4 routes) added 2026-10-01 — closes the one §11 gap a pending-work check found. A partial automated test suite exists (`modules/Scheduling/Tests`) but has not been fully re-verified after the last fixes, and the waitlist has none — treat as Built, not Tested, until a full run confirms it |
 | 11 | Public online booking | §12 | 8 | MVP | **Built** | `modules/Booking` — public widget under `/api/v1/public/{tenant}/...` (`D-024`), reuses Scheduling's engine (`D-023`), no automated tests written this session. Still needs the 20-concurrent-request test on MySQL, and a public self-service cancel-by-token endpoint (deferred, see `D-024`) |
 | 12 | Notifications + messaging | §13 | 9 | MVP | Blocked | Needs a persistent queue worker — `D-011` unresolved. **A substantial `modules/Notifications/` directory was found already on disk 2026-10-01** (mail/SMS provider contracts + fakes, appointment-event listeners, a reminder command, a `notification_logs` migration) — unregistered in `bootstrap/providers.php`, currently failing `ModuleRegistrationGuardTest`. Not verified or touched; see note below the table |
@@ -83,15 +85,22 @@ above: a separate hand-off that does not unblock the eventual React SPA for the 
 **10 of 16 §6 nav items are real** (Dashboard, Calendar, Appointments, Customers, Pets, Services,
 Team, Settings, Online Booking, Billing & Plan) — each reads and
 writes live via client-side `fetch()` against the already-built `/api/v1` endpoints, never a
-server-side query reaching into another module's model (`D-007`); the remaining 7 (Website,
-Messages, Reviews, Growth, Reports & Insights, AI & Automation, Billing & Plan) are
-consistent "not built yet" placeholders sharing the same real shell and sidebar — **of those,
-only Billing & Plan has a finished backend waiting on a screen**.
+server-side query reaching into another module's model (`D-007`); the remaining **6** (Website,
+Messages, Reviews, Growth, Reports & Insights, AI & Automation) are
+consistent "not built yet" placeholders sharing the same real shell and sidebar — **none of the
+6 can be built today: each needs its own module first.**
+
+> Corrected on 2026-10-02: this paragraph previously listed Billing & Plan in both the real and
+> the placeholder list, and said 7 placeholders remained. Billing & Plan was built earlier the
+> same day (`summaries/2026-10-02-admin-billing-access.md`), which also means the "only
+> Billing & Plan has a finished backend waiting on a screen" note no longer applies — every
+> remaining placeholder is backend-blocked.
 
 **A 2026-10-02 audit recorded what is still missing**, in full in CLAUDE.md's "Open / next
 steps": a long list of built, reachable endpoints with no UI (the whole Scheduling waitlist,
 recurring appointments, `GET /availability`, **all of Identity's invitations and role changes**,
-the entire §7 onboarding checklist, Crm merge/import/export, Team working hours and time off,
+the entire §7 onboarding checklist, Crm merge/import/export, ~~Team working hours and time
+off~~ (**closed 2026-10-02**, see row 9; `D-017` service eligibility still open),
 Catalog add-ons and availability windows, Pets internal notes and photos), plus two
 cross-cutting defects: **the sidebar renders all 16 items to every role and `/admin/*` carries
 no `permission:` middleware** (data is safe — the API enforces §5 — but the nav misrepresents

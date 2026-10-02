@@ -34,12 +34,19 @@
                   <th>Contact</th>
                   <th>Login</th>
                   <th>Online</th>
+                  {{--
+                    Separate from "Online" on purpose. StaffMember::isPubliclyBookable() is
+                    assignable + is_bookable_online and deliberately does NOT consult the rota,
+                    so a groomer with no working hours reads "Online: Yes" while being available
+                    at no time whatsoever. The model's own docblock asks for this warning.
+                  --}}
+                  <th>Rota</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="staffRows">
-                <tr><td colspan="7" class="f-light">Loading…</td></tr>
+                <tr><td colspan="8" class="f-light">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -269,6 +276,119 @@
       </div>
     </div>
   </div>
+
+  {{--
+    Working hours and time off (§23), one staff member at a time.
+
+    One modal rather than two screens because they answer the same question — "when is this
+    groomer available?" — out of two different stores: a repeating weekly rota, and dated
+    exceptions to it. Both are read from `GET /staff/{id}`, which already loads them.
+
+    Readable by anyone holding staff.view (Groomer and Front Desk do), writable only with
+    staff.manage (Owner and Manager) — matching exactly what the API's own routes allow, so
+    nothing here offers a control the server would refuse.
+  --}}
+  <div class="modal" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="scheduleTitle">Schedule</h5>
+          <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="scheduleStaffId">
+
+          {{-- --- Working hours ------------------------------------------------------- --}}
+          <div class="flex items-center justify-between">
+            <h6 class="mb-0">Working hours</h6>
+            @can('staff.manage')
+              <button type="button" class="btn btn-light btn-sm" id="addShiftBtn">+ Add shift</button>
+            @endcan
+          </div>
+
+          {{-- A bordered note rather than `alert alert-light`, which renders grey-on-grey and
+               unreadable in this template — the same fix the Online Booking page needed. --}}
+          <p class="f-light mt-2" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
+            The whole week saves in one go: whatever rows are here when you press Save
+            <em>replace</em> the stored rota. Saving with no rows at all is a real state rather
+            than a mistake — it takes this person off the rota without removing them, and they
+            then become bookable at no time whatsoever. Times are this business's own wall
+            clock. Two shifts on one day may touch (09:00–13:00 then 13:00–17:00) but may not
+            overlap.
+          </p>
+
+          <div id="shiftError" class="alert alert-danger" style="display:none"></div>
+          <div id="shiftSaved" class="alert alert-success" style="display:none">Working hours saved.</div>
+
+          <div id="shiftRows" class="mt-2"></div>
+
+          @can('staff.manage')
+            <button type="button" class="btn btn-primary btn-sm mt-2" id="saveShiftsBtn">Save working hours</button>
+          @endcan
+
+          <hr class="mt-4 mb-3">
+
+          {{-- --- Time off ------------------------------------------------------------ --}}
+          <h6>Time off</h6>
+          <p class="f-light mb-2" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
+            Holidays, sickness, an afternoon out — added one at a time, so booking August off
+            does not mean resending March's sick day. Recording an absence does
+            <strong>not</strong> cancel appointments already booked inside it: the API leaves
+            that to a person on purpose, because a groomer taking a day off with four dogs on
+            the book is four conversations, not a cascade delete.
+          </p>
+
+          <div id="timeOffError" class="alert alert-danger" style="display:none"></div>
+
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>All day</th>
+                  <th>Reason</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="timeOffRows">
+                <tr><td colspan="5" class="f-light">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          @can('staff.manage')
+            <form id="timeOffForm" class="grid grid-cols-12 card-gap mt-2">
+              <div class="col-span-3 sm:col-span-12">
+                <label class="form-label">From *</label>
+                <input type="datetime-local" class="form-control" id="timeOffStart" required>
+              </div>
+              <div class="col-span-3 sm:col-span-12">
+                <label class="form-label">To *</label>
+                <input type="datetime-local" class="form-control" id="timeOffEnd" required>
+              </div>
+              <div class="col-span-2 sm:col-span-12 flex items-end">
+                <label class="flex items-center"><input type="checkbox" id="timeOffAllDay" class="me-2"> All day</label>
+              </div>
+              <div class="col-span-4 sm:col-span-12">
+                <label class="form-label">Reason</label>
+                {{-- Visible to everyone holding staff.view, so the placeholder says so rather
+                     than inviting medical detail into a field a Groomer can read. The audit
+                     event itself only records *whether* a reason was given, never its text. --}}
+                <input type="text" class="form-control" id="timeOffReason" maxlength="1000" placeholder="Optional — anyone who can see the team can read this">
+              </div>
+              <div class="col-span-12">
+                <button type="submit" class="btn btn-primary btn-sm">Add time off</button>
+              </div>
+            </form>
+          @endcan
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 @endsection
 
 @push('scripts')
@@ -281,7 +401,7 @@
         var tbody = document.getElementById('staffRows');
 
         if (staff.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="f-light">No staff match these filters.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="f-light">No staff match these filters.</td></tr>';
           return;
         }
 
@@ -293,8 +413,12 @@
             '<td>' + api.escapeHtml(contact) + '</td>' +
             '<td>' + (s.user_id ? '<span class="badge badge-light-success">Has login</span>' : '<span class="badge badge-light-secondary">No login</span>') + '</td>' +
             '<td>' + (s.is_publicly_bookable ? '<span class="badge badge-light-success">Yes</span>' : '<span class="badge badge-light-secondary">No</span>') + '</td>' +
+            '<td>' + (s.has_working_hours
+              ? '<span class="badge badge-light-success">Set</span>'
+              : '<span class="badge badge-light-danger" title="No working hours — never bookable">No hours</span>') + '</td>' +
             '<td><span class="badge ' + (s.status === 'active' ? 'badge-light-success' : 'badge-light-secondary') + '">' + api.escapeHtml(s.status_label) + '</span></td>' +
             '<td class="text-end">' +
+              '<button type="button" class="btn btn-light btn-sm scheduleStaffBtn" data-id="' + s.id + '">Schedule</button> ' +
               '<button type="button" class="btn btn-light btn-sm editStaffBtn" data-id="' + s.id + '">Edit</button> ' +
               (s.status === 'active'
                 ? '<button type="button" class="btn btn-light btn-sm text-danger deactivateStaffBtn" data-id="' + s.id + '">Deactivate</button>'
@@ -303,6 +427,9 @@
             '</tr>';
         }).join('');
 
+        document.querySelectorAll('.scheduleStaffBtn').forEach(function (btn) {
+          btn.addEventListener('click', function () { openSchedule(btn.dataset.id); });
+        });
         document.querySelectorAll('.editStaffBtn').forEach(function (btn) {
           btn.addEventListener('click', function () { openEdit(btn.dataset.id); });
         });
@@ -334,12 +461,12 @@
       async function load(page) {
         currentPage = page || 1;
         var tbody = document.getElementById('staffRows');
-        tbody.innerHTML = '<tr><td colspan="7" class="f-light">Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="f-light">Loading…</td></tr>';
 
         var result = await api.get('/api/v1/staff?' + buildQuery(currentPage));
 
         if (!result.ok) {
-          tbody.innerHTML = '<tr><td colspan="7" class="f-light">Could not load the team.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="f-light">Could not load the team.</td></tr>';
           return;
         }
 
@@ -436,6 +563,262 @@
           errorBox.textContent = result.body.message || 'Could not save this staff member.';
         }
         errorBox.style.display = 'block';
+      });
+
+      /* ------------------------------------------- working hours + time off (§23) ------- */
+
+      var canManageStaff = @json(auth()->user()->can('staff.manage'));
+
+      {{--
+        Days come from the shared-kernel App\Domain\DayOfWeek rather than a literal list typed
+        here. That enum's own docblock is explicit about why: it is ISO numbering (Monday = 1
+        through Sunday = 7, matching Carbon::dayOfWeekIso), PHP's native date('w') is Sunday = 0,
+        and anything holding a second copy of the numbering is a chance to be off by a day —
+        a failure nobody notices until a customer turns up on a Sunday.
+      --}}
+      var DAYS = @json(collect(\App\Domain\DayOfWeek::cases())
+          ->map(fn (\App\Domain\DayOfWeek $day): array => ['value' => $day->value, 'label' => $day->label()])
+          ->all());
+
+      function shiftRowHtml(shift) {
+        var options = DAYS.map(function (d) {
+          var selected = Number(shift.day_of_week) === d.value ? ' selected' : '';
+          return '<option value="' + d.value + '"' + selected + '>' + api.escapeHtml(d.label) + '</option>';
+        }).join('');
+
+        var disabled = canManageStaff ? '' : ' disabled';
+
+        return '<div class="grid grid-cols-12 card-gap mb-2 shiftRow">' +
+          '<div class="col-span-4 sm:col-span-12">' +
+            '<select class="form-control shiftDay"' + disabled + '>' + options + '</select>' +
+          '</div>' +
+          '<div class="col-span-3 sm:col-span-12">' +
+            '<input type="time" class="form-control shiftStart" value="' + api.escapeHtml(shift.starts_at || '') + '"' + disabled + '>' +
+          '</div>' +
+          '<div class="col-span-3 sm:col-span-12">' +
+            '<input type="time" class="form-control shiftEnd" value="' + api.escapeHtml(shift.ends_at || '') + '"' + disabled + '>' +
+          '</div>' +
+          '<div class="col-span-2 sm:col-span-12 flex items-center">' +
+            (canManageStaff ? '<button type="button" class="btn btn-light btn-sm text-danger removeShiftBtn">Remove</button>' : '') +
+          '</div>' +
+        '</div>';
+      }
+
+      function renderShifts(shifts) {
+        var container = document.getElementById('shiftRows');
+
+        if (shifts.length === 0) {
+          container.innerHTML = '<p class="f-light mb-0">' + (canManageStaff
+            ? 'No working hours set, so this person is not bookable at any time. Add a shift to put them on the rota.'
+            : 'No working hours set, so this person is not bookable at any time.') + '</p>';
+          return;
+        }
+
+        container.innerHTML = shifts.map(shiftRowHtml).join('');
+      }
+
+      function collectShifts() {
+        return Array.prototype.map.call(
+          document.querySelectorAll('#shiftRows .shiftRow'),
+          function (row) {
+            return {
+              day_of_week: Number(row.querySelector('.shiftDay').value),
+
+              // Trimmed to HH:MM: SetWorkingHoursRequest validates `date_format:H:i`, and a
+              // browser whose time input carries a seconds step would otherwise send HH:MM:SS
+              // and 422 on a value the user never typed.
+              starts_at: row.querySelector('.shiftStart').value.slice(0, 5),
+              ends_at: row.querySelector('.shiftEnd').value.slice(0, 5),
+            };
+          }
+        );
+      }
+
+      function renderTimeOff(absences) {
+        var tbody = document.getElementById('timeOffRows');
+
+        if (absences.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="f-light">No time off recorded.</td></tr>';
+          return;
+        }
+
+        // ISO-8601 strings sort lexicographically in chronological order, so no Date objects
+        // are constructed here — see the layout's note on why these values must not be read
+        // through `new Date()`.
+        var sorted = absences.slice().sort(function (a, b) {
+          return a.starts_at < b.starts_at ? -1 : (a.starts_at > b.starts_at ? 1 : 0);
+        });
+
+        tbody.innerHTML = sorted.map(function (t) {
+          // An all-day absence has times that mean nothing to show; the date is the whole fact.
+          var from = t.is_all_day
+            ? api.wallClockDateLabel(t.starts_at)
+            : api.wallClockDateLabel(t.starts_at) + ' ' + api.wallClockTimeLabel(t.starts_at);
+          var to = t.is_all_day
+            ? api.wallClockDateLabel(t.ends_at)
+            : api.wallClockDateLabel(t.ends_at) + ' ' + api.wallClockTimeLabel(t.ends_at);
+
+          return '<tr>' +
+            '<td>' + api.escapeHtml(from) + '</td>' +
+            '<td>' + api.escapeHtml(to) + '</td>' +
+            '<td>' + (t.is_all_day ? 'Yes' : 'No') + '</td>' +
+            '<td>' + api.escapeHtml(t.reason || '—') + '</td>' +
+            '<td class="text-end">' +
+              (canManageStaff
+                ? '<button type="button" class="btn btn-light btn-sm text-danger" data-time-off-id="' + t.id + '">Cancel</button>'
+                : '') +
+            '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      async function openSchedule(id) {
+        document.getElementById('scheduleStaffId').value = id;
+        document.getElementById('shiftError').style.display = 'none';
+        document.getElementById('shiftSaved').style.display = 'none';
+        document.getElementById('timeOffError').style.display = 'none';
+        document.getElementById('shiftRows').innerHTML = '<p class="f-light mb-0">Loading…</p>';
+        document.getElementById('timeOffRows').innerHTML = '<tr><td colspan="5" class="f-light">Loading…</td></tr>';
+        document.getElementById('scheduleTitle').textContent = 'Schedule';
+        api.openModal('scheduleModal');
+
+        // One request: GET /staff/{id} already loads workingHours and timeOff, so there is no
+        // separate read endpoint for either and none is needed.
+        var result = await api.get('/api/v1/staff/' + id);
+
+        if (!result.ok) {
+          document.getElementById('shiftRows').innerHTML = '<p class="f-light mb-0">Could not load this schedule.</p>';
+          document.getElementById('timeOffRows').innerHTML = '<tr><td colspan="5" class="f-light">Could not load time off.</td></tr>';
+          return;
+        }
+
+        var s = result.body.data;
+        document.getElementById('scheduleTitle').textContent = 'Schedule — ' + s.display_name;
+        renderShifts(s.working_hours || []);
+        renderTimeOff(s.time_off || []);
+      }
+
+      document.getElementById('addShiftBtn')?.addEventListener('click', function () {
+        var existing = collectShifts();
+
+        // 21 is the request's own cap (three shifts a day is already a generous split shift).
+        // Refusing here says so plainly instead of letting the server answer 422.
+        if (existing.length >= 21) {
+          var capError = document.getElementById('shiftError');
+          capError.textContent = 'A rota holds at most 21 shifts.';
+          capError.style.display = 'block';
+          return;
+        }
+
+        existing.push({ day_of_week: DAYS[0].value, starts_at: '09:00', ends_at: '17:00' });
+        renderShifts(existing);
+      });
+
+      document.getElementById('shiftRows').addEventListener('click', function (e) {
+        if (!e.target.closest('.removeShiftBtn')) {
+          return;
+        }
+
+        var row = e.target.closest('.shiftRow');
+        var rows = Array.prototype.indexOf.call(row.parentNode.children, row);
+        var shifts = collectShifts();
+        shifts.splice(rows, 1);
+        renderShifts(shifts);
+      });
+
+      document.getElementById('saveShiftsBtn')?.addEventListener('click', async function () {
+        var errorBox = document.getElementById('shiftError');
+        var savedBox = document.getElementById('shiftSaved');
+        errorBox.style.display = 'none';
+        savedBox.style.display = 'none';
+
+        var shifts = collectShifts();
+
+        if (shifts.length === 0 && !confirm('Save with no shifts? This takes them off the rota entirely — they will not be bookable at any time.')) {
+          return;
+        }
+
+        var result = await api.put(
+          '/api/v1/staff/' + document.getElementById('scheduleStaffId').value + '/working-hours',
+          { shifts: shifts }
+        );
+
+        if (result.ok) {
+          savedBox.style.display = 'block';
+          renderShifts(result.body.data.working_hours || []);
+
+          // The roster's Rota badge is derived from this, so refresh the list behind the modal.
+          load(currentPage);
+          return;
+        }
+
+        // The overlap rule is a domain check inside SetWorkingHours, not a validation rule, and
+        // arrives as a 422 on the `shifts` key — same shape as the field errors, so both render
+        // through this one path.
+        if (result.status === 422 && result.body.errors) {
+          errorBox.innerHTML = Object.values(result.body.errors).map(function (m) { return api.escapeHtml(m[0]); }).join('<br>');
+        } else {
+          errorBox.textContent = result.body.message || 'Could not save these working hours.';
+        }
+        errorBox.style.display = 'block';
+      });
+
+      document.getElementById('timeOffForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        var errorBox = document.getElementById('timeOffError');
+        errorBox.style.display = 'none';
+
+        var staffId = document.getElementById('scheduleStaffId').value;
+
+        var result = await api.post('/api/v1/staff/' + staffId + '/time-off', {
+          starts_at: api.fromDatetimeLocalValue(document.getElementById('timeOffStart').value),
+          ends_at: api.fromDatetimeLocalValue(document.getElementById('timeOffEnd').value),
+          is_all_day: document.getElementById('timeOffAllDay').checked,
+          reason: document.getElementById('timeOffReason').value || null,
+        });
+
+        if (!result.ok) {
+          if (result.status === 422 && result.body.errors) {
+            errorBox.innerHTML = Object.values(result.body.errors).map(function (m) { return api.escapeHtml(m[0]); }).join('<br>');
+          } else {
+            errorBox.textContent = result.body.message || 'Could not record that time off.';
+          }
+          errorBox.style.display = 'block';
+          return;
+        }
+
+        document.getElementById('timeOffForm').reset();
+        openSchedule(staffId);
+      });
+
+      document.getElementById('timeOffRows').addEventListener('click', async function (e) {
+        var button = e.target.closest('[data-time-off-id]');
+        if (!button) {
+          return;
+        }
+
+        if (!confirm('Cancel this time off? Appointments are not affected either way.')) {
+          return;
+        }
+
+        var staffId = document.getElementById('scheduleStaffId').value;
+        button.disabled = true;
+
+        // Both ids go in the path: the controller refuses a time-off id belonging to a
+        // different staff member with a 404, since two staff in one salon share a tenant and
+        // the tenant scope alone does not prove the two rows belong together.
+        var result = await api.del('/api/v1/staff/' + staffId + '/time-off/' + button.dataset.timeOffId);
+
+        if (!result.ok) {
+          button.disabled = false;
+          var errorBox = document.getElementById('timeOffError');
+          errorBox.textContent = result.body.message || 'Could not cancel that time off.';
+          errorBox.style.display = 'block';
+          return;
+        }
+
+        openSchedule(staffId);
       });
 
       document.getElementById('staffSearch').addEventListener('input', api.debounce(function () { load(1); }, 400));
