@@ -5,22 +5,13 @@
 
 @section('content')
   <div class="grid grid-cols-12 card-gap widget-grid">
-    <div class="col-span-4 xxl:col-span-6 sm:col-span-12 box-col-6">
-      <div class="card profile-box">
-        <div class="card-body">
-          <div class="flex media-wrapper justify-between">
-            <div class="grow">
-              <div class="greeting-user">
-                <h2 class="font-semibold line-clamp-[1]">Welcome, {{ auth()->user()->name }}!</h2>
-                <p class="line-clamp-[2]">Here's what's happening{{ auth()->user()->tenant ? ' at ' . auth()->user()->tenant->name : '' }} today.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-span-8 xxl:col-span-6 xl:col-span-12 box-col-6">
+    {{--
+      The greeting card that used to sit here was removed on the owner's instruction: it filled a
+      third of the row above the fold to say the viewer's own name back to them, which the header
+      already shows alongside their role. The stat row now takes the full width, so the four §16
+      counts and today's schedule are what the dashboard opens with.
+    --}}
+    <div class="col-span-12 box-col-12">
       <div class="grid grid-cols-12 card-gap">
         <div class="col-span-3 sm:col-span-6">
           <div class="card widget-1">
