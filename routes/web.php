@@ -59,10 +59,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('pets', fn () => view('admin.pets'))->name('pets');
     Route::get('services', fn () => view('admin.services'))->name('services');
     Route::get('team', fn () => view('admin.team'))->name('team');
+    Route::get('calendar', fn () => view('admin.calendar'))->name('calendar');
+    Route::get('appointments', fn () => view('admin.appointments'))->name('appointments');
+    Route::get('settings', fn () => view('admin.settings'))->name('settings');
 
     $comingSoon = [
-        'calendar' => ['Calendar', 'calendar'],
-        'appointments' => ['Appointments', 'task'],
         'booking' => ['Online Booking', 'bookmark'],
         'website' => ['Website', 'landing-page'],
         'messages' => ['Messages', 'chat'],
@@ -70,7 +71,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         'growth' => ['Growth', 'activity'],
         'reports' => ['Reports & Insights', 'report'],
         'automation' => ['AI & Automation', 'api'],
-        'settings' => ['Settings', 'form'],
         'billing' => ['Billing & Plan', 'subscribe'],
     ];
 

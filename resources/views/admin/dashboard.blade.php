@@ -113,6 +113,16 @@
     (function () {
       var api = window.GroomerLoopAdmin;
 
+      // Appointment times are tenant-local wall-clock values with no timezone conversion
+      // anywhere in Scheduling (see the shared helpers' own comment in the layout) — these
+      // build literal "YYYY-MM-DDTHH:MM:SS" boundaries from the browser's own local clock
+      // fields, never through `.toISOString()`, which would shift by the browser's UTC offset.
+      function pad(n) { return String(n).padStart(2, '0'); }
+
+      function literalDateTime(d) {
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+
       function startOfToday() {
         var d = new Date();
         d.setHours(0, 0, 0, 0);
@@ -148,8 +158,8 @@
       async function loadTodaysSchedule() {
         var list = document.getElementById('todaysScheduleList');
         try {
-          var from = startOfToday().toISOString();
-          var to = endOfToday().toISOString();
+          var from = literalDateTime(startOfToday());
+          var to = literalDateTime(endOfToday());
           var result = await api.get(
             '/api/v1/appointments?per_page=10&sort=starts_at&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)
           );
@@ -167,7 +177,7 @@
           }
 
           list.innerHTML = result.body.data.map(function (appointment) {
-            var time = new Date(appointment.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            var time = api.wallClockTimeLabel(appointment.starts_at);
             return '<li class="flex items-center justify-between">' +
               '<span>' + time + ' — ' + (appointment.customer_name || 'Customer') + ' / ' + (appointment.pet_name || 'Pet') + '</span>' +
               '<span class="badge badge-light-secondary">' + appointment.status_label + '</span>' +

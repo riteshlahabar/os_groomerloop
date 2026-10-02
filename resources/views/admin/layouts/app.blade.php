@@ -268,6 +268,40 @@
           }
         }
 
+        // Appointment datetimes in this product are tenant-local wall-clock values — nothing
+        // in Scheduling converts them to or from UTC (AvailabilityEngine compares `starts_at`
+        // directly against business_hours' stored "HH:MM" strings). The API still serialises
+        // them with `toIso8601String()`, which stamps on a timezone suffix that doesn't
+        // semantically apply. Reading that through `new Date(iso)` — or building one with
+        // `.toISOString()` — asks the browser to apply its own UTC offset and silently shifts
+        // the hour by however far the viewer's machine sits from UTC. These four helpers
+        // read/write the literal characters instead, so every admin page means the same wall
+        // clock the business itself works in, regardless of which timezone the browser is in.
+        function wallClockTimeLabel(value) {
+          var hh = parseInt(value.slice(11, 13), 10);
+          var mm = value.slice(14, 16);
+          var displayHour = hh % 12 === 0 ? 12 : hh % 12;
+          return displayHour + ':' + mm + ' ' + (hh < 12 ? 'AM' : 'PM');
+        }
+
+        function wallClockDateKey(value) {
+          return value.slice(0, 10);
+        }
+
+        function wallClockDateLabel(value) {
+          var parts = wallClockDateKey(value).split('-');
+          var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        function toDatetimeLocalValue(value) {
+          return value.slice(0, 16);
+        }
+
+        function fromDatetimeLocalValue(value) {
+          return value ? value + ':00' : null;
+        }
+
         return {
           get: function (url) { return apiRequest('GET', url); },
           post: function (url, body) { return apiRequest('POST', url, body); },
@@ -278,6 +312,11 @@
           openModal: openModal,
           closeModal: closeModal,
           renderPagination: renderPagination,
+          wallClockTimeLabel: wallClockTimeLabel,
+          wallClockDateKey: wallClockDateKey,
+          wallClockDateLabel: wallClockDateLabel,
+          toDatetimeLocalValue: toDatetimeLocalValue,
+          fromDatetimeLocalValue: fromDatetimeLocalValue,
         };
       })();
 
