@@ -14,88 +14,197 @@
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/icofont.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/themify.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/feather-icon.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/slick.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/slick-theme.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/scrollbar.css') }}">
     <link rel="stylesheet" href="{{ asset('admin-assets/css/style.css') }}">
-    <style>
-      /*
-        A deliberately self-contained header/nav, NOT the Cuba template's `page-header` /
-        `header-wrapper` / `page-wrapper` structural classes. Those assume the full
-        sidebar-based "compact-wrapper" scaffold (admin/layouts/app.blade.php has it); without
-        that scaffold, `.page-header` renders as a fixed-position bar that overlapped the nav
-        row directly beneath it, hiding the first two links ("Dashboard", "Tenants") behind it —
-        a real defect the owner caught from a live screenshot, not a hypothetical. The `card`,
-        `btn`, `table`, `badge`, `alert` and `form-control` component classes used on every page
-        below are unaffected by this — they are standalone visual components, not part of the
-        fixed-positioning system — so only the shell here needed to stop borrowing Cuba's markup.
-      */
-      .pf-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 14px 24px; background: #fff; border-bottom: 1px solid #e9ecef;
-      }
-      .pf-header a.pf-brand { display: flex; align-items: center; text-decoration: none; color: #1a1a1a; font-weight: 700; }
-      .pf-header a.pf-brand img { height: 28px; margin-right: 8px; }
-      .pf-nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 24px 0; }
-      .pf-nav a { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 14px; color: #1a1a1a; background: #f4f4f6; }
-      .pf-nav a.active { background: #7366ff; color: #fff; }
-      .pf-content { padding: 16px 24px 48px; }
-      .pf-footer { text-align: center; padding: 16px; color: #9aa1ab; font-size: 13px; }
-    </style>
     @stack('styles')
   </head>
   <body>
-    <!--
-      This is a SEPARATE console from /admin — GroomerLoop's own staff (spec §5 PlatformAdmin
-      role), never a tenant business. It reuses admin-assets' `card`/`btn`/`table`/`badge`/
-      `alert`/`form-control` component classes for visual consistency, but the page shell itself
-      (header, nav, footer) is custom CSS above, not a reuse of admin/layouts/app.blade.php's
-      sidebar-based structure — see the style block's own note on why.
-    -->
-    <header class="pf-header">
-      <a href="{{ route('platform.dashboard') }}" class="pf-brand">
-        <img src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop">
-        GroomerLoop Platform
-      </a>
-      <div>
-        <span class="f-light me-3">{{ auth()->user()->name }} &middot; {{ auth()->user()->role?->label() }}</span>
-        <a href="#" id="platformLogoutLink"><i data-feather="log-out"></i> Log out</a>
-      </div>
-    </header>
+    {{--
+      This is the SAME Cuba admin template and the SAME page-wrapper/sidebar scaffold as
+      admin/layouts/app.blade.php, deliberately — the owner asked for the platform console to
+      look like the tenant admin panel, sidebar included. It is still a separate file rather than
+      a shared one: the nav is a different, fixed 5-item list (never the §6 business nav, and
+      never permission-filtered per item the way admin's is, because every route behind this
+      layout already requires platform.administer to render at all — see routes/web.php), there
+      is no tenant business name to show in the header, and the logout button posts to the same
+      /api/v1/logout endpoint under a differently-named id so the two layouts' scripts never
+      collide if ever loaded in the same browser tab's history.
 
-    @php
-      $platformNav = [
-        ['label' => 'Dashboard', 'route' => 'platform.dashboard'],
-        ['label' => 'Tenants', 'route' => 'platform.tenants'],
-        ['label' => 'Audit Log', 'route' => 'platform.audit-log'],
-        ['label' => 'Mail Settings', 'route' => 'platform.mail-settings'],
-        ['label' => 'Platform Health', 'route' => 'platform.health'],
-      ];
-    @endphp
-    <nav class="pf-nav">
-      @foreach ($platformNav as $item)
-        <a href="{{ route($item['route']) }}" class="{{ request()->routeIs($item['route']) ? 'active' : '' }}">{{ $item['label'] }}</a>
-      @endforeach
-    </nav>
-
-    <div class="pf-content">
-      <div class="page-title mb-3">
-        <h3>@yield('page-heading', 'Dashboard')</h3>
-      </div>
-
-      @yield('content')
+      The previous version of this file tried to build a lighter-weight header by borrowing only
+      `page-header`/`header-wrapper` from Cuba without the `compact-wrapper` scaffold those
+      classes assume — `page-header` is fixed-position in this CSS, and with no sidebar beneath
+      it pushing content down, it overlapped and hid the first two nav links. Using the complete,
+      unmodified scaffold (exactly as admin's layout does) is what actually fixes that, not a
+      smaller custom stylesheet layered on top of a partial copy.
+    --}}
+    <!-- loader starts-->
+    <div class="loader-wrapper">
+      <div class="loader-index"> <span></span></div>
+      <svg>
+        <defs></defs>
+        <filter id="goo">
+          <fegaussianblur in="SourceGraphic" stddeviation="11" result="blur"></fegaussianblur>
+          <fecolormatrix in="blur" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo"> </fecolormatrix>
+        </filter>
+      </svg>
     </div>
+    <!-- loader ends-->
+    <div class="tap-top"><i data-feather="chevrons-up"></i></div>
+    <!-- page-wrapper Start-->
+    <div class="page-wrapper compact-wrapper" id="pageWrapper">
+      <!-- Page Header Start-->
+      <div class="page-header">
+        <div class="header-wrapper grid grid-cols-12 m-0">
+          <div class="header-logo-wrapper hidden col-auto p-0 lg:block">
+            <div class="logo-wrapper"><a href="{{ route('platform.dashboard') }}">
+                <img class="max-w-full h-auto for-light" src="{{ asset('admin-assets/images/logo/logo.png') }}" alt="GroomerLoop">
+                <img class="max-w-full h-auto for-dark" src="{{ asset('admin-assets/images/logo/logo_dark.png') }}" alt="GroomerLoop">
+              </a></div>
+            <div class="toggle-sidebar"><i class="status_toggle middle sidebar-toggle" data-feather="align-center"></i></div>
+          </div>
 
-    <footer class="pf-footer">&copy; {{ date('Y') }} GroomerLoop — internal platform console</footer>
+          {{-- No tenant business name to show here (a PlatformAdmin belongs to no tenant) — a
+               static label fills the same slot admin's layout uses for one. --}}
+          <div class="left-header col-span-5 xxl:col-span-6 xl:col-span-5 lg:col-span-4 md:col-span-3">
+            <h6 class="mb-0 f-light truncate">GroomerLoop Platform</h6>
+          </div>
+
+          <div class="nav-right col-span-7 xxl:col-span-6 xl:col-span-7 md:col-span-11 float-right right-header p-0 ms-auto">
+            <ul class="nav-menus">
+              <li>
+                <div class="mode">
+                  <svg><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#moon"></use></svg>
+                </div>
+              </li>
+              <li class="profile-nav onhover-dropdown !py-0 !pe-0">
+                <div class="flex profile-media items-center">
+                  <img class="max-w-full h-auto" src="{{ asset('admin-assets/images/logo/avatar.png') }}" alt="{{ auth()->user()->name }}">
+                  <div class="profile-content"><span>{{ auth()->user()->name }}</span>
+                    <p class="mb-0">{{ auth()->user()->role?->label() }} <i class="align-middle fa-solid fa-angle-down"></i></p>
+                  </div>
+                </div>
+                <ul class="profile-dropdown onhover-show-div">
+                  <li>
+                    <a class="flex items-center" href="{{ route('platform.mail-settings') }}">
+                      <i data-feather="settings"></i><span>Mail Settings</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="flex items-center" href="#" id="platformLogoutLink">
+                      <i data-feather="log-in"></i><span>Log out</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <!-- Page Header Ends-->
+      <!-- Page Body Start-->
+      <div class="page-body-wrapper horizontal-menu">
+        <!-- Page Sidebar Start-->
+        <div class="sidebar-wrapper" data-sidebar-layout="stroke-svg">
+          <div>
+            <div class="logo-wrapper"><a href="{{ route('platform.dashboard') }}">
+                <img class="max-w-full h-auto for-light" src="{{ asset('admin-assets/images/logo/logo.png') }}" alt="GroomerLoop">
+                <img class="max-w-full h-auto for-dark" src="{{ asset('admin-assets/images/logo/logo_dark.png') }}" alt="GroomerLoop">
+              </a>
+              <div class="back-btn hidden lg:block"><i class="fa-solid fa-angle-left"></i></div>
+              <div class="toggle-sidebar"><i class="status_toggle middle sidebar-toggle" data-feather="grid"></i></div>
+            </div>
+            <div class="logo-icon-wrapper"><a href="{{ route('platform.dashboard') }}"><img class="max-w-full h-auto" src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop"></a></div>
+            <nav class="sidebar-main">
+              <div class="left-arrow" id="left-arrow"><i data-feather="arrow-left"></i></div>
+              <div id="sidebar-menu">
+                <ul class="sidebar-links" id="simple-bar">
+                  <li class="back-btn">
+                    <div class="mobile-back text-end"><span>Back</span><i class="fa-solid fa-angle-right ps-2" aria-hidden="true"></i></div>
+                  </li>
+                  @php
+                    // A fixed 5-item console nav, never permission-filtered per item: every
+                    // route behind this layout already requires platform.administer at the
+                    // route level (routes/web.php), unlike admin's §6 nav which spans six roles
+                    // with different capabilities.
+                    $platformNav = [
+                      ['label' => 'Dashboard', 'route' => 'platform.dashboard', 'icon' => 'home'],
+                      ['label' => 'Tenants', 'route' => 'platform.tenants', 'icon' => 'client'],
+                      ['label' => 'Audit Log', 'route' => 'platform.audit-log', 'icon' => 'note'],
+                      ['label' => 'Mail Settings', 'route' => 'platform.mail-settings', 'icon' => 'email'],
+                      ['label' => 'Platform Health', 'route' => 'platform.health', 'icon' => 'activity'],
+                    ];
+                  @endphp
+                  @foreach ($platformNav as $item)
+                    <li class="sidebar-list">
+                      <a class="sidebar-link sidebar-title link-nav {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
+                        <svg class="stroke-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-{{ $item['icon'] }}"></use></svg>
+                        <svg class="fill-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#fill-{{ $item['icon'] }}"></use></svg>
+                        <span>{{ $item['label'] }}</span>
+                      </a>
+                    </li>
+                  @endforeach
+                </ul>
+              </div>
+              <div class="right-arrow" id="right-arrow"><i data-feather="arrow-right"></i></div>
+            </nav>
+          </div>
+        </div>
+        <!-- Page Sidebar Ends-->
+        <div class="page-body">
+          <div class="container w-full">
+            <div class="page-title">
+              <div class="grid grid-cols-12 mx-2 items-center">
+                <div class="col-span-6 sm:col-span-12">
+                  <h3>@yield('page-heading', 'Dashboard')</h3>
+                </div>
+                <div class="col-span-6 sm:col-span-12">
+                  <ol class="breadcrumb flex">
+                    <li class="breadcrumb-item"><a href="{{ route('platform.dashboard') }}">
+                        <svg class="stroke-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-home"></use></svg>
+                      </a></li>
+                    <li class="breadcrumb-item active">@yield('page-heading', 'Dashboard')</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="container">
+            @yield('content')
+          </div>
+        </div>
+        <footer class="footer">
+          <div class="container mx-auto w-full">
+            <div class="gird grid-cols-12">
+              <div class="col-span-12 footer-copyright text-center">
+                <p class="mb-0">© {{ date('Y') }} GroomerLoop — internal platform console</p>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
 
     <script src="{{ asset('admin-assets/js/jquery.min.js') }}"></script>
     <script src="{{ asset('admin-assets/js/icons/feather-icon/feather.min.js') }}"></script>
     <script src="{{ asset('admin-assets/js/icons/feather-icon/feather-icon.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/scrollbar/simplebar.min.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/scrollbar/custom.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/config.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/modalpage/custom-modal.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/sidebar-menu.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/tooltip-init.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/script1.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/theme-customizer/customizer.js') }}"></script>
+    <script src="{{ asset('admin-assets/js/script.js') }}"></script>
 
     <script>
       // Same Sanctum SPA cookie-auth helpers as window.GroomerLoopAdmin
       // (resources/views/admin/layouts/app.blade.php) — duplicated rather than shared because
-      // this layout is a separate tree for a separate audience (D-007's reasoning applied to
-      // views: a platform console reaching into the tenant admin's own Blade helper would be
-      // an odd, one-directional coupling for no benefit).
+      // this is a separate tree for a separate audience (D-007's reasoning applied to views: a
+      // platform console reaching into the tenant admin's own Blade helper would be an odd,
+      // one-directional coupling for no benefit).
       window.GroomerLoopPlatform = (function () {
         function getCookie(name) {
           var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -175,6 +284,20 @@
         e.preventDefault();
         await window.GroomerLoopPlatform.post('/api/v1/logout');
         window.location.href = '/login';
+      });
+
+      // Any element with data-dismiss="modal" closes its nearest .modal ancestor — same
+      // convention admin/layouts/app.blade.php uses.
+      document.addEventListener('click', function (e) {
+        var dismiss = e.target.closest('[data-dismiss="modal"]');
+        if (dismiss) {
+          var modal = dismiss.closest('.modal');
+          if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+          }
+        }
       });
     </script>
     @stack('scripts')

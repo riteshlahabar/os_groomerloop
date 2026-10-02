@@ -189,3 +189,39 @@ classes, all present. `pint --test` clean except the pre-existing `modules/Notif
 `view:cache` clean. **The visual fix for bug 2 is still not confirmed by an actual browser** —
 only that the correct markup and CSS are now present; left for the owner to confirm when they
 redeploy.
+
+## Session 3 — rebuilt to match /admin exactly, sidebar included (same day)
+
+The owner's fix for bug 2 above (the custom `pf-*` stylesheet) worked, but the owner then asked
+for something different: make `/platform` **look like** the tenant admin panel — the same Cuba
+template, sidebar included — rather than its own lightweight top-nav design.
+
+- **`resources/views/platform/layouts/app.blade.php` rewritten to the full, unmodified
+  `page-wrapper compact-wrapper` scaffold** — the same structure `admin/layouts/app.blade.php`
+  uses, sidebar and all. This is also what actually fixes Session 2's bug 2 properly, rather than
+  routing around it: `.page-header`'s fixed positioning was only ever a problem because the
+  previous version borrowed it *without* the `compact-wrapper` sidebar scaffold it assumes.
+  Using the complete scaffold (not a partial copy, not a custom replacement) is correct now.
+- **A fixed 5-item sidebar nav** (Dashboard, Tenants, Audit Log, Mail Settings, Platform
+  Health — icons `home`/`client`/`note`/`email`/`activity` from `admin-assets/svg/icon-sprite.svg`),
+  never permission-filtered per item the way `/admin`'s §6 nav is: every route behind this layout
+  already requires `platform.administer` at the route level, so there is nothing to filter per
+  link the way admin's six roles need.
+- **No tenant business name in the header** (a `PlatformAdmin` belongs to no tenant) — a static
+  "GroomerLoop Platform" label fills that slot instead of `admin`'s
+  `auth()->user()->loadMissing('tenant')->tenant?->name`.
+- **The profile dropdown's Settings link now points at Mail Settings** (the closest equivalent
+  "settings" screen this console has) instead of admin's `@can('settings.manage')`-gated tenant
+  Settings page, which doesn't exist here.
+- `window.GroomerLoopPlatform` (the Sanctum-cookie JS helper) is unchanged — the five page
+  templates (`dashboard`, `tenants`, `audit-log`, `mail-settings`, `health`) needed no edits at
+  all, since `@yield('content')`/`@push('scripts')` and the helper's API surface are identical to
+  before.
+
+**Verified:** created and later force-deleted a temporary platform admin; rendered `/platform`
+and grepped for `sidebar-wrapper`, `logo-wrapper`, `compact-wrapper`, the "GroomerLoop Platform"
+label, and all 5 nav labels — all present; confirmed all 5 `/platform/*` pages still return 200;
+confirmed the icon sprite, stylesheet, logo, and `sidebar-menu.js` all serve 200 (the four assets
+this scaffold actually depends on to render and to collapse/expand). `pint --test` clean on the
+touched file. **Still not confirmed by an actual browser** — whether the sidebar visually
+collapses/expands correctly and whether the icons render are left for the owner to confirm.
