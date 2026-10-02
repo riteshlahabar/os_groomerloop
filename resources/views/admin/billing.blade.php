@@ -206,6 +206,11 @@
       var currentPlanKey = null;
       var plans = [];
 
+      // Set once, the first time loadPlans() resolves a ?plan= from the URL into a real button
+      // click — never again, so a later reload() (after switching plans, say) does not re-open
+      // the confirm modal every time this page refreshes its own data.
+      var planFromUrlHandled = false;
+
       function statusBadgeClass(status) {
         return {
           trialing: 'badge-light-info',
@@ -416,6 +421,29 @@
             api.openModal('blPlanModal');
           });
         });
+
+        // Carries a plan chosen on the pricing page (or groomerloop.com's own Join button)
+        // through registration into its one real continuation here — see
+        // frontview/register.blade.php. Opens the same confirm modal a manual click would,
+        // rather than subscribing outright: "pay" is still an explicit, visible action the
+        // owner confirms, never something a URL parameter alone can trigger silently.
+        if (!planFromUrlHandled) {
+          planFromUrlHandled = true;
+
+          var requestedPlan = new URLSearchParams(window.location.search).get('plan');
+          if (requestedPlan) {
+            // Stripped immediately so a later reload() of this same page (e.g. after the modal
+            // is confirmed, or the owner just refreshes) never re-opens it.
+            var url = new URL(window.location.href);
+            url.searchParams.delete('plan');
+            window.history.replaceState({}, '', url);
+
+            var button = container.querySelector('[data-plan-key="' + requestedPlan.replace(/"/g, '') + '"]');
+            if (button) {
+              button.click();
+            }
+          }
+        }
       }
 
       document.getElementById('blPlanForm').addEventListener('submit', async function (e) {

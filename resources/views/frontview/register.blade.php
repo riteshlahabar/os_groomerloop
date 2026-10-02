@@ -356,14 +356,24 @@
                     var result = await apiPost('/api/v1/register', payload);
 
                     if (result.status === 201 && result.ok) {
-                        showStatus(
-                            'Account created — you\'re signed in. The full dashboard isn\'t built yet (it\'s waiting on the React frontend), but your business account is real and saved.',
-                            'success'
-                        );
+                        showStatus('Account created — redirecting…', 'success');
                         submitBtn.textContent = 'Account created';
                         document.getElementById('registerForm').querySelectorAll('input').forEach(function (input) {
                             input.disabled = true;
                         });
+
+                        // Spec §32.1: "choose plan" (on the pricing page, or groomerloop.com's
+                        // own Join button) happens before "create account", and "pay" happens
+                        // after. The plan picked at step 1 is carried here only as a URL
+                        // parameter — nothing server-side stores or acts on it (Identity has no
+                        // business writing to Billing's plan, D-007) — and handed to the Billing
+                        // screen so step 3 ("pay") can default to what the owner already chose
+                        // instead of asking them to pick again. No plan in the URL (an organic
+                        // sign-up with no prior plan choice) goes straight to the dashboard.
+                        var plan = new URLSearchParams(window.location.search).get('plan');
+                        window.location.href = plan
+                            ? '/admin/billing?plan=' + encodeURIComponent(plan)
+                            : '/admin';
                         return;
                     }
 

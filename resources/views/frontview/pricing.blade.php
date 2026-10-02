@@ -406,7 +406,7 @@
                     '            <div class="col-lg-6">' + col(colB) + '</div>' +
                     '          </div>' +
                     '          <div class="text-center">' +
-                    '            <a href="{{ url('/register') }}" class="primary-btn w-100">Choose Plan</a>' +
+                    '            <a href="{{ url('/register') }}?plan=' + encodeURIComponent(plan.key) + '" class="primary-btn w-100">Choose Plan</a>' +
                     '          </div>' +
                     '        </div>' +
                     '      </div>' +
