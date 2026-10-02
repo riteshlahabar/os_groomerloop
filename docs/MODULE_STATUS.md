@@ -13,7 +13,10 @@ same day the Team page gained the **staff working hours and time off UI** plus a
 warning on staff with no hours — see `docs/summaries/2026-10-02-admin-staff-schedule.md` — and
 the **shared header was rebuilt against the Cuba template** (12-column grid restored, duplicate
 logo removed, correctly-sized brand assets instead of inline-styled oversized ones) — see
-`docs/summaries/2026-10-02-admin-header.md`.
+`docs/summaries/2026-10-02-admin-header.md`. The **Calendar screen now uses the template's real
+FullCalendar v5.11.3 widget** (month/week/day/list views fed from `GET /api/v1/appointments`)
+instead of the seven-card week strip — see
+`docs/summaries/2026-10-02-admin-calendar-fullcalendar.md`.
 
 Previously, 2026-10-01 (Phase 6 complete — Team finished; frontview expanded to 6 pages,
 outside the module system — see note below the table; row 10 corrected from `Not started` to
