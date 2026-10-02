@@ -1000,3 +1000,41 @@ should not mistake for a missed port — there is no single source file it corre
 owner later wants the page to visually match the template's booking flow more closely (the
 step-banner-with-illustration layout, for instance), that is a deliberate follow-up, not a
 "finish the port" task.
+
+## D-029 — `PlatformAdmin` accounts are created only by a console command, never an HTTP endpoint
+
+**Date:** 2026-10-02 · **Status:** Accepted
+
+**Context:** Building out spec §31's console (the first real UI any `PlatformAdmin` could use)
+surfaced the actual blocker the owner asked about: no `PlatformAdmin` (spec §5) account had ever
+existed in this environment, and nothing created one. Every other account-creation path in the
+product is a tenant creating its own users — `RegisterBusiness` (an Owner, with their own
+tenant) and `InviteTeamMember` (a tenant inviting someone into itself, spec §5's five tenant
+roles only — `Role::assignableWithinTenant()` already excludes `PlatformAdmin` by name). None of
+those paths can be "a tenant invites a GroomerLoop staff member" without breaking the premise
+that `PlatformAdmin` belongs to no tenant and holds no tenant-data permission at all.
+
+**Decision:** `php artisan platform-admin:create {name} {email} {--password=}`
+(`modules/SuperAdmin/Console/CreatePlatformAdminCommand.php`, calling
+`Actions/CreatePlatformAdmin.php`) is the only way this role is ever granted. No HTTP route
+exists for it, gated or otherwise. Omitting `--password` generates and prints a one-time
+20-character password (`Str::password(20)`) rather than asking an operator to type one that
+then sits in shell history.
+
+**Alternatives considered:**
+- An HTTP endpoint gated `permission:platform.administer`, so an existing GroomerLoop Admin
+  could create the next one from the console UI itself — rejected for this MVP slice: it is a
+  privilege-escalation surface (any bug in that one permission check becomes "mint a GroomerLoop
+  Admin account") for a capability that, in practice, GroomerLoop onboards a small, known number
+  of times. A console command needs shell access to the production host, which is already the
+  trust boundary every other sensitive one-off in this codebase (`billing:expire-lapsed` aside,
+  which is a scheduled sweep, not a privilege grant) assumes.
+- A database seeder — rejected: seeders run once at setup and are awkward for "create one more
+  admin later," which is the actual shape of this need over the product's life.
+
+**Consequences:** Onboarding a new GroomerLoop staff member requires someone with shell/SSH
+access to the production host, which is a real operational cost `D-011`'s hosting resolution
+should keep in mind — shared cPanel's Terminal app can still run `php artisan`, so this does not
+block on `D-011` the way a persistent queue worker does. If GroomerLoop's own team grows past
+"a person with hosting access runs a command," an HTTP-based invitation flow for this role
+should get its own decision entry rather than being added quietly to this command.

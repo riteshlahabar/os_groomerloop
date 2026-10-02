@@ -136,3 +136,28 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         }
     }
 });
+
+/*
+|--------------------------------------------------------------------------
+| Platform console (spec §31, GroomerLoop's own staff — the PlatformAdmin role of spec §5)
+|--------------------------------------------------------------------------
+|
+| A separate tree from /admin on purpose: a GroomerLoop Admin belongs to no tenant, so the
+| tenant-business concepts /admin's layout and nav are built around (business name header, the
+| §6 nav) do not apply here. Every page follows the exact same client-side-fetch-against-/api/v1
+| rule as /admin (D-007): no server-side query into another module's model happens in this file
+| or in resources/views/platform/*, only the Tenant row itself where a route needs one, and even
+| that only through route model binding further down, never here.
+|
+| `permission:platform.administer` on every route, not just the sidebar — the §31 modules'
+| server-side `permission:` middleware on the matching /api/v1/admin/* routes is what actually
+| enforces this; the route-level gate here is what stops a refused user from even seeing the
+| page shell.
+*/
+Route::middleware(['auth', 'permission:platform.administer'])->prefix('platform')->name('platform.')->group(function (): void {
+    Route::get('/', fn () => view('platform.dashboard'))->name('dashboard');
+    Route::get('tenants', fn () => view('platform.tenants'))->name('tenants');
+    Route::get('audit-log', fn () => view('platform.audit-log'))->name('audit-log');
+    Route::get('mail-settings', fn () => view('platform.mail-settings'))->name('mail-settings');
+    Route::get('health', fn () => view('platform.health'))->name('health');
+});

@@ -4,6 +4,7 @@ namespace Modules\SuperAdmin;
 
 use App\Support\ModuleServiceProvider;
 use Illuminate\Support\Facades\Cache;
+use Modules\SuperAdmin\Console\CreatePlatformAdminCommand;
 use Modules\SuperAdmin\Models\PlatformMailSettings;
 use Throwable;
 
@@ -23,6 +24,10 @@ final class SuperAdminServiceProvider extends ModuleServiceProvider
         parent::boot();
 
         $this->applyStoredMailSettings();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([CreatePlatformAdminCommand::class]);
+        }
     }
 
     /**

@@ -5,7 +5,12 @@ to the build phase that delivers it. Status words are fixed: `Not started`, `In 
 `Built`, `Tested`, `Blocked`. `Tested` requires passing automated tests, never a manual
 click-through.
 
-**Last updated:** 2026-10-02 — the §12 customer-facing public booking page now exists:
+**Last updated:** 2026-10-02 — the Super Admin console (§31) went from "one unreachable API
+endpoint" to a real v1: `php artisan platform-admin:create` (the only way to get the first
+login), tenant search/detail/suspend/reactivate, a read-only audit log view, and 5 new
+`/platform/*` screens. See `docs/summaries/2026-10-02-super-admin-console.md` and row 21 below.
+
+Earlier the same day: the §12 customer-facing public booking page went live:
 `GET /book/{tenant}`, a mobile-first wizard, plus the "open slots for a day" endpoint it needed
 (`AppointmentScheduler::openSlotsFor()`, `GET /api/v1/public/{tenant}/availability/open-slots`).
 Also fixed a pre-existing 500 in `SubmitPublicBooking` (a NOT-NULL `pets.sex` column fed an
@@ -62,7 +67,7 @@ below the table)
 | 18 | Customer retention + rebooking | §22 | — | Phase 2 | Not started | Segmentation, inactive-customer detection |
 | 19 | Google + social integrations | §21, §30 | — | Phase 2 | Not started | Official APIs only |
 | 20 | Mobile app | §15 | — | Phase 2 | Not started | React Native can share code with the SPA (`D-006`) |
-| 21 | Super admin console | §31 | — | Phase 2 | **In progress** | Tenant support with strict audit — not built. **First slice built 2026-10-01 (`D-026`), ahead of normal order**: `modules/SuperAdmin` holds platform-wide SMTP settings (`platform_mail_settings`, no `tenant_id`), edited via `GET/PUT /api/v1/admin/mail-settings` (`permission:platform.administer`, no `tenant` middleware). No `PlatformAdmin` user exists yet to actually use it. **Bug fixed same day**: its service provider cached a raw Eloquent model via `Cache::rememberForever()`, which does not reliably survive PHP's native unserialize and crashed every `artisan` command once a stale cache entry turned into a `__PHP_Incomplete_Class` — now caches a plain array instead; see `docs/summaries/2026-10-01-admin-panel.md` |
+| 21 | Super admin console | §31 | — | Phase 2 | **Built** | `modules/SuperAdmin`, ahead of normal order. Platform-wide SMTP settings (`D-026`, 2026-10-01). **2026-10-02: a real v1 console** — `php artisan platform-admin:create` (the only way to create the first `PlatformAdmin` login, deliberately console-only), tenant search/detail (plan, subscription via a new `Billing\Contracts\SubscriptionDirectory`, all 21 §25 feature grades, user list), suspend/reactivate, a read view onto the audit trail, and an overview tile row — 7 new `/api/v1/admin/*` endpoints, 5 new `/platform/*` screens (`routes/web.php`, `resources/views/platform/*`). The 9 §31 items needing an unbuilt module (Insights, Integrations, AI Voice, Website, product analytics, a persistent queue worker) are an honest placeholder page, `platform/health.blade.php`, not built. No automated tests; see `docs/summaries/2026-10-02-super-admin-console.md` |
 | 22 | Product analytics | §36 | — | Phase 2 | Not started | MRR, churn, conversion, usage |
 | 23 | AI voice agent | §19, §29 | — | Phase 3 | Not started | Growth Partner plan only |
 | 24 | Advanced AI + growth intelligence | §17, §29 | — | Phase 3 | Not started | |

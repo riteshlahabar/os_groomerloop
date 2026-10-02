@@ -5,6 +5,8 @@ namespace Modules\Billing;
 use App\Support\ModuleServiceProvider;
 use Modules\Billing\Console\ExpireLapsedSubscriptionsCommand;
 use Modules\Billing\Contracts\PaymentGateway;
+use Modules\Billing\Contracts\SubscriptionDirectory;
+use Modules\Billing\Services\EloquentSubscriptionDirectory;
 use Modules\Billing\Services\Gateways\FakePaymentGateway;
 use Modules\Billing\Services\Gateways\StripeGateway;
 use RuntimeException;
@@ -72,6 +74,8 @@ final class BillingServiceProvider extends ModuleServiceProvider
 
             return $this->app->make($class);
         });
+
+        $this->app->bind(SubscriptionDirectory::class, EloquentSubscriptionDirectory::class);
     }
 
     public function boot(): void
