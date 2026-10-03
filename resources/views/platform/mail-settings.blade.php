@@ -21,7 +21,7 @@
           <label class="form-check-label" for="ms_is_enabled">Enabled</label>
         </div>
 
-        <div class="grid grid-cols-12 card-gap">
+        <div class="grid grid-cols-12 card-gap form-grid">
           <div class="col-span-8">
             <label class="form-label">Host</label>
             <input type="text" class="form-control" id="ms_host">

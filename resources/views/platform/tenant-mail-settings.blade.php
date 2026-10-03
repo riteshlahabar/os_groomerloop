@@ -22,7 +22,7 @@
           <label class="form-check-label" for="tms_is_enabled">Use this account for {{ $tenant->name }}</label>
         </div>
 
-        <div class="grid grid-cols-12 card-gap">
+        <div class="grid grid-cols-12 card-gap form-grid">
           <div class="col-span-8">
             <label class="form-label">Host</label>
             <input type="text" class="form-control" id="tms_host" placeholder="smtp.example.com">
@@ -80,7 +80,7 @@
     </div>
     <div class="card-body pt-0">
       <div id="tmsTestStatus" class="alert" style="display:none"></div>
-      <form id="tmsTestForm" class="grid grid-cols-12 card-gap">
+      <form id="tmsTestForm" class="grid grid-cols-12 card-gap form-grid">
         <div class="col-span-8">
           <label class="form-label">Send to</label>
           <input type="email" class="form-control" id="tms_test_to" placeholder="you@groomerloop.com">
