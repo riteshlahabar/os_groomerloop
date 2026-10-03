@@ -1,24 +1,19 @@
 <?php
 
-namespace Modules\SuperAdmin\Http\Requests;
+namespace Modules\Notifications\Http\Requests;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Notifications\Contracts\TenantMailSettings;
 use Modules\Notifications\Domain\MailEncryption;
-use Modules\Tenancy\Models\Tenant;
-use Modules\Tenancy\Support\TenantContext;
 
 /**
- * One business's own SMTP account (`D-032`) — the same rules as the platform-wide screen, plus
- * `reply_to`.
+ * The business's own SMTP account, as its owner edits it (`D-033`).
  *
- * Unlike `UpdatePlatformMailSettingsRequest`, "is a password already stored?" is a tenant-scoped
- * question, so it is asked inside `TenantContext::runFor()` against the route's tenant rather
- * than read from a global row. It is never taken from the request body: a client-supplied
- * "I already have a password" flag would let a caller switch on a configuration that cannot
- * authenticate.
+ * "Is a password already stored?" is asked of the current tenant through the contract, never
+ * taken from the request body — a client-supplied "I already have one" flag would let a caller
+ * switch on a configuration that cannot authenticate.
  */
 final class UpdateTenantMailSettingsRequest extends FormRequest
 {
@@ -46,10 +41,10 @@ final class UpdateTenantMailSettingsRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         // Half a configuration, switched on, is how a business's notification email stops
-        // sending with no visible error — refuse it here rather than discovering it in a
-        // bounce. The platform fallback makes this more important, not less: an incomplete row
-        // fails `isUsable()`, the platform account quietly takes over, and the admin is left
-        // believing they configured something that is not being used.
+        // sending with no visible error. The platform fallback makes refusing it more
+        // important, not less: an incomplete row fails `isUsable()`, the platform account
+        // quietly takes over, and the owner is left believing they configured something that
+        // is not being used.
         $validator->after(function (Validator $validator): void {
             if (! $this->boolean('is_enabled')) {
                 return;
@@ -57,7 +52,7 @@ final class UpdateTenantMailSettingsRequest extends FormRequest
 
             foreach (['host', 'port', 'from_address'] as $required) {
                 if (! $this->filled($required)) {
-                    $validator->errors()->add($required, 'Required to enable mail sending for this business.');
+                    $validator->errors()->add($required, 'Required to send through your own mail account.');
                 }
             }
 
@@ -77,15 +72,6 @@ final class UpdateTenantMailSettingsRequest extends FormRequest
 
     private function hasStoredPassword(): bool
     {
-        $tenant = $this->route('tenant');
-
-        if (! $tenant instanceof Tenant) {
-            return false;
-        }
-
-        return app(TenantContext::class)->runFor(
-            $tenant,
-            static fn (): bool => app(TenantMailSettings::class)->snapshotForCurrentTenant()->hasPassword,
-        );
+        return app(TenantMailSettings::class)->snapshotForCurrentTenant()->hasPassword;
     }
 }

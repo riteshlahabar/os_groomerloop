@@ -108,6 +108,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('settings', fn () => view('admin.settings'))
         ->middleware('permission:settings.manage')->name('settings');
 
+    // The business's own outbound email account (`D-033`), moved here from the §31 console: the
+    // sending domain is the business's brand and deliverability, so it is the owner's to set.
+    // Same gate as the rest of Settings, which is also what the sidebar's submenu inherits.
+    Route::get('settings/email', fn () => view('admin.settings-email'))
+        ->middleware('permission:settings.manage')->name('settings.email');
+
     // Two halves, two audiences: the booking-requests queue needs appointments.manage, the
     // rules form needs settings.manage. The page renders whichever half the viewer holds.
     Route::get('booking', fn () => view('admin.booking'))
@@ -167,13 +173,5 @@ Route::middleware(['auth', 'permission:platform.administer'])->prefix('platform'
     Route::get('tenants', fn () => view('platform.tenants'))->name('tenants');
     Route::get('audit-log', fn () => view('platform.audit-log'))->name('audit-log');
     Route::get('mail-settings', fn () => view('platform.mail-settings'))->name('mail-settings');
-
-    // One business's own SMTP account (`D-032`). The only platform page that needs a Tenant
-    // row, and it takes it from route model binding — the page's data still comes from
-    // /api/v1/admin/tenants/{id}/mail-settings like every other screen here.
-    Route::get('tenants/{tenant}/mail-settings', fn (Tenant $tenant) => view('platform.tenant-mail-settings', [
-        'tenant' => $tenant,
-    ]))->name('tenant-mail-settings');
-
     Route::get('health', fn () => view('platform.health'))->name('health');
 });

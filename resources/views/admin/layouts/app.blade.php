@@ -225,7 +225,13 @@
                       ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view']],
                       ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => null],
                       ['label' => 'Team', 'route' => 'admin.team', 'icon' => 'user', 'permission' => ['staff.view']],
-                      ['label' => 'Settings', 'route' => 'admin.settings', 'icon' => 'form', 'permission' => ['settings.manage']],
+                      // The first §6 item with a submenu. Both halves are the owner's job and
+                      // carry the same `settings.manage` gate the parent does, so the children
+                      // declare no `permission` of their own — the parent's filter decides.
+                      ['label' => 'Settings', 'icon' => 'form', 'permission' => ['settings.manage'], 'children' => [
+                        ['label' => 'Business profile', 'route' => 'admin.settings'],
+                        ['label' => 'Email delivery', 'route' => 'admin.settings.email'],
+                      ]],
                       ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe', 'permission' => ['billing.view']],
                     ];
 
@@ -253,24 +259,54 @@
                       16 nav items showed an arrow promising a submenu that does not exist.
 
                       Driven off `children` rather than hardcoded, so the rule is the real one —
-                      an arrow when there is something to expand, none when there isn't. Every
-                      §6 item is currently a flat link, so none of them gets an arrow today; add
-                      a `children` key and the arrow comes back on its own.
+                      an arrow when there is something to expand, none when there isn't.
+                      Settings is the first and so far only item with children (`D-033`).
                     --}}
+                    @php
+                      $children = $item['children'] ?? [];
+
+                      // A parent with children is highlighted when any child is the current
+                      // page, and its own `route` (if it even has one) is irrelevant — clicking
+                      // it expands rather than navigates.
+                      $childActive = collect($children)->contains(
+                        static fn (array $child): bool => request()->routeIs($child['route'])
+                      );
+
+                      $selfActive = isset($item['route']) && request()->routeIs($item['route']);
+                    @endphp
                     <li class="sidebar-list">
                       {{--
                         `data-nav-active` carries the server's answer as an ATTRIBUTE, not just a
                         class, because `sidebar-menu.js` strips `active` off every sidebar link on
                         load and recomputes it itself — see the re-apply script at the bottom of
                         this file for why its own answer is wrong here.
+
+                        A parent with children gets `href="#"`: Cuba's handler toggles
+                        `$(this).next()` on click and does not preventDefault, so a real href
+                        would navigate away instead of expanding the submenu.
                       --}}
-                      <a class="sidebar-link sidebar-title {{ empty($item['children'] ?? []) ? 'link-nav' : '' }} {{ request()->routeIs($item['route'] ?? '') ? 'active' : '' }}"
-                        @if (request()->routeIs($item['route'] ?? '')) data-nav-active="1" @endif
-                        href="{{ isset($item['route']) ? route($item['route']) : '#' }}">
+                      <a class="sidebar-link sidebar-title {{ empty($children) ? 'link-nav' : '' }} {{ $selfActive || $childActive ? 'active' : '' }}"
+                        @if ($selfActive) data-nav-active="1" @elseif ($childActive) data-nav-parent-active="1" @endif
+                        href="{{ empty($children) && isset($item['route']) ? route($item['route']) : '#' }}">
                         <svg class="stroke-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-{{ $item['icon'] }}"></use></svg>
                         <svg class="fill-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#fill-{{ $item['icon'] }}"></use></svg>
                         <span>{{ $item['label'] }}</span>
                       </a>
+                      @if (! empty($children))
+                        {{-- Cuba hides every `.sidebar-submenu` on load; the re-apply script at
+                             the bottom of this file reopens the one holding the current page. --}}
+                        <ul class="sidebar-submenu">
+                          @foreach ($children as $child)
+                            <li>
+                              <a href="{{ route($child['route']) }}"
+                                class="{{ request()->routeIs($child['route']) ? 'active' : '' }}"
+                                @if (request()->routeIs($child['route'])) data-nav-active="1" @endif>
+                                {{ $child['label'] }}
+                              </a>
+                            </li>
+                          @endforeach
+                        </ul>
+                      @endif
                     </li>
                   @endforeach
                 </ul>
@@ -347,7 +383,7 @@
         template's script has had its turn.
       */
       (function () {
-        var active = document.querySelector('.sidebar-wrapper .sidebar-link[data-nav-active]');
+        var active = document.querySelector('.sidebar-wrapper [data-nav-active]');
 
         if (!active) {
           return;
@@ -359,6 +395,28 @@
 
         if (item) {
           item.classList.add('active');
+        }
+
+        // When the current page is a submenu child, Cuba has already hidden the whole submenu
+        // on load (`jQuery('.sidebar-submenu').hide()`), so without this the Settings group
+        // collapses the moment you land on one of its pages. Open it and point its arrow down,
+        // which is what the template's own click handler does.
+        var submenu = active.closest('.sidebar-submenu');
+
+        if (submenu) {
+          submenu.style.display = 'block';
+
+          var parent = document.querySelector('.sidebar-wrapper [data-nav-parent-active]');
+
+          if (parent) {
+            parent.classList.add('active');
+
+            var arrow = parent.querySelector('.according-menu i');
+
+            if (arrow) {
+              arrow.className = 'fa-solid fa-angle-down';
+            }
+          }
         }
       })();
     </script>

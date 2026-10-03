@@ -8,8 +8,9 @@
     <div class="card-header card-no-border pb-2">
       <h5>Platform outbound email</h5>
       <p class="f-light mb-0" style="font-size:13px">
-        GroomerLoop's own SMTP account (<code>D-026</code>). Every business sends through this
-        unless it has an account of its own — set those below.
+        GroomerLoop's own SMTP account (<code>D-026</code>) — the fallback every business sends
+        through until it configures one of its own, which owners now do themselves under
+        Settings → Email delivery (<code>D-033</code>).
       </p>
     </div>
     <div class="card-body pt-0">
@@ -63,37 +64,6 @@
     </div>
   </div>
 
-  {{-- The per-business half of `D-032`. It lived only behind a button in the tenant detail
-       modal, which meant an admin who came to "Mail Settings" saw no business anywhere and
-       concluded the feature did not exist. --}}
-  <div class="card mt-3" style="max-width:860px">
-    <div class="card-header card-no-border pb-2">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h5>Per-business accounts</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            A business with its own SMTP account sends from its own address; anything else falls
-            back to the platform account above.
-          </p>
-        </div>
-        <input type="text" class="form-control" id="msTenantSearch" placeholder="Search business" style="max-width:240px">
-      </div>
-    </div>
-    <div class="card-body pt-0">
-      <div id="msTenantError" class="alert alert-danger" style="display:none"></div>
-
-      <div class="table-responsive">
-        <table class="table">
-          <thead>
-            <tr><th>Business</th><th>Sends through</th><th class="text-end">&nbsp;</th></tr>
-          </thead>
-          <tbody id="msTenantRows"><tr><td colspan="3" class="f-light">Loading…</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="flex items-center justify-content-between" id="msTenantPagination"></div>
-    </div>
-  </div>
 @endsection
 
 @push('scripts')
@@ -161,66 +131,6 @@
           }
         });
       });
-
-      // ---- Per-business accounts ----------------------------------------------------------
-      // The roster comes from the tenant list endpoint, which already searches and paginates;
-      // only "does this one have its own account" is new, and it arrives as one array of ids
-      // rather than a per-row field, so the tenant roster stays as cheap as it was.
-
-      var configuredIds = [];
-      var tenantPage = 1;
-
-      function showTenantError(message) {
-        var el = document.getElementById('msTenantError');
-        el.textContent = message;
-        el.style.display = 'block';
-      }
-
-      function renderTenantRows(rows) {
-        document.getElementById('msTenantRows').innerHTML = rows.map(function (t) {
-          var own = configuredIds.indexOf(t.id) !== -1;
-
-          return '<tr>'
-            + '<td>' + G.escapeHtml(t.name) + '<div class="f-light" style="font-size:12px">' + G.escapeHtml(t.slug) + '</div></td>'
-            + '<td>' + (own
-              ? '<span class="badge badge-light-success">Its own account</span>'
-              : '<span class="badge badge-light-secondary">The platform account</span>') + '</td>'
-            + '<td class="text-end"><a class="btn btn-sm" style="background:#e6f0ff" href="/platform/tenants/' + t.id + '/mail-settings">'
-            + (own ? 'Edit' : 'Set up') + '</a></td>'
-            + '</tr>';
-        }).join('') || '<tr><td colspan="3" class="f-light">No businesses found.</td></tr>';
-      }
-
-      function loadTenants() {
-        var search = document.getElementById('msTenantSearch').value;
-        var query = 'page=' + tenantPage + (search ? '&search=' + encodeURIComponent(search) : '');
-
-        G.get('/api/v1/admin/tenants?' + query).then(function (result) {
-          if (!result.ok) {
-            showTenantError((result.body && result.body.message) || 'Could not load the business list.');
-            return;
-          }
-
-          document.getElementById('msTenantError').style.display = 'none';
-          renderTenantRows(result.body.data);
-          G.renderPagination('msTenantPagination', result.body.meta, function (page) {
-            tenantPage = page;
-            loadTenants();
-          });
-        });
-      }
-
-      // Ids first, so the first paint already shows the right badge rather than flipping.
-      G.get('/api/v1/admin/mail-settings/tenants').then(function (result) {
-        if (result.ok) {
-          configuredIds = result.body.data;
-        }
-
-        loadTenants();
-      });
-
-      document.getElementById('msTenantSearch')
-        .addEventListener('input', G.debounce(function () { tenantPage = 1; loadTenants(); }, 300));
     })();
   </script>
 @endpush

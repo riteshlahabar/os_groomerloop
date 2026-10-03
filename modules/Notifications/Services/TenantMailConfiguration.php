@@ -14,8 +14,8 @@ use Modules\Notifications\Models\TenantMailSetting;
  * Two audiences, deliberately in one class so there is a single answer to "what is this
  * business's mail configuration":
  *
- *   - **SuperAdmin**, through `Contracts\TenantMailSettings` — snapshots and writes, never a
- *     password, never the Eloquent model.
+ *   - **The owner's Settings screen**, through `Contracts\TenantMailSettings` — snapshots and
+ *     writes, never a password, never the Eloquent model.
  *   - **`SmtpMailProvider`**, through `mailerForCurrentTenant()` — the live credential, which is
  *     why that method is on the concrete class and not on the contract.
  *
@@ -43,21 +43,6 @@ final class TenantMailConfiguration implements TenantMailSettings
     public function isLiveForCurrentTenant(): bool
     {
         return TenantMailSetting::currentOrNew()->isUsable() || $this->platformAccountIsLive();
-    }
-
-    public function configuredTenantIds(): array
-    {
-        return TenantMailSetting::query()
-            ->acrossAllTenants()
-            ->where('is_enabled', true)
-            ->get()
-            // `isUsable()` rather than a second `where` on each column: completeness is the
-            // model's definition and belongs in one place, and the enabled set is small enough
-            // that filtering it in PHP costs nothing.
-            ->filter(static fn (TenantMailSetting $row): bool => $row->isUsable())
-            ->map(static fn (TenantMailSetting $row): int => (int) $row->tenant_id)
-            ->values()
-            ->all();
     }
 
     /**
