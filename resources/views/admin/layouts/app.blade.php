@@ -258,7 +258,15 @@
                       a `children` key and the arrow comes back on its own.
                     --}}
                     <li class="sidebar-list">
-                      <a class="sidebar-link sidebar-title {{ empty($item['children'] ?? []) ? 'link-nav' : '' }} {{ request()->routeIs($item['route'] ?? '') ? 'active' : '' }}" href="{{ isset($item['route']) ? route($item['route']) : '#' }}">
+                      {{--
+                        `data-nav-active` carries the server's answer as an ATTRIBUTE, not just a
+                        class, because `sidebar-menu.js` strips `active` off every sidebar link on
+                        load and recomputes it itself — see the re-apply script at the bottom of
+                        this file for why its own answer is wrong here.
+                      --}}
+                      <a class="sidebar-link sidebar-title {{ empty($item['children'] ?? []) ? 'link-nav' : '' }} {{ request()->routeIs($item['route'] ?? '') ? 'active' : '' }}"
+                        @if (request()->routeIs($item['route'] ?? '')) data-nav-active="1" @endif
+                        href="{{ isset($item['route']) ? route($item['route']) : '#' }}">
                         <svg class="stroke-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-{{ $item['icon'] }}"></use></svg>
                         <svg class="fill-icon"><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#fill-{{ $item['icon'] }}"></use></svg>
                         <span>{{ $item['label'] }}</span>
@@ -318,6 +326,42 @@
     <script src="{{ asset('admin-assets/js/script1.js') }}"></script>
     <script src="{{ asset('admin-assets/js/theme-customizer/customizer.js') }}"></script>
     <script src="{{ asset('admin-assets/js/script.js') }}"></script>
+
+    <script>
+      /*
+        Restore the highlight on the current §6 nav item.
+
+        `sidebar-menu.js` runs on load and, under `.compact-wrapper`, strips `active` from every
+        sidebar `a` and `li` and recomputes it with
+        `window.location.pathname.indexOf($(this).attr('href')) != -1`. That answer is wrong here
+        for two independent reasons:
+
+          1. `route()` emits ABSOLUTE urls, so `href` is "http://host/admin/customers" while
+             `pathname` is "/admin/customers" — indexOf is -1 and nothing is ever matched.
+          2. Even with relative hrefs it would match the wrong item: Dashboard is "/admin", a
+             prefix of every other §6 path, and the template takes the FIRST match, so Dashboard
+             would light up on all 16 screens.
+
+        The server already knows the answer — `request()->routeIs()` on each link, stamped as
+        `data-nav-active`, which `removeClass` cannot touch. This re-applies it after the
+        template's script has had its turn.
+      */
+      (function () {
+        var active = document.querySelector('.sidebar-wrapper .sidebar-link[data-nav-active]');
+
+        if (!active) {
+          return;
+        }
+
+        active.classList.add('active');
+
+        var item = active.closest('.sidebar-list');
+
+        if (item) {
+          item.classList.add('active');
+        }
+      })();
+    </script>
 
     <script>
       // Shared Sanctum SPA cookie-auth helpers (same pattern as frontview/login.blade.php),
