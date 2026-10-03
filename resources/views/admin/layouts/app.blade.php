@@ -209,21 +209,31 @@
                     // placeholder reveals nothing anyway. Messages (§13) left that set on
                     // 2026-10-02: the module is real, so it has real permissions (`D-031`).
                     $adminNav = [
+                      // `feature` is the §25 capability key the item needs, gated through the one
+                      // entitlement service (invariant #3 — a feature key here, never a plan
+                      // name). Null means "every plan has this", or — for Messages — that the
+                      // module is deliberately ungated server-side, so gating the link would
+                      // promise a refusal that will not come.
+                      //
+                      // Hiding is the right shape for invariant #4: a downgrade removes the link,
+                      // never the records behind it, and re-upgrading brings it straight back.
+                      // Billing & Plan is deliberately never gated — it is where an owner goes to
+                      // get a feature back, and hiding it would strand them.
                       ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'home', 'permission' => null],
-                      ['label' => 'Calendar', 'route' => 'admin.calendar', 'icon' => 'calendar', 'permission' => ['calendar.view']],
-                      ['label' => 'Appointments', 'route' => 'admin.appointments', 'icon' => 'task', 'permission' => ['appointments.view']],
-                      ['label' => 'Customers', 'route' => 'admin.customers', 'icon' => 'contact', 'permission' => ['customers.view']],
-                      ['label' => 'Pets', 'route' => 'admin.pets', 'icon' => 'file', 'permission' => ['pets.view']],
+                      ['label' => 'Calendar', 'route' => 'admin.calendar', 'icon' => 'calendar', 'permission' => ['calendar.view'], 'feature' => 'appointments_calendar'],
+                      ['label' => 'Appointments', 'route' => 'admin.appointments', 'icon' => 'task', 'permission' => ['appointments.view'], 'feature' => 'appointments_calendar'],
+                      ['label' => 'Customers', 'route' => 'admin.customers', 'icon' => 'contact', 'permission' => ['customers.view'], 'feature' => 'crm_pets'],
+                      ['label' => 'Pets', 'route' => 'admin.pets', 'icon' => 'file', 'permission' => ['pets.view'], 'feature' => 'crm_pets'],
                       ['label' => 'Services', 'route' => 'admin.services', 'icon' => 'package', 'permission' => ['services.view']],
                       // Two halves, two audiences: the requests queue needs appointments.manage,
                       // the rules form needs settings.manage. Either one earns the link.
-                      ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark', 'permission' => ['appointments.manage', 'settings.manage']],
-                      ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page', 'permission' => ['website.manage']],
+                      ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark', 'permission' => ['appointments.manage', 'settings.manage'], 'feature' => 'online_booking'],
+                      ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page', 'permission' => ['website.manage'], 'feature' => 'basic_website'],
                       ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat', 'permission' => ['messages.view']],
-                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null],
-                      ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage']],
-                      ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view']],
-                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => null],
+                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null, 'feature' => 'review_support'],
+                      ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage'], 'feature' => 'growth_reporting'],
+                      ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view'], 'feature' => 'business_insights'],
+                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => null, 'feature' => 'automation'],
                       ['label' => 'Team', 'route' => 'admin.team', 'icon' => 'user', 'permission' => ['staff.view']],
                       // The first §6 item with a submenu. Both halves are the owner's job and
                       // carry the same `settings.manage` gate the parent does, so the children
@@ -235,7 +245,34 @@
                       ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe', 'permission' => ['billing.view']],
                     ];
 
-                    $adminNav = array_filter($adminNav, static function (array $item): bool {
+                    // What this business's plan includes, asked once for the whole nav rather
+                    // than per item. Entitlements answer about the *current* tenant and these
+                    // /admin web routes carry only `auth` (no `tenant` middleware — permissions
+                    // live on the user's role and never needed it), so the lookup is wrapped in
+                    // the tenant's own context, the same way SuperAdmin reads billing per tenant.
+                    //
+                    // Fails OPEN, not closed: an unresolvable tenant leaves `$grants` null and
+                    // every item stays visible. The opposite of the entitlement service's own
+                    // fail-closed rule, and deliberately so — this filter is cosmetic, the route
+                    // and its `entitlement:` middleware are the real gate, and a nav that
+                    // vanishes on an edge case strands an owner with no way to reach Billing.
+                    $user = auth()->user()->loadMissing('tenant');
+                    $grants = null;
+
+                    if ($user->tenant !== null) {
+                      $grants = app(\Modules\Tenancy\Support\TenantContext::class)->runFor(
+                        $user->tenant,
+                        static fn (): array => app(\Modules\Entitlements\Contracts\Entitlements::class)->all()
+                      );
+                    }
+
+                    $adminNav = array_filter($adminNav, static function (array $item) use ($grants): bool {
+                      $feature = $item['feature'] ?? null;
+
+                      if ($feature !== null && $grants !== null && ! isset($grants[$feature])) {
+                        return false;
+                      }
+
                       if ($item['permission'] === null) {
                         return true;
                       }
