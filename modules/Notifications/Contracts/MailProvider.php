@@ -5,9 +5,11 @@ namespace Modules\Notifications\Contracts;
 /**
  * Sending an email, behind an interface (invariant #5, spec §30).
  *
- * No real driver exists yet — `D-025` records why the bound implementation logs instead of
- * sending, matching `PaymentGateway`'s precedent that nothing above this line may know which
- * provider (or whether a real one) is in use.
+ * Two implementations: `SmtpMailProvider`, bound since `D-032`, which sends through the
+ * business's own SMTP account or the platform's; and `LogMailProvider`, which writes to the
+ * application log and which the SMTP driver falls back to when neither account is configured.
+ * Nothing above this line may know which one ran, or whether delivery was real — the
+ * `PaymentGateway` precedent (`D-025`), and invariant #5.
  */
 interface MailProvider
 {

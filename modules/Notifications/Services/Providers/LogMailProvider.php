@@ -6,10 +6,13 @@ use Illuminate\Support\Facades\Log;
 use Modules\Notifications\Contracts\MailProvider;
 
 /**
- * The bound `MailProvider` until a real one is chosen (`D-025`). Writes to the application log
- * instead of sending — honest about not actually reaching an inbox, rather than silently
- * pretending to, the same spirit as `FakePaymentGateway` but used as the real binding rather than
- * only a test double, since no real mail credentials exist in this environment yet.
+ * Writes to the application log instead of sending — honest about not actually reaching an
+ * inbox rather than silently pretending to, the same spirit as `FakePaymentGateway`.
+ *
+ * No longer the bound `MailProvider` (`D-032`): `SmtpMailProvider` is, and delegates here when
+ * neither the business nor the platform has an SMTP account configured. That keeps an
+ * unconfigured install behaving exactly as it did under `D-025` instead of throwing on the next
+ * appointment booking.
  */
 final class LogMailProvider implements MailProvider
 {

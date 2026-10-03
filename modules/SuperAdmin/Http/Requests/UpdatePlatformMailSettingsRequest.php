@@ -5,7 +5,7 @@ namespace Modules\SuperAdmin\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Modules\SuperAdmin\Domain\MailEncryption;
+use Modules\Notifications\Domain\MailEncryption;
 use Modules\SuperAdmin\Models\PlatformMailSettings;
 
 final class UpdatePlatformMailSettingsRequest extends FormRequest

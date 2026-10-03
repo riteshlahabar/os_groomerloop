@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Notifications\Http\Controllers\Api\V1\MailDeliveryModeController;
 use Modules\Notifications\Http\Controllers\Api\V1\NotificationLogController;
 use Modules\Notifications\Http\Controllers\Api\V1\NotificationRetryController;
 
@@ -25,6 +26,11 @@ use Modules\Notifications\Http\Controllers\Api\V1\NotificationRetryController;
 Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::middleware('permission:messages.view')->group(function (): void {
         Route::get('notifications', [NotificationLogController::class, 'index'])->name('notifications.index');
+
+        // Whether anything actually leaves the server for this business. Read by the Messages
+        // screen's banner so it stops claiming nothing is connected once SMTP is set up.
+        Route::get('notifications/delivery-mode', MailDeliveryModeController::class)
+            ->name('notifications.delivery-mode');
     });
 
     Route::middleware('permission:messages.send')->group(function (): void {

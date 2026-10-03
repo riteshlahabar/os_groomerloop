@@ -24,14 +24,11 @@
 
           <div class="grid grid-cols-12 card-gap" id="msgTiles"></div>
 
-          {{-- Providers currently log instead of sending; saying so here stops a salon owner
-               concluding from "Sent" that a customer received an email. --}}
-          <div class="alert alert-warning mt-3 mb-0">
-            <strong>No email or SMS provider is connected yet.</strong> Messages are recorded and
-            rendered in full, and <em>Sent</em> means the provider accepted them — but the current
-            provider writes to the application log instead of delivering. Connecting a real provider
-            changes nothing on this screen.
-          </div>
+          {{-- What "Sent" actually means for this business, which depends on whether an SMTP
+               account is configured for it (`D-032`). Hidden until
+               /api/v1/notifications/delivery-mode answers: a banner that guesses is worse than
+               no banner, because a salon owner reads it as a statement about their customers. --}}
+          <div class="alert alert-warning mt-3 mb-0" id="msgDeliveryNotice" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -264,6 +261,36 @@
         .addEventListener('input', api.debounce(function () { load(1); }, 350));
 
       document.getElementById('msgRefresh').addEventListener('click', function () { load(currentPage); });
+
+      // What "Sent" means for this business. Email can now genuinely leave the server
+      // (`D-032`); SMS still cannot, so the two are reported separately rather than as one
+      // "providers are connected" claim.
+      function renderDeliveryNotice(mode) {
+        var el = document.getElementById('msgDeliveryNotice');
+
+        if (!mode.email_live && !mode.sms_live) {
+          el.innerHTML = '<strong>No email or SMS provider is connected yet.</strong> Messages are'
+            + ' recorded and rendered in full, and <em>Sent</em> means the provider accepted them —'
+            + ' but the current provider writes to the application log instead of delivering.';
+        } else if (mode.email_live && !mode.sms_live) {
+          el.innerHTML = '<strong>Email is being delivered; SMS is not.</strong> <em>Sent</em> on an'
+            + ' email row means a mail server accepted the message. SMS rows are recorded but the'
+            + ' current provider writes them to the application log instead of sending.';
+        } else {
+          el.innerHTML = '<strong>Messages are being delivered.</strong> <em>Sent</em> means the'
+            + ' provider accepted the message — not that it escaped a spam filter.';
+        }
+
+        el.style.display = 'block';
+      }
+
+      api.get('/api/v1/notifications/delivery-mode').then(function (result) {
+        if (result.ok) {
+          renderDeliveryNotice(result.body.data);
+        }
+        // On failure the banner simply stays hidden — the delivery log below is unaffected, and
+        // a wrong claim about whether customers were reached is worse than no claim.
+      });
 
       load(1);
     })();

@@ -167,5 +167,13 @@ Route::middleware(['auth', 'permission:platform.administer'])->prefix('platform'
     Route::get('tenants', fn () => view('platform.tenants'))->name('tenants');
     Route::get('audit-log', fn () => view('platform.audit-log'))->name('audit-log');
     Route::get('mail-settings', fn () => view('platform.mail-settings'))->name('mail-settings');
+
+    // One business's own SMTP account (`D-032`). The only platform page that needs a Tenant
+    // row, and it takes it from route model binding — the page's data still comes from
+    // /api/v1/admin/tenants/{id}/mail-settings like every other screen here.
+    Route::get('tenants/{tenant}/mail-settings', fn (Tenant $tenant) => view('platform.tenant-mail-settings', [
+        'tenant' => $tenant,
+    ]))->name('tenant-mail-settings');
+
     Route::get('health', fn () => view('platform.health'))->name('health');
 });

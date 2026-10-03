@@ -4,15 +4,19 @@ namespace Modules\Notifications;
 
 use App\Support\ModuleServiceProvider;
 use Illuminate\Support\Facades\Event;
+use Modules\Notifications\Actions\SendTestEmail;
 use Modules\Notifications\Console\RetryFailedNotificationsCommand;
 use Modules\Notifications\Console\SendAppointmentRemindersCommand;
 use Modules\Notifications\Contracts\MailProvider;
 use Modules\Notifications\Contracts\SmsProvider;
+use Modules\Notifications\Contracts\TenantMailSettings;
+use Modules\Notifications\Contracts\TestMailSender;
 use Modules\Notifications\Listeners\SendAppointmentBookedNotification;
 use Modules\Notifications\Listeners\SendAppointmentRescheduledNotification;
 use Modules\Notifications\Listeners\SendAppointmentStatusNotification;
-use Modules\Notifications\Services\Providers\LogMailProvider;
 use Modules\Notifications\Services\Providers\LogSmsProvider;
+use Modules\Notifications\Services\Providers\SmtpMailProvider;
+use Modules\Notifications\Services\TenantMailConfiguration;
 use Modules\Scheduling\Events\AppointmentBooked;
 use Modules\Scheduling\Events\AppointmentRescheduled;
 use Modules\Scheduling\Events\AppointmentStatusChanged;
@@ -26,11 +30,12 @@ use Modules\Scheduling\Events\AppointmentStatusChanged;
  * modules that cause a message are decoupled by events, which is how Scheduling can book an
  * appointment without knowing this module exists.
  *
- * **Providers are bound to logging drivers** (`LogMailProvider`, `LogSmsProvider`). They implement the
- * real contracts and write to the application log instead of reaching an inbox, because no mail or SMS
- * credentials exist in this environment — the same honesty `FakePaymentGateway` had before
- * `StripeGateway` (`D-025`). Swapping in a real driver is one binding each and touches no business
- * logic (invariant #5).
+ * **Email sends for real; SMS still logs.** `MailProvider` is bound to `SmtpMailProvider` (`D-032`),
+ * which sends through the business's own SMTP account when a GroomerLoop admin has configured one,
+ * through the platform account otherwise, and falls back to `LogMailProvider` when neither exists —
+ * so an unconfigured install stays as honest as it was before. `SmsProvider` is still `LogSmsProvider`
+ * for want of a provider (`D-025`). Either swap is one binding and touches no business logic
+ * (invariant #5).
  *
  * **Nothing here is queued** (`D-031`): this host has no persistent queue worker (`D-011`), so sends
  * happen inline with the request that caused them and the two scheduled halves — reminders and failure
@@ -56,8 +61,11 @@ final class NotificationsServiceProvider extends ModuleServiceProvider
     {
         parent::register();
 
-        $this->app->bind(MailProvider::class, LogMailProvider::class);
+        $this->app->bind(MailProvider::class, SmtpMailProvider::class);
         $this->app->bind(SmsProvider::class, LogSmsProvider::class);
+
+        $this->app->bind(TenantMailSettings::class, TenantMailConfiguration::class);
+        $this->app->bind(TestMailSender::class, SendTestEmail::class);
     }
 
     public function boot(): void

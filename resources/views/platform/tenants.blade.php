@@ -67,6 +67,9 @@
           <div class="mt-3">
             <button type="button" class="btn btn-sm" id="tdSuspendBtn" style="background:#f8d7da">Suspend this business</button>
             <button type="button" class="btn btn-sm" id="tdReactivateBtn" style="background:#d4edda">Reactivate</button>
+            {{-- This business's own SMTP account (`D-032`); a full page rather than another
+                 section of this modal, because it is a form with a credential in it. --}}
+            <a class="btn btn-sm" id="tdMailSettingsLink" href="#" style="background:#e6f0ff">Email delivery settings</a>
           </div>
 
           <h6 class="mt-4">Users</h6>
@@ -146,6 +149,7 @@
         document.getElementById('tdReactivateBtn').style.display = t.status === 'suspended' ? '' : 'none';
         document.getElementById('tdSuspendBtn').setAttribute('data-id', t.id);
         document.getElementById('tdReactivateBtn').setAttribute('data-id', t.id);
+        document.getElementById('tdMailSettingsLink').href = '/platform/tenants/' + t.id + '/mail-settings';
 
         document.getElementById('tdUserRows').innerHTML = t.users.map(function (u) {
           return '<tr><td>' + G.escapeHtml(u.name) + '</td><td>' + G.escapeHtml(u.email) + '</td><td>' + G.escapeHtml(u.role_label) + '</td></tr>';

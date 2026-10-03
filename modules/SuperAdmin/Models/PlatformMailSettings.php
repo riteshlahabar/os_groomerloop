@@ -3,7 +3,7 @@
 namespace Modules\SuperAdmin\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Modules\SuperAdmin\Domain\MailEncryption;
+use Modules\Notifications\Domain\MailEncryption;
 
 /**
  * The platform's own outbound-email configuration (spec §13, §31) — not tenant-owned, so no

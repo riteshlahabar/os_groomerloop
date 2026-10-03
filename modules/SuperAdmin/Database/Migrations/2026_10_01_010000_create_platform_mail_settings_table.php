@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('host')->nullable();
             $table->unsignedSmallInteger('port')->nullable();
 
-            // none|tls|ssl. Validated in the request, not here — see Domain\MailEncryption.
+            // none|tls|ssl. Validated in the request, not here — see Notifications' MailEncryption.
             $table->string('encryption', 8)->nullable();
 
             $table->string('username')->nullable();
