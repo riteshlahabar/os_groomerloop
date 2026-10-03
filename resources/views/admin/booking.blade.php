@@ -121,45 +121,6 @@
             <a href="{{ url('/book/'.$bookingTenant->slug) }}" target="_blank" class="btn btn-light">Open</a>
             <button type="button" class="btn btn-light" id="bkCopyUrl">Copy</button>
           </div>
-
-          <h6 class="mt-3">Live booking endpoints</h6>
-          <ul class="f-light mb-0" style="font-size:12px;word-break:break-all;list-style:disc;padding-left:18px">
-            <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/services') }}</code></li>
-            <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/staff') }}</code></li>
-            <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/availability') }}</code></li>
-            <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/availability/open-slots') }}</code></li>
-            <li><code>POST {{ url('/api/v1/public/'.$bookingTenant->slug.'/appointments') }}</code></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    {{-- What a customer would actually be offered --}}
-    <div class="col-span-12">
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <div class="flex items-center justify-between">
-            <h5>Bookable online <span class="badge badge-light-primary" id="bkServiceCount" style="display:none">0</span></h5>
-            <a href="{{ route('admin.services') }}" class="btn btn-light btn-sm">Edit services</a>
-          </div>
-        </div>
-        <div class="card-body pt-0">
-          <div id="bkServicesError" class="alert alert-danger" style="display:none"></div>
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Duration</th>
-                </tr>
-              </thead>
-              <tbody id="bkServiceRows">
-                <tr><td colspan="4" class="f-light">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </div>
@@ -388,43 +349,6 @@
         });
       }
 
-      /* ---------------------------------------------------------- bookable services ------- */
-
-      async function loadBookableServices() {
-        var body = document.getElementById('bkServiceRows');
-        var result = await api.get('/api/v1/services?per_page=100');
-
-        if (!result.ok) {
-          body.innerHTML = '<tr><td colspan="4" class="f-light">Could not load services.</td></tr>';
-          return;
-        }
-
-        // `is_publicly_bookable` is the server's own resolved three-condition answer (active +
-        // bookable online + not an add-on), so filtering on it here cannot disagree with what
-        // the public endpoint will actually offer.
-        var bookable = result.body.data.filter(function (s) { return s.is_publicly_bookable; });
-
-        var count = document.getElementById('bkServiceCount');
-        count.textContent = bookable.length;
-        count.style.display = 'inline-block';
-
-        if (bookable.length === 0) {
-          body.innerHTML = '<tr><td colspan="4" class="f-light">Nothing is bookable online yet.</td></tr>';
-          return;
-        }
-
-        body.innerHTML = bookable.map(function (s) {
-          return '<tr>' +
-            '<td>' + api.escapeHtml(s.name) + '</td>' +
-            '<td>' + (s.category ? api.escapeHtml(s.category.name) : '<span class="f-light">Uncategorised</span>') + '</td>' +
-            '<td>$' + api.escapeHtml(s.price) + '</td>' +
-            '<td>' + s.duration_minutes + ' min' +
-              (s.buffer_minutes > 0 ? ' <span class="f-light">+ ' + s.buffer_minutes + ' buffer</span>' : '') +
-            '</td>' +
-          '</tr>';
-        }).join('');
-      }
-
       /* --------------------------------------------------------------------- slug copy ---- */
 
       function wireCopyButton(buttonId, inputId) {
@@ -450,7 +374,6 @@
 
       loadSettings();
       loadRequests(1);
-      loadBookableServices();
     })();
   </script>
 @endpush
