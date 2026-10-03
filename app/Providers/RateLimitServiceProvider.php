@@ -21,6 +21,7 @@ class RateLimitServiceProvider extends ServiceProvider
         $this->registerApiLimiter();
         $this->registerAuthenticationLimiter();
         $this->registerPublicLimiter();
+        $this->registerPublicAvailabilityLimiter();
     }
 
     /**
@@ -60,5 +61,22 @@ class RateLimitServiceProvider extends ServiceProvider
     {
         RateLimiter::for('public', static fn (Request $request) => Limit::perMinute(30)
             ->by('public:'.$request->ip()));
+    }
+
+    /**
+     * Open-slots availability only, carved out of the general public budget on 2026-10-03.
+     *
+     * The booking page's own "find the next open day" search (`loadSlots()` in
+     * `resources/views/frontview/booking.blade.php`) can call this one endpoint up to 15 times
+     * for a single date pick — a single customer going through the wizard once could exhaust
+     * the 30/minute public budget on this endpoint alone, long before touching `/services`,
+     * `/staff` or submitting. A read-only availability lookup is also materially cheaper and
+     * lower-risk than the public group's write endpoint (`POST appointments`), which stays on
+     * the tighter limiter.
+     */
+    private function registerPublicAvailabilityLimiter(): void
+    {
+        RateLimiter::for('public-availability', static fn (Request $request) => Limit::perMinute(60)
+            ->by('public-availability:'.$request->ip()));
     }
 }

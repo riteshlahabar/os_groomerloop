@@ -401,11 +401,21 @@
                 return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
             }
 
+            // Returns `{throttled, slots}` rather than just an array — a 429 (`throttle:
+            // public-availability`, 60/minute per IP) must never be read as "this day has
+            // nothing", or a forward search that trips the limit would burn through every
+            // remaining lookahead day as a false "no availability" instead of stopping and
+            // saying so.
             async function fetchSlotsFor(date) {
                 var query = '/availability/open-slots?service_id=' + state.selectedService.id + '&date=' + date +
                     (state.selectedStaffId ? '&staff_member_id=' + state.selectedStaffId : '');
                 var result = await apiGet(query);
-                return result.ok ? (result.body.data || []) : [];
+
+                if (result.status === 429) {
+                    return { throttled: true, slots: [] };
+                }
+
+                return { throttled: false, slots: result.ok ? (result.body.data || []) : [] };
             }
 
             function renderSlotButtons(slots) {
@@ -440,18 +450,23 @@
                 status.textContent = 'Loading available times…';
 
                 var date = requestedDate;
-                var slots = await fetchSlotsFor(date);
+                var outcome = await fetchSlotsFor(date);
 
-                for (var i = 0; slots.length === 0 && i < SLOT_SEARCH_DAYS; i++) {
+                for (var i = 0; outcome.slots.length === 0 && !outcome.throttled && i < SLOT_SEARCH_DAYS; i++) {
                     status.textContent = 'Looking for the next open day…';
                     date = addDays(date, 1);
-                    slots = await fetchSlotsFor(date);
+                    outcome = await fetchSlotsFor(date);
+                }
+
+                if (outcome.throttled) {
+                    status.textContent = "You're checking dates a little quickly — please wait a moment and try again.";
+                    return;
                 }
 
                 state.date = date;
-                state.slots = slots;
+                state.slots = outcome.slots;
 
-                if (slots.length === 0) {
+                if (outcome.slots.length === 0) {
                     status.textContent = 'No availability in the next ' + SLOT_SEARCH_DAYS + ' days. Please contact '
                         + TENANT_NAME + ' directly.';
                     return;
@@ -464,7 +479,7 @@
                     : 'No times on ' + formatDateLabel(requestedDate) + '. Showing the next open day, '
                         + formatDateLabel(date) + '.';
 
-                renderSlotButtons(slots);
+                renderSlotButtons(outcome.slots);
             }
 
             function formatTime(naive) {

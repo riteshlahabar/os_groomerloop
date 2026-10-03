@@ -32,8 +32,18 @@ Route::prefix('public/{tenant}')
         Route::get('services', [PublicServiceController::class, 'index'])->name('public.services.index');
         Route::get('staff', [PublicStaffController::class, 'index'])->name('public.staff.index');
         Route::get('availability', PublicAvailabilityController::class)->name('public.availability.show');
-        Route::get('availability/open-slots', PublicOpenSlotsController::class)->name('public.availability.open-slots');
         Route::post('appointments', [PublicBookingController::class, 'store'])->name('public.appointments.store');
+    });
+
+// Carved out of the group above on 2026-10-03 (`RateLimitServiceProvider::registerPublicAvailabilityLimiter()`):
+// the booking page's "find the next open day" search can call this one endpoint far more than
+// once per customer action, and the shared 30/minute public budget made that search itself the
+// most likely way to exhaust it — a customer's own date search could lock them out of their own
+// next request, misreported as "no availability" rather than "please wait a moment".
+Route::prefix('public/{tenant}')
+    ->middleware(['throttle:public-availability', ResolvePublicTenant::class])
+    ->group(function (): void {
+        Route::get('availability/open-slots', PublicOpenSlotsController::class)->name('public.availability.open-slots');
     });
 
 Route::middleware(['auth:sanctum', 'tenant', 'permission:settings.manage'])->group(function (): void {
