@@ -229,6 +229,7 @@
                             <h4 class="mt-3 mb-1" id="doneHeadline"></h4>
                             <p class="f-light" id="doneDetail"></p>
                             <a href="{{ url('/site/' . $tenant->slug) }}" class="btn dark-btn mt-2">Back to website</a>
+                            <p class="f-light mt-2" id="redirectCountdown"></p>
                         </div>
                     </div>
 
@@ -639,6 +640,7 @@
                                 ? 'Your appointment for ' + result.body.data.service_name + ' is confirmed.'
                                 : 'We have received your request for ' + result.body.data.service_name + ' and will confirm it shortly.';
                         showStep(6);
+                        startRedirectCountdown();
                         return;
                     }
 
@@ -656,6 +658,24 @@
                     btn.disabled = false;
                 }
             });
+
+            function startRedirectCountdown() {
+                var seconds = 10;
+                var countdownEl = document.getElementById('redirectCountdown');
+                var siteUrl = @json(url('/site/' . $tenant->slug));
+
+                countdownEl.textContent = 'You will be transferred to website in ' + seconds + ' secs';
+
+                var timer = setInterval(function () {
+                    seconds -= 1;
+                    if (seconds <= 0) {
+                        clearInterval(timer);
+                        window.location.href = siteUrl;
+                        return;
+                    }
+                    countdownEl.textContent = 'You will be transferred to website in ' + seconds + ' secs';
+                }, 1000);
+            }
 
             function escapeHtml(value) {
                 var div = document.createElement('div');
