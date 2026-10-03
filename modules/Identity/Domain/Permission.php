@@ -103,6 +103,17 @@ enum Permission: string
     case AdministerPlatform = 'platform.administer';
 
     /**
+     * Managing GroomerLoop's own staff accounts — held by Super Admin alone (`D-035`).
+     *
+     * Split out of `AdministerPlatform` because granting the platform privilege is a different
+     * risk from using it: an operator who can suspend a business is doing their job, while one
+     * who can mint another operator can make that privilege permanent and spread it. It is the
+     * one §31 capability worth withholding from a support hire, which is why it is the only line
+     * between Admin and Super Admin.
+     */
+    case ManagePlatformAdmins = 'platform.manage_admins';
+
+    /**
      * @return list<self>
      */
     public static function all(): array

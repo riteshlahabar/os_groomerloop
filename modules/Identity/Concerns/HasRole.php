@@ -40,9 +40,17 @@ trait HasRole
         return $this->hasRole(Role::Owner);
     }
 
+    /**
+     * GroomerLoop's own staff, of either tier (`D-035`).
+     *
+     * Means "belongs to no tenant and operates the platform", which is true of Super Admin and
+     * Admin alike — so callers asking "is this a platform account" keep working unchanged after
+     * the split. "May this account manage other staff" is a different question and is asked as a
+     * permission (`platform.manage_admins`), never by comparing the role.
+     */
     public function isPlatformAdmin(): bool
     {
-        return $this->hasRole(Role::PlatformAdmin);
+        return $this->hasRole(Role::PlatformAdmin, Role::PlatformSupport);
     }
 
     /**

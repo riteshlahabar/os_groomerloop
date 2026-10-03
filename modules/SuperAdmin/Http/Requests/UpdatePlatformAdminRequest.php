@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Modules\Identity\Domain\Role;
 
 /**
  * Editing a GroomerLoop staff account (`D-034`).
@@ -33,6 +34,10 @@ final class UpdatePlatformAdminRequest extends FormRequest
             // Blank or omitted keeps the current password; when given it must still clear
             // Password::defaults().
             'password' => ['nullable', 'string', Password::defaults()],
+
+            // Only GroomerLoop's own two tiers (`D-035`) — never a tenant role, which would leave
+            // a user with no tenant and a role that expects one. Omitted keeps the current tier.
+            'role' => ['nullable', Rule::in(Role::platformValues())],
         ];
     }
 

@@ -55,7 +55,9 @@ final class PlatformOverviewController
                 'cancelled' => $byStatus->get(TenantStatus::Cancelled->value, 0),
             ],
             'tenants_by_plan' => $byPlan,
-            'platform_admin_count' => User::query()->where('role', Role::PlatformAdmin->value)->count(),
+            // Both tiers (`D-035`) — the tile answers "how many GroomerLoop staff have console
+            // access", and an Admin has it just as a Super Admin does.
+            'platform_admin_count' => User::query()->whereIn('role', Role::platformValues())->count(),
         ]]);
     }
 }

@@ -3,7 +3,9 @@
 namespace Modules\SuperAdmin\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Modules\Identity\Domain\Role;
 
 /**
  * A new GroomerLoop staff account (`D-034`).
@@ -25,6 +27,16 @@ final class StorePlatformAdminRequest extends FormRequest
             // business owner's address must never also be able to reach /platform.
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::defaults()],
+
+            // Only GroomerLoop's own two tiers (`D-035`). `Rule::in` over `Role::platformValues()`
+            // rather than `Rule::enum(Role::class)`, which would also accept `owner` and create a
+            // tenant role with no tenant.
+            'role' => ['required', Rule::in(Role::platformValues())],
         ];
+    }
+
+    public function platformRole(): Role
+    {
+        return Role::from($this->string('role')->toString());
     }
 }

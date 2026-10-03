@@ -26,6 +26,12 @@ final class PlatformAdminResource extends JsonResource
             'id' => $this->resource->getKey(),
             'name' => $this->resource->name,
             'email' => $this->resource->email,
+
+            // `role_label` comes from the enum, so "Super Admin" / "Admin" is written down once
+            // (`Role::label()`) rather than re-spelled in the screen's JavaScript.
+            'role' => $this->resource->role?->value,
+            'role_label' => $this->resource->role?->label(),
+
             'is_you' => $request->user()?->getKey() === $this->resource->getKey(),
             'created_at' => $this->resource->created_at?->toIso8601String(),
         ];

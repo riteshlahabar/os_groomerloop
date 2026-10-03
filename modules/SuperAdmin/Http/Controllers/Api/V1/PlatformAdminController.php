@@ -34,7 +34,7 @@ final class PlatformAdminController
     {
         return PlatformAdminResource::collection(
             User::query()
-                ->where('role', Role::PlatformAdmin->value)
+                ->whereIn('role', Role::platformValues())
                 ->orderBy('name')
                 ->get()
         );
@@ -46,6 +46,7 @@ final class PlatformAdminController
             $request->string('name')->toString(),
             $request->string('email')->toString(),
             $request->string('password')->toString(),
+            $request->platformRole(),
         );
 
         return PlatformAdminResource::make($admin)
@@ -78,6 +79,6 @@ final class PlatformAdminController
      */
     private function assertIsPlatformAdmin(User $admin): void
     {
-        abort_unless($admin->role === Role::PlatformAdmin, Response::HTTP_NOT_FOUND);
+        abort_unless(in_array($admin->role, Role::platform(), strict: true), Response::HTTP_NOT_FOUND);
     }
 }

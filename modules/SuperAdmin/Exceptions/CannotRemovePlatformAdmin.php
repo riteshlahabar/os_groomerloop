@@ -22,11 +22,15 @@ final class CannotRemovePlatformAdmin extends Exception
         return new self('You cannot remove your own GroomerLoop Admin account. Ask a colleague to remove it.');
     }
 
+    /**
+     * Also thrown when stepping the last Super Admin down to Admin — the same lockout by a
+     * different route, since nobody would be left who could promote anyone back.
+     */
     public static function lastOne(): self
     {
         return new self(
-            'This is the only GroomerLoop Admin account left. Add another one first, or nobody '
-            .'will be able to reach the platform console.'
+            'This is the only Super Admin left. Promote someone else first, or nobody will be '
+            .'able to manage GroomerLoop staff again.'
         );
     }
 

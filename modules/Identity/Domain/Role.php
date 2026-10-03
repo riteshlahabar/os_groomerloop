@@ -3,11 +3,15 @@
 namespace Modules\Identity\Domain;
 
 /**
- * The six roles of spec §5, and the single authoritative map from role to capability.
+ * The roles of spec §5, and the single authoritative map from role to capability.
  *
  * This enum is the only place the authorization matrix is written down. Nothing else in the
  * codebase compares against a role name — policies, middleware and controllers all ask about a
  * Permission instead, so a change here changes the whole product consistently.
+ *
+ * §5 names six. There are seven, because `D-035` split GroomerLoop's own staff into two tiers
+ * after the owner asked to tell them apart on the §31 roster; the five tenant roles are exactly
+ * as the spec defines them, and the deviation is recorded rather than left to be discovered.
  */
 enum Role: string
 {
@@ -19,8 +23,53 @@ enum Role: string
 
     /**
      * GroomerLoop staff, not a grooming business's staff. Belongs to no tenant.
+     *
+     * The stored value stays `platform_admin` and still means **full** access, so every account
+     * created before `D-035` kept exactly the privileges it had — a rename would have been a
+     * silent demotion of whoever was holding the console at the time.
      */
     case PlatformAdmin = 'platform_admin';
+
+    /**
+     * GroomerLoop staff without the power to grant GroomerLoop staff (`D-035`).
+     *
+     * Everything the §31 console does — tenant search, suspend/reactivate, audit log, platform
+     * mail settings — minus managing the admin roster itself. Intended for a support hire.
+     */
+    case PlatformSupport = 'platform_support';
+
+    /**
+     * Permissions that belong to GroomerLoop's own staff and must never reach a tenant role.
+     *
+     * Exists because the Owner's set is derived by *excluding* these from every permission, so a
+     * platform permission missing from this list is silently granted to every business owner in
+     * the product. Adding a `platform.*` permission means adding it here in the same change.
+     */
+    private const PLATFORM_ONLY = [
+        Permission::AdministerPlatform,
+        Permission::ManagePlatformAdmins,
+    ];
+
+    /**
+     * The roles belonging to GroomerLoop rather than to a grooming business (`D-035`).
+     *
+     * One definition, so a query for "every platform account" cannot drift from the enum when a
+     * third tier is ever added.
+     *
+     * @return list<self>
+     */
+    public static function platform(): array
+    {
+        return [self::PlatformAdmin, self::PlatformSupport];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function platformValues(): array
+    {
+        return array_map(static fn (self $role): string => $role->value, self::platform());
+    }
 
     public function label(): string
     {
@@ -30,7 +79,8 @@ enum Role: string
             self::Groomer => 'Groomer / Staff',
             self::FrontDesk => 'Front Desk',
             self::Marketing => 'Marketing / Managed Growth',
-            self::PlatformAdmin => 'GroomerLoop Admin',
+            self::PlatformAdmin => 'Super Admin',
+            self::PlatformSupport => 'Admin',
         };
     }
 
@@ -48,9 +98,14 @@ enum Role: string
     public function permissions(): array
     {
         return match ($this) {
+            // Everything EXCEPT the platform-operations permissions. Derived by exclusion rather
+            // than listed, so a new tenant capability reaches the Owner automatically — but that
+            // cuts both ways, and every platform permission must be named here or a business
+            // owner silently acquires it. `D-035` added the second one; forgetting it would have
+            // handed every Owner the ability to mint GroomerLoop staff.
             self::Owner => array_values(array_filter(
                 Permission::all(),
-                static fn (Permission $p): bool => $p !== Permission::AdministerPlatform
+                static fn (Permission $p): bool => ! in_array($p, self::PLATFORM_ONLY, strict: true)
             )),
 
             self::Manager => [
@@ -112,6 +167,15 @@ enum Role: string
             ],
 
             self::PlatformAdmin => [
+                Permission::AdministerPlatform,
+                Permission::ManagePlatformAdmins,
+                Permission::ViewAuditLog,
+            ],
+
+            // Identical to Super Admin minus ManagePlatformAdmins — the single line between the
+            // two tiers (`D-035`). Written out rather than derived from the list above, because
+            // the one place the matrix lives should be readable as a matrix.
+            self::PlatformSupport => [
                 Permission::AdministerPlatform,
                 Permission::ViewAuditLog,
             ],

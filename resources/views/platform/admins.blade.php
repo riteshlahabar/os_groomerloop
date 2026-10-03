@@ -31,9 +31,9 @@
       <div class="table-responsive">
         <table class="table">
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Added</th><th class="text-end">&nbsp;</th></tr>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th class="text-end">&nbsp;</th></tr>
           </thead>
-          <tbody id="paRows"><tr><td colspan="4" class="f-light">Loading…</td></tr></tbody>
+          <tbody id="paRows"><tr><td colspan="5" class="f-light">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -58,6 +58,13 @@
               <div class="col-span-6 sm:col-span-12">
                 <label class="form-label" for="pa_email">Email</label>
                 <input type="email" class="form-control" id="pa_email" maxlength="255">
+              </div>
+              <div class="col-span-12">
+                <label class="form-label" for="pa_role">Role</label>
+                <select class="form-control" id="pa_role">
+                  <option value="platform_support">Admin — runs the console, cannot manage staff</option>
+                  <option value="platform_admin">Super Admin — can also add and remove staff</option>
+                </select>
               </div>
               <div class="col-span-12">
                 <label class="form-label" for="pa_password">Password <span class="f-light" id="paPasswordNote" style="font-size:12px"></span></label>
@@ -113,6 +120,7 @@
         document.getElementById('paModalTitle').textContent = admin ? 'Edit admin' : 'Add admin';
         document.getElementById('pa_name').value = admin ? admin.name : '';
         document.getElementById('pa_email').value = admin ? admin.email : '';
+        document.getElementById('pa_role').value = admin ? admin.role : 'platform_support';
         document.getElementById('pa_password').value = '';
         document.getElementById('paPasswordNote').textContent = admin ? '(leave blank to keep the current one)' : '';
 
@@ -131,12 +139,13 @@
           return '<tr>'
             + '<td>' + G.escapeHtml(a.name) + '</td>'
             + '<td>' + G.escapeHtml(a.email) + '</td>'
+            + '<td>' + G.escapeHtml(a.role_label) + '</td>'
             + '<td class="f-light">' + (a.created_at ? a.created_at.slice(0, 10) : '—') + '</td>'
             + '<td class="text-end">'
             + '<button type="button" class="btn btn-sm me-1" style="background:#e6f0ff" data-edit="' + a.id + '">Edit</button>'
             + remove
             + '</td></tr>';
-        }).join('') || '<tr><td colspan="4" class="f-light">No admins found.</td></tr>';
+        }).join('') || '<tr><td colspan="5" class="f-light">No admins found.</td></tr>';
 
         document.querySelectorAll('[data-edit]').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -186,6 +195,7 @@
         var payload = {
           name: document.getElementById('pa_name').value,
           email: document.getElementById('pa_email').value,
+          role: document.getElementById('pa_role').value,
         };
 
         var password = document.getElementById('pa_password').value;

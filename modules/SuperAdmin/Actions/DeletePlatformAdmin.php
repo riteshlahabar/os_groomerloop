@@ -32,7 +32,10 @@ final class DeletePlatformAdmin
             throw CannotRemovePlatformAdmin::self();
         }
 
-        if ($this->remaining() <= 1) {
+        // Only Super Admins are counted: they are the tier that can grant the privilege back, so
+        // losing the last one is the state nothing can recover from inside the console. Removing
+        // the last plain Admin costs nothing — a Super Admin can always create another.
+        if ($admin->role === Role::PlatformAdmin && $this->remainingSuperAdmins() <= 1) {
             throw CannotRemovePlatformAdmin::lastOne();
         }
 
@@ -40,12 +43,13 @@ final class DeletePlatformAdmin
             'removed_user_id' => $admin->getKey(),
             'name' => $admin->name,
             'email' => $admin->email,
+            'role' => $admin->role?->value,
         ]);
 
         $admin->delete();
     }
 
-    private function remaining(): int
+    private function remainingSuperAdmins(): int
     {
         return User::query()->where('role', Role::PlatformAdmin->value)->count();
     }
