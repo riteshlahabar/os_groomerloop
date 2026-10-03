@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap mb-3">
+          <div class="grid grid-cols-12 card-gap form-grid mb-3">
             <div class="col-span-6 sm:col-span-12">
               <input type="text" class="form-control" id="staffSearch" placeholder="Search staff…">
             </div>
@@ -82,7 +82,7 @@
             <div id="userError" class="alert alert-danger" style="display:none"></div>
             <div id="userOk" class="alert alert-success" style="display:none"></div>
 
-            <div class="grid grid-cols-12 card-gap mb-2">
+            <div class="grid grid-cols-12 card-gap form-grid mb-2">
               <div class="col-span-4 sm:col-span-12">
                 <input type="text" class="form-control" id="userSearch" placeholder="Search name or email…">
               </div>
@@ -237,7 +237,7 @@
             <div id="staffFormError" class="alert alert-danger" style="display:none"></div>
             <input type="hidden" id="staffId">
 
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-12">
                 <label class="form-label">Display name *</label>
                 <input type="text" class="form-control" id="staffDisplayName" required maxlength="255" placeholder="e.g. a first name is enough for a solo groomer">
@@ -358,7 +358,7 @@
           </div>
 
           @can('staff.manage')
-            <form id="timeOffForm" class="grid grid-cols-12 card-gap mt-2">
+            <form id="timeOffForm" class="grid grid-cols-12 card-gap form-grid mt-2">
               <div class="col-span-3 sm:col-span-12">
                 <label class="form-label">From *</label>
                 <input type="datetime-local" class="form-control" id="timeOffStart" required>
@@ -588,7 +588,7 @@
 
         var disabled = canManageStaff ? '' : ' disabled';
 
-        return '<div class="grid grid-cols-12 card-gap mb-2 shiftRow">' +
+        return '<div class="grid grid-cols-12 card-gap form-grid mb-2 shiftRow">' +
           '<div class="col-span-4 sm:col-span-12">' +
             '<select class="form-control shiftDay"' + disabled + '>' + options + '</select>' +
           '</div>' +

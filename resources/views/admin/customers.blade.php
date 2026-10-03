@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap mb-3">
+          <div class="grid grid-cols-12 card-gap form-grid mb-3">
             <div class="col-span-4 sm:col-span-12">
               <input type="text" class="form-control" id="customerSearch" placeholder="Search name, email, phone…">
             </div>
@@ -69,7 +69,7 @@
             <div id="customerFormError" class="alert alert-danger" style="display:none"></div>
             <input type="hidden" id="customerId">
 
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-6 sm:col-span-12">
                 <label class="form-label">First name *</label>
                 <input type="text" class="form-control" id="customerFirstName" required maxlength="255">

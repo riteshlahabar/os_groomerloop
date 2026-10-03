@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap mb-3">
+          <div class="grid grid-cols-12 card-gap form-grid mb-3">
             <div class="col-span-3 sm:col-span-6">
               <label class="form-label">From</label>
               <input type="date" class="form-control" id="apptFrom">
@@ -77,7 +77,7 @@
           <div class="modal-body">
             <div id="apptAddError" class="alert alert-danger" style="display:none"></div>
 
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-12" style="position:relative">
                 <label class="form-label">Customer *</label>
                 <input type="text" class="form-control" id="apptCustomerSearch" placeholder="Search customer by name…" autocomplete="off">
@@ -138,7 +138,7 @@
             <div id="apptEditError" class="alert alert-danger" style="display:none"></div>
             <input type="hidden" id="apptEditId">
             <p class="f-light">Customer, pet and service can’t change on an existing booking — cancel and rebook instead. Use Reschedule for a new time.</p>
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-12">
                 <label class="form-label">Staff</label>
                 <select class="form-control" id="apptEditStaff">

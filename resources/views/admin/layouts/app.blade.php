@@ -18,6 +18,24 @@
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/slick-theme.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('admin-assets/css/vendors/scrollbar.css') }}">
     <link rel="stylesheet" href="{{ asset('admin-assets/css/style.css') }}">
+
+    <style>
+      /*
+        Cuba's `.card-gap` is `gap: 0 <column-gap>` — a deliberately ZERO row gap, which is right
+        for a row of cards that carry their own bottom margin and wrong for a grid of form fields,
+        where it leaves every input's bottom edge touching the label of the field beneath it, and
+        stacked filter controls touching each other once the columns collapse on narrow screens.
+
+        Scoped to `.form-grid` rather than patched onto `.card-gap` itself: the same class lays out
+        the dashboard's widget tiles, the plan cards on Billing and the template picker on Website,
+        and giving those a row gap would change spacing on pages nobody asked about. Add
+        `form-grid` alongside `grid grid-cols-12 card-gap` on any grid of form controls.
+      */
+      .form-grid {
+        row-gap: 18px;
+      }
+    </style>
+
     @stack('styles')
   </head>
   <body>

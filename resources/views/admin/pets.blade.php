@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap mb-3">
+          <div class="grid grid-cols-12 card-gap form-grid mb-3">
             <div class="col-span-4 sm:col-span-12">
               <input type="text" class="form-control" id="petSearch" placeholder="Search pet name, breed…">
             </div>
@@ -71,7 +71,7 @@
             <input type="hidden" id="petId">
             <input type="hidden" id="petCustomerId">
 
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-12" style="position:relative">
                 <label class="form-label">Owner *</label>
                 <input type="text" class="form-control" id="petCustomerSearch" placeholder="Search customer by name…" autocomplete="off">

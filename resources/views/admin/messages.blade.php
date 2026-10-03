@@ -42,7 +42,7 @@
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap mb-3">
+          <div class="grid grid-cols-12 card-gap form-grid mb-3">
             <div class="col-span-12 md:col-span-3">
               <label class="form-label" for="msgStatusFilter">Status</label>
               <select class="form-control" id="msgStatusFilter">

@@ -75,7 +75,7 @@
             <div id="bkSettingsSaved" class="alert alert-success" style="display:none">Booking rules saved.</div>
 
             <form id="bkSettingsForm">
-              <div class="grid grid-cols-12 card-gap">
+              <div class="grid grid-cols-12 card-gap form-grid">
                 <div class="col-span-6 sm:col-span-12">
                   <label class="form-label">Minimum notice <span class="f-light">(minutes)</span></label>
                   <input type="number" class="form-control" id="bkLeadTime" min="0" max="10080" step="5" required>

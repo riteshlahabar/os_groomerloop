@@ -361,7 +361,7 @@
           return '<div class="col-span-12 md:col-span-5">' + fieldInput(id, field, row ? row[field] : '') + '</div>';
         }).join('');
 
-        return '<div class="grid grid-cols-12 card-gap items-end mb-2" data-row="' + index + '">' +
+        return '<div class="grid grid-cols-12 card-gap form-grid items-end mb-2" data-row="' + index + '">' +
           inputs +
           '<div class="col-span-12 md:col-span-2">' +
           '<button type="button" class="btn btn-light btn-sm" data-remove-row="1">Remove</button>' +
@@ -398,7 +398,7 @@
             '</div></div>' +
             '<div class="card-body pt-0">' +
             '<div id="wsPageError_' + page.key + '" class="alert alert-danger" style="display:none"></div>' +
-            '<div class="grid grid-cols-12 card-gap">' +
+            '<div class="grid grid-cols-12 card-gap form-grid">' +
             '<div class="col-span-12 md:col-span-6 mb-3">' +
             '<label class="form-label" for="wsTitle_' + page.key + '">Menu title</label>' +
             '<input type="text" class="form-control" id="wsTitle_' + page.key + '" value="' + api.escapeHtml(page.title || '') + '">' +

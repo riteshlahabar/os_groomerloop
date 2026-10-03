@@ -15,7 +15,7 @@
           <div id="profileFormError" class="alert alert-danger" style="display:none"></div>
 
           <form id="profileForm">
-            <div class="grid grid-cols-12 card-gap">
+            <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-6 sm:col-span-12">
                 <label class="form-label">Legal / business name</label>
                 <input type="text" class="form-control" id="profileLegalName" maxlength="255">
