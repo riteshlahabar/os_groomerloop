@@ -24,6 +24,13 @@ final class UserResource extends JsonResource
             'email' => $this->resource->email,
             'role' => $this->resource->role?->value,
             'role_label' => $this->resource->role?->label(),
+
+            // True for either GroomerLoop staff tier (`D-035`) — belongs to no tenant, lands in
+            // `/platform` rather than `/admin`. The single source of truth for "which console
+            // does this account belong in", so a third platform tier would only need updating
+            // here, never re-spelled in the login page's redirect.
+            'is_platform' => $this->resource->isPlatformAdmin(),
+
             'email_verified' => $this->resource->email_verified_at !== null,
 
             // The SPA uses this to hide controls the server would refuse anyway. It is a UX

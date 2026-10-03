@@ -300,10 +300,10 @@
                     if (result.status === 200 && result.ok) {
                         showStatus('Signed in. Redirecting…', 'success');
                         submitBtn.textContent = 'Signed in';
-                        // GroomerLoop staff (spec §5 PlatformAdmin) belong to no tenant and land
+                        // GroomerLoop staff, either tier (`D-035`), belong to no tenant and land
                         // in the platform console (§31), never the tenant admin panel.
-                        var role = result.body && result.body.data ? result.body.data.role : null;
-                        window.location.href = role === 'platform_admin' ? '/platform' : '/admin';
+                        var isPlatform = result.body && result.body.data ? result.body.data.is_platform : false;
+                        window.location.href = isPlatform ? '/platform' : '/admin';
                         return;
                     }
 
