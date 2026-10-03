@@ -228,6 +228,7 @@
                             <i class="ti ti-circle-check" style="font-size:48px;color:#2fb380"></i>
                             <h4 class="mt-3 mb-1" id="doneHeadline"></h4>
                             <p class="f-light" id="doneDetail"></p>
+                            <a href="{{ url('/site/' . $tenant->slug) }}" class="btn dark-btn mt-2">Back to website</a>
                         </div>
                     </div>
 
