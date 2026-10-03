@@ -45,6 +45,21 @@ final class TenantMailConfiguration implements TenantMailSettings
         return TenantMailSetting::currentOrNew()->isUsable() || $this->platformAccountIsLive();
     }
 
+    public function configuredTenantIds(): array
+    {
+        return TenantMailSetting::query()
+            ->acrossAllTenants()
+            ->where('is_enabled', true)
+            ->get()
+            // `isUsable()` rather than a second `where` on each column: completeness is the
+            // model's definition and belongs in one place, and the enabled set is small enough
+            // that filtering it in PHP costs nothing.
+            ->filter(static fn (TenantMailSetting $row): bool => $row->isUsable())
+            ->map(static fn (TenantMailSetting $row): int => (int) $row->tenant_id)
+            ->values()
+            ->all();
+    }
+
     /**
      * This business's own mailer, or null when it has none and the platform account should be
      * used instead.

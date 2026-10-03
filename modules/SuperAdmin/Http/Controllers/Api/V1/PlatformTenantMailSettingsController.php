@@ -26,6 +26,17 @@ final class PlatformTenantMailSettingsController
         private readonly TenantContext $tenants,
     ) {}
 
+    /**
+     * Which businesses have their own account, for the Mail Settings page's picker. Ids only —
+     * the roster itself comes from `GET /api/v1/admin/tenants`, which already searches and
+     * paginates, so this endpoint exists purely to avoid putting a third per-row contract call
+     * into `PlatformTenantSummaryResource`.
+     */
+    public function configured(TenantMailSettings $settings): JsonResponse
+    {
+        return response()->json(['data' => $settings->configuredTenantIds()]);
+    }
+
     public function show(Tenant $tenant, TenantMailSettings $settings): TenantMailSettingsResource
     {
         return TenantMailSettingsResource::make(

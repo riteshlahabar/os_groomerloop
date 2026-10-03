@@ -29,6 +29,12 @@ Route::prefix('admin')
         Route::put('mail-settings', [PlatformMailSettingsController::class, 'update'])
             ->name('admin.mail-settings.update');
 
+        // Which businesses have their own SMTP account — the Mail Settings page's picker marks
+        // its rows with this. Sits under `mail-settings` rather than `tenants` because it is a
+        // fact about mail configuration, not another tenant roster.
+        Route::get('mail-settings/tenants', [PlatformTenantMailSettingsController::class, 'configured'])
+            ->name('admin.mail-settings.tenants');
+
         Route::get('overview', PlatformOverviewController::class)->name('admin.overview.show');
 
         Route::get('tenants', [PlatformTenantController::class, 'index'])->name('admin.tenants.index');

@@ -45,4 +45,20 @@ interface TenantMailSettings
      * believe a customer was reached (invariant #5).
      */
     public function isLiveForCurrentTenant(): bool;
+
+    /**
+     * Which businesses have a usable account of their own.
+     *
+     * The one cross-tenant method here — everything else on this contract answers about the
+     * current tenant. It exists for §31's roster, which has to mark a whole page of businesses
+     * at once; doing that with `runFor()` per row would be a context switch and a query per
+     * business. `BelongsToTenant::scopeAcrossAllTenants()` reserves exactly this use.
+     *
+     * "Usable" means enabled *and* complete, so a half-filled row that is quietly falling back
+     * to the platform account is reported as not configured, which is what an admin needs to
+     * see.
+     *
+     * @return list<int> tenant ids
+     */
+    public function configuredTenantIds(): array;
 }
