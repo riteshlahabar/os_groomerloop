@@ -140,18 +140,26 @@
                     <div class="mobile-back text-end"><span>Back</span><i class="fa-solid fa-angle-right ps-2" aria-hidden="true"></i></div>
                   </li>
                   @php
-                    // A fixed 5-item console nav, never permission-filtered per item: every
-                    // route behind this layout already requires platform.administer at the
-                    // route level (routes/web.php), unlike admin's §6 nav which spans six roles
-                    // with different capabilities.
+                    // Mostly a fixed console nav: every route behind this layout already
+                    // requires platform.administer at the route level (routes/web.php), unlike
+                    // admin's §6 nav which spans six roles with different capabilities. The one
+                    // exception is GroomerLoop Admins (`D-035`), which also needs
+                    // platform.manage_admins — Admin-tier staff can reach every other screen here
+                    // but would only get a 403 on that one, so it carries an optional
+                    // `permission` key rather than leaving a dead link in the sidebar.
                     $platformNav = [
                       ['label' => 'Dashboard', 'route' => 'platform.dashboard', 'icon' => 'home'],
                       ['label' => 'Tenants', 'route' => 'platform.tenants', 'icon' => 'client'],
                       ['label' => 'Audit Log', 'route' => 'platform.audit-log', 'icon' => 'note'],
                       ['label' => 'Mail Settings', 'route' => 'platform.mail-settings', 'icon' => 'email'],
-                      ['label' => 'GroomerLoop Admins', 'route' => 'platform.admins', 'icon' => 'user'],
+                      ['label' => 'GroomerLoop Admins', 'route' => 'platform.admins', 'icon' => 'user', 'permission' => 'platform.manage_admins'],
                       ['label' => 'Platform Health', 'route' => 'platform.health', 'icon' => 'activity'],
                     ];
+
+                    $platformNav = array_filter(
+                      $platformNav,
+                      static fn (array $item): bool => ! isset($item['permission']) || auth()->user()->can($item['permission'])
+                    );
                   @endphp
                   @foreach ($platformNav as $item)
                     <li class="sidebar-list">
