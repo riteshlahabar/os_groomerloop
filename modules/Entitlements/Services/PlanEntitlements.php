@@ -85,6 +85,11 @@ final class PlanEntitlements implements Entitlements
         return $this->memoisedPlan;
     }
 
+    public function hasPlan(): bool
+    {
+        return $this->plan() !== null;
+    }
+
     public function defaultPlan(): ?Plan
     {
         return Plan::query()->with('features')->where('is_default', true)->first();

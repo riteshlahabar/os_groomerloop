@@ -44,7 +44,9 @@ final class EnsureEntitlement
             : $this->entitlements->atLeast($case, $minimum);
 
         if (! $satisfied) {
-            throw new FeatureNotEntitled($case, $minimum);
+            // Whether the business is on a plan at all decides which refusal this is — see
+            // FeatureNotEntitled. Asked only on the failing path, so the happy path costs nothing.
+            throw new FeatureNotEntitled($case, $minimum, $this->entitlements->hasPlan());
         }
 
         return $next($request);

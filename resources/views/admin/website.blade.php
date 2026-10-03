@@ -39,7 +39,7 @@
     </div>
 
     {{-- Template picker --}}
-    <div class="col-span-12">
+    <div class="col-span-12" data-ws-section>
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Choose a look</h5>
@@ -52,7 +52,7 @@
     </div>
 
     {{-- Site-wide settings --}}
-    <div class="col-span-12 xl:col-span-6">
+    <div class="col-span-12 xl:col-span-6" data-ws-section>
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Branding &amp; search</h5>
@@ -87,7 +87,7 @@
     </div>
 
     {{-- Social links --}}
-    <div class="col-span-12 xl:col-span-6">
+    <div class="col-span-12 xl:col-span-6" data-ws-section>
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Social links</h5>
@@ -103,7 +103,7 @@
     </div>
 
     {{-- Pages --}}
-    <div class="col-span-12">
+    <div class="col-span-12" data-ws-section>
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Pages</h5>
@@ -546,14 +546,35 @@
         renderPages();
       }
 
+      // Nothing below the status card can be filled in without a site to edit, and leaving them
+      // on screen after a failed load is how this page ended up showing an error, a permanent
+      // "Loading…", and three empty shells underneath it.
+      function hideEditor(statusText) {
+        document.getElementById('wsStatus').textContent = statusText;
+        document.getElementById('wsUrl').textContent = '';
+        document.getElementById('wsActions').innerHTML = '';
+
+        document.querySelectorAll('[data-ws-section]').forEach(function (section) {
+          section.hidden = true;
+        });
+      }
+
       async function load() {
         var result = await api.get('/api/v1/website');
 
         if (!result.ok) {
-          // 402 is the entitlement answer, not an error the owner can fix by retrying.
+          // 402 is the entitlement answer, not something the owner can fix by retrying. Its
+          // wording comes from the server, which alone knows whether this is real plan
+          // packaging or a business that resolves to no plan at all — opposite problems with
+          // opposite fixes, and the page used to assert the first regardless.
           showError(result.status === 402
-            ? 'Your plan does not include the website builder.'
+            ? (result.body.message || 'Your plan does not include the website builder.')
             : firstErrorFrom(result, 'Could not load your website.'));
+
+          hideEditor(result.status === 402
+            ? 'The website builder is not available for this business.'
+            : 'Your website could not be loaded.');
+
           return;
         }
 

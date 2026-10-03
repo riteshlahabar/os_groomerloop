@@ -46,6 +46,20 @@ interface Entitlements
     public function all(): array;
 
     /**
+     * Is the current business on a plan at all?
+     *
+     * Distinguishes the two ways `allows()` returns false, which look identical to a caller and
+     * mean opposite things. "Your plan does not include this" is a packaging answer and the fix
+     * is to upgrade. "This business resolves to no plan" is a *setup fault* — no `plan_id` and no
+     * plan flagged `is_default`, which in practice means the plan catalogue was never seeded —
+     * and telling that owner to upgrade sends them to buy something every plan already includes.
+     *
+     * Entitlement answers still fail closed in that state (`D-012`'s reasoning); this only lets
+     * the refusal explain itself honestly.
+     */
+    public function hasPlan(): bool;
+
+    /**
      * Drop any memoised answer, so the next question re-reads the plan.
      *
      * Needed when a plan changes inside a single request or job — an upgrade, a downgrade, or
