@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
+use Modules\Tenancy\Http\Middleware\ResolvePublicTenantById;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Modules\Website\Http\Controllers\PublicSiteController;
 use Modules\Website\Http\Controllers\SitePreviewController;
@@ -14,20 +14,26 @@ use Modules\Website\Http\Controllers\SitePreviewController;
 | Two surfaces, both server-rendered (D-030 — the one deliberate exception to D-007's
 | client-side-fetch rule, because a tenant's marketing site must be crawlable):
 |
-|   /site/{tenant}[/{page}]   the published site, public, no login
-|   /admin/website/preview    the owner's draft, authenticated
+|   /{tenant}/{slug}[/{page}]   the published site, public, no login
+|   /admin/website/preview      the owner's draft, authenticated
 |
-| `/site/...` is its own top-level path rather than `/public/{tenant}/...`: colliding with the
-| public/frontview-assets directory is the trap D-019 already documents, and `/book/{tenant}` was
-| given its own path for the same reason.
+| The public path is keyed by the tenant's numeric id, not its slug (owner's request, 2026-10-03)
+| — the `{slug}` segment after it is decorative, read by no code, kept only so the URL stays
+| readable and a slug rename never breaks a link already handed to a customer. Resolved by
+| ResolvePublicTenantById rather than the slug-keyed ResolvePublicTenant the §12 booking widget
+| uses — see that class's docblock for why this is two middlewares, not one with a mode flag.
+|
+| This no longer collides with /book/{tenant} or public/frontview-assets the way a literal `site`
+| prefix once needed to avoid (D-019) — a leading numeric segment cannot match either path.
 |
 | The subdomain shape the product eventually wants — <tenant>.groomerloop.com — is additive: a
 | domain-scoped route group resolving the same controller. It is not built here because wildcard DNS
 | and a wildcard certificate cannot be verified from this environment.
 */
 
-Route::prefix('site/{tenant}')
-    ->middleware(['throttle:public', ResolvePublicTenant::class])
+Route::prefix('{tenant}/{slug}')
+    ->where(['tenant' => '[0-9]+'])
+    ->middleware(['throttle:public', ResolvePublicTenantById::class])
     ->group(function (): void {
         Route::get('/', PublicSiteController::class)->name('website.public.home');
         Route::get('{page}', PublicSiteController::class)->name('website.public.page');

@@ -116,7 +116,7 @@ final class SiteComposer
                 'label' => $page->displayTitle(),
                 'url' => $isPreview
                     ? route('admin.website.preview', ['page' => $page->key->value])
-                    : route('website.public.page', ['tenant' => $tenant->slug, 'page' => $page->key->value]),
+                    : route('website.public.page', ['tenant' => $tenant->id, 'slug' => $tenant->slug, 'page' => $page->key->value]),
                 'is_current' => $page->key === $current->key,
             ];
         }
@@ -125,6 +125,7 @@ final class SiteComposer
 
         return new SiteView(
             businessName: $businessName,
+            tenantId: $tenant->id,
             tenantSlug: (string) $tenant->slug,
             template: $template,
             page: $current->key,

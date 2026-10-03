@@ -39,8 +39,9 @@ final class WebsiteResource extends JsonResource
             'social' => $this->resource->social ?? [],
 
             // Absolute, because the owner's whole reason for opening this screen is to copy the link
-            // and hand it to a customer.
-            'public_url' => route('website.public.home', ['tenant' => $slug]),
+            // and hand it to a customer. Keyed by id, not slug (owner's request, 2026-10-03) —
+            // see Website/Routes/web.php.
+            'public_url' => route('website.public.home', ['tenant' => $this->resource->tenant->id, 'slug' => $slug]),
             'preview_url' => route('admin.website.preview', ['page' => 'home']),
             'booking_url' => route('public-booking', ['tenant' => $slug]),
 

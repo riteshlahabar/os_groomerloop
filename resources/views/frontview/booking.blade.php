@@ -228,7 +228,7 @@
                             <i class="ti ti-circle-check" style="font-size:48px;color:#2fb380"></i>
                             <h4 class="mt-3 mb-1" id="doneHeadline"></h4>
                             <p class="f-light" id="doneDetail"></p>
-                            <a href="{{ url('/site/' . $tenant->slug) }}" class="btn dark-btn mt-2">Back to website</a>
+                            <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn dark-btn mt-2">Back to website</a>
                             <p class="f-light mt-2" id="redirectCountdown"></p>
                         </div>
                     </div>
@@ -662,7 +662,7 @@
             function startRedirectCountdown() {
                 var seconds = 10;
                 var countdownEl = document.getElementById('redirectCountdown');
-                var siteUrl = @json(url('/site/' . $tenant->slug));
+                var siteUrl = @json(route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]));
 
                 countdownEl.textContent = 'You will be transferred to website in ' + seconds + ' secs';
 

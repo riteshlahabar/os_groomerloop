@@ -29,6 +29,7 @@ final readonly class SiteView
      */
     public function __construct(
         public string $businessName,
+        public int $tenantId,
         public string $tenantSlug,
         public TemplateKey $template,
         public PageKey $page,
@@ -127,6 +128,6 @@ final readonly class SiteView
     {
         return $this->isPreview
             ? route('admin.website.preview', ['page' => $page->value])
-            : route('website.public.page', ['tenant' => $this->tenantSlug, 'page' => $page->value]);
+            : route('website.public.page', ['tenant' => $this->tenantId, 'slug' => $this->tenantSlug, 'page' => $page->value]);
     }
 }

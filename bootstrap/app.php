@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
+use Modules\Tenancy\Http\Middleware\ResolvePublicTenantById;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -56,6 +57,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(
             before: SubstituteBindings::class,
             prepend: ResolvePublicTenant::class,
+        );
+
+        // Same guarantee again, for the spec §14 public website, which is keyed by tenant id
+        // rather than slug (ResolvePublicTenantById).
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolvePublicTenantById::class,
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
