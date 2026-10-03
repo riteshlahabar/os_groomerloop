@@ -112,6 +112,18 @@ final class EloquentStaffDirectory implements StaffDirectory
             StaffMember::query()->bookableOnline()->with(['workingHours'])
         );
 
+        // Nobody with an empty rota, ever. `isAvailableAt()` below refuses every slot on every day
+        // for such a person — "a person with no shifts is not available" — so offering them to a
+        // customer is offering a dead end: §12's wizard would search its whole 14-day window, find
+        // nothing on all 14 days, and tell the customer the *business* has no availability. That
+        // exact misattribution was reported from production on 2026-10-03 against a salon whose
+        // only published groomer had never been given working hours. `hasWorkingHours` exists on
+        // the summary for precisely this distinction and was carried here unused.
+        $staff = array_values(array_filter(
+            $staff,
+            static fn (StaffSummary $summary): bool => $summary->hasWorkingHours
+        ));
+
         if ($serviceId === null) {
             return $staff;
         }

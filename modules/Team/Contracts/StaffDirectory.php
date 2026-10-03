@@ -58,8 +58,13 @@ interface StaffDirectory
     public function assignable(): array;
 
     /**
-     * The narrower list a customer may choose from on the §12 booking page: active, published, and —
-     * when a service is named — able to perform it.
+     * The narrower list a customer may choose from on the §12 booking page: active, published, on a
+     * rota, and — when a service is named — able to perform it.
+     *
+     * "On a rota" is part of the definition rather than the caller's problem: a staff member with no
+     * working hours fails {@see self::isAvailableAt()} for every slot on every day, so offering them
+     * as a choice can only ever end in the booking page reporting no availability — and reporting it
+     * against the business rather than against the person.
      *
      * @return list<StaffSummary>
      */

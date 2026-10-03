@@ -117,6 +117,13 @@
                             <label class="form-label" for="bookingDate">Date</label>
                             <input type="date" class="form-control" id="bookingDate" style="max-width:220px">
                             <div id="slotStatus" class="f-light mt-3" style="font-size:13px"></div>
+                            {{--
+                              The way out of a dead end, rather than "contact us directly": when the
+                              groomer the customer picked has nothing in the whole search window,
+                              one button drops the preference and searches again. Empty and hidden
+                              unless `loadSlots()` has something to offer here.
+                            --}}
+                            <div id="slotRecovery" class="mt-2" style="display:none"></div>
                             <div class="slot-grid" id="slotGrid"></div>
                             <div class="d-flex justify-content-between mt-3">
                                 <button type="button" class="btn light-btn" data-back="2"><i class="ti ti-arrow-left me-1"></i> Back</button>
@@ -343,6 +350,12 @@
             });
 
             // ---- Step 2: staff ----
+
+            // Kept so step 3 can hand the customer back to "No preference" through the same
+            // `selectStaff()` the radio uses. Clearing `state.selectedStaffId` on its own would
+            // leave the radio and the step-5 summary claiming a groomer the customer no longer has.
+            var noPreferenceOption = null;
+
             function renderStaff() {
                 var list = document.getElementById('staffList');
                 list.innerHTML = '';
@@ -353,6 +366,7 @@
                     '<div class="f-light" style="font-size:13px">We will assign whoever is available.</div>';
                 noPreference.addEventListener('click', function () { selectStaff(null, noPreference); });
                 list.appendChild(noPreference);
+                noPreferenceOption = noPreference;
                 state.selectedStaffId = null;
 
                 state.staff.forEach(function (member) {
@@ -369,6 +383,15 @@
             function selectStaff(id, selectedLabel) {
                 document.querySelectorAll('#staffList .booking-option').forEach(function (el) { el.classList.remove('selected'); });
                 selectedLabel.classList.add('selected');
+
+                // Ticked explicitly rather than relying on the label's native click behaviour: step
+                // 3's recovery button calls this directly, and a radio left unchecked there would
+                // show the customer a selection they no longer have if they stepped back.
+                var radio = selectedLabel.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+
                 state.selectedStaffId = id;
             }
 
@@ -437,6 +460,37 @@
                 });
             }
 
+            function staffNameFor(id) {
+                var match = state.staff.filter(function (member) { return member.id === id; })[0];
+                return match ? match.display_name : 'That groomer';
+            }
+
+            function hideSlotRecovery() {
+                var box = document.getElementById('slotRecovery');
+                box.style.display = 'none';
+                box.innerHTML = '';
+            }
+
+            // Offered only when a named groomer came up empty: drop the preference and search the
+            // same date again. Going through `selectStaff()` keeps step 2's radio, step 5's summary
+            // and the `staff_member_id` finally posted all agreeing with what the customer sees.
+            function showSlotRecovery(requestedDate) {
+                var box = document.getElementById('slotRecovery');
+                box.innerHTML = '<button type="button" class="btn light-btn" id="btnAnyGroomer">'
+                    + 'Show times for any groomer</button>';
+                box.style.display = 'block';
+
+                document.getElementById('btnAnyGroomer').addEventListener('click', function () {
+                    if (noPreferenceOption) {
+                        selectStaff(null, noPreferenceOption);
+                    } else {
+                        state.selectedStaffId = null;
+                    }
+
+                    loadSlots(requestedDate);
+                });
+            }
+
             // A closed day (no staff working, fully booked, etc.) used to be a dead end: the
             // customer picked a date, got "No times available", and had to guess which other
             // date might work. This now searches forward for the next day that actually has an
@@ -447,8 +501,12 @@
 
                 var status = document.getElementById('slotStatus');
                 document.getElementById('slotGrid').innerHTML = '';
+                hideSlotRecovery();
                 status.textContent = 'Loading available times…';
 
+                // Captured before the search, because the message at the end depends on whether a
+                // groomer was named — an empty 14 days means something different in each case.
+                var chosenStaffId = state.selectedStaffId;
                 var date = requestedDate;
                 var outcome = await fetchSlotsFor(date);
 
@@ -466,7 +524,19 @@
                 state.date = date;
                 state.slots = outcome.slots;
 
+                // Two different facts, and saying the wrong one is how a groomer's empty rota got
+                // reported to a customer as the salon having no availability at all (production,
+                // 2026-10-03). A named groomer who is never free is the groomer's problem to route
+                // around, and the customer can do it in one click; only the no-preference case is
+                // genuinely about the business.
                 if (outcome.slots.length === 0) {
+                    if (chosenStaffId) {
+                        status.textContent = staffNameFor(chosenStaffId)
+                            + ' has no open times in the next ' + SLOT_SEARCH_DAYS + ' days.';
+                        showSlotRecovery(requestedDate);
+                        return;
+                    }
+
                     status.textContent = 'No availability in the next ' + SLOT_SEARCH_DAYS + ' days. Please contact '
                         + TENANT_NAME + ' directly.';
                     return;

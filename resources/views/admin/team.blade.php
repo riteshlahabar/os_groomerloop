@@ -25,6 +25,16 @@
             </div>
           </div>
 
+          {{--
+            The Rota column's red "No hours" badge has carried this warning since 2026-10-02, but
+            the consequence lived in a `title` attribute nobody hovers — and on 2026-10-03 a real
+            salon hit it: its only published groomer had no working hours, so every customer who
+            chose them was told the business had no availability for 14 days. Said in a sentence
+            here, naming the people, because that is what an owner can act on. Rendered from the
+            roster payload the table already loads; no endpoint change.
+          --}}
+          <div id="staffRotaWarning" class="alert alert-warning" style="display:none"></div>
+
           <div class="table-responsive">
             <table class="table">
               <thead>
@@ -397,8 +407,34 @@
       var api = window.GroomerLoopAdmin;
       var currentPage = 1;
 
+      // Appears when it spots a problem; its absence is never a clean bill of health, because the
+      // roster is filtered and paginated and this only ever sees the rows currently loaded. Worded
+      // so it makes no claim about the staff it cannot see.
+      function renderRotaWarning(staff) {
+        var box = document.getElementById('staffRotaWarning');
+        var stranded = staff.filter(function (s) {
+          return s.is_publicly_bookable && !s.has_working_hours;
+        });
+
+        if (stranded.length === 0) {
+          box.style.display = 'none';
+          return;
+        }
+
+        var names = stranded.map(function (s) { return api.escapeHtml(s.display_name); }).join(', ');
+
+        box.innerHTML = '<strong>' + names + '</strong> '
+          + (stranded.length === 1 ? 'is' : 'are')
+          + ' on your booking page with no working hours, so nobody can book '
+          + (stranded.length === 1 ? 'them' : 'any of them')
+          + ' at any time. Set a rota with <em>Schedule</em>, or turn online booking off until you do.';
+        box.style.display = 'block';
+      }
+
       function renderRows(staff) {
         var tbody = document.getElementById('staffRows');
+
+        renderRotaWarning(staff);
 
         if (staff.length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" class="f-light">No staff match these filters.</td></tr>';
