@@ -241,6 +241,7 @@
                       ['label' => 'Settings', 'icon' => 'form', 'permission' => ['settings.manage'], 'children' => [
                         ['label' => 'Business profile', 'route' => 'admin.settings'],
                         ['label' => 'Email delivery', 'route' => 'admin.settings.email'],
+                        ['label' => 'Service categories', 'route' => 'admin.settings.categories'],
                       ]],
                       ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe', 'permission' => ['billing.view']],
                     ];

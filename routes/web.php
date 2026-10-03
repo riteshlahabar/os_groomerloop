@@ -114,6 +114,14 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('settings/email', fn () => view('admin.settings-email'))
         ->middleware('permission:settings.manage')->name('settings.email');
 
+    // Service categories (spec §10) live operationally under Catalog's own `services.manage`
+    // permission — Manager holds it too — but this screen sits in the Settings group at the
+    // owner's request and so inherits Settings' narrower `settings.manage` gate, same as its two
+    // siblings. A Manager still assigns an *existing* category to a service from `/admin/services`
+    // (`services.manage`, unaffected); only adding or retiring a category moved here.
+    Route::get('settings/categories', fn () => view('admin.settings-categories'))
+        ->middleware('permission:settings.manage')->name('settings.categories');
+
     // Two halves, two audiences: the booking-requests queue needs appointments.manage, the
     // rules form needs settings.manage. The page renders whichever half the viewer holds.
     Route::get('booking', fn () => view('admin.booking'))
