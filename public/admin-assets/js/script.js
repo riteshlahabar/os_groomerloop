@@ -19,6 +19,12 @@
 (function ($) {
   "use strict";
 
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      $(".loader-wrapper").stop(true, true).remove();
+    }
+  });
+
   $(document).on("click", function (e) {
     var outside_space = $(".outside");
     if (!outside_space.is(e.target) && outside_space.has(e.target).length === 0) {
