@@ -158,7 +158,12 @@
 
       function openDetail(id) {
         document.getElementById('tdError').style.display = 'none';
+        // `.modal` ships `opacity: 0` in the Cuba bundle and only `.modal.show` sets it to 1
+        // (admin-assets/css/style.css) — toggling `display` alone leaves the modal present but
+        // fully transparent.
         document.getElementById('tenantDetailModal').style.display = 'block';
+        document.getElementById('tenantDetailModal').classList.add('show');
+        document.body.classList.add('modal-open');
 
         G.get('/api/v1/admin/tenants/' + id).then(function (result) {
           if (!result.ok) {
@@ -172,7 +177,11 @@
       }
 
       document.querySelectorAll('[data-dismiss="modal"]').forEach(function (btn) {
-        btn.addEventListener('click', function () { document.getElementById('tenantDetailModal').style.display = 'none'; });
+        btn.addEventListener('click', function () {
+          document.getElementById('tenantDetailModal').style.display = 'none';
+          document.getElementById('tenantDetailModal').classList.remove('show');
+          document.body.classList.remove('modal-open');
+        });
       });
 
       document.getElementById('tdSuspendBtn').addEventListener('click', function () {

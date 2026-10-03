@@ -112,6 +112,8 @@
 
       function closeModal() {
         document.getElementById('paModal').style.display = 'none';
+        document.getElementById('paModal').classList.remove('show');
+        document.body.classList.remove('modal-open');
       }
 
       function openModal(admin) {
@@ -125,7 +127,13 @@
         document.getElementById('paPasswordNote').textContent = admin ? '(leave blank to keep the current one)' : '';
 
         hide('paFormError');
+        // `.modal` ships `opacity: 0` in the Cuba bundle and only `.modal.show` sets it to 1
+        // (admin-assets/css/style.css) — toggling `display` alone leaves the modal present but
+        // fully transparent. `/admin`'s layout has a shared openModal()/closeModal() helper that
+        // adds this class; `/platform` has no equivalent helper, so this page must do it itself.
         document.getElementById('paModal').style.display = 'block';
+        document.getElementById('paModal').classList.add('show');
+        document.body.classList.add('modal-open');
       }
 
       function render(rows) {
