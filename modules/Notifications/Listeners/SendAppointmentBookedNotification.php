@@ -2,6 +2,7 @@
 
 namespace Modules\Notifications\Listeners;
 
+use Modules\Booking\Contracts\CancellationLinks;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Notifications\Domain\NotificationType;
 use Modules\Notifications\Services\NotificationDispatcher;
@@ -17,6 +18,7 @@ final class SendAppointmentBookedNotification
     public function __construct(
         private readonly NotificationDispatcher $dispatcher,
         private readonly ServiceCatalog $catalog,
+        private readonly CancellationLinks $cancellationLinks,
     ) {}
 
     public function handle(AppointmentBooked $event): void
@@ -29,6 +31,7 @@ final class SendAppointmentBookedNotification
             [
                 'service_name' => $service?->name ?? 'your appointment',
                 'starts_at' => $event->appointment->startsAt->format('D, M j \a\t g:i A'),
+                'cancel_url' => $this->cancellationLinks->urlFor($event->appointment->id),
             ],
             $event->appointment->id,
         );

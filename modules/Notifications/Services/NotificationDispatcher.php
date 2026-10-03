@@ -145,6 +145,7 @@ final class NotificationDispatcher
         $service = $context['service_name'] ?? 'your appointment';
         $when = $context['starts_at'] ?? '';
         $previousWhen = $context['previous_starts_at'] ?? '';
+        $cancelUrl = $context['cancel_url'] ?? null;
 
         $subject = match ($type) {
             NotificationType::BookingRequested => "Booking received: {$service}",
@@ -163,6 +164,12 @@ final class NotificationDispatcher
             NotificationType::AppointmentReminder => "Hi {$customerName}, a reminder that {$service} is coming up on {$when}.",
             NotificationType::NoShowFollowUp => "Hi {$customerName}, we missed you for {$service} on {$when}. Let us know if you'd like to rebook.",
         };
+
+        // Only the two types a customer can still act on carry the link — a cancelled or
+        // past appointment has nothing left to cancel.
+        if ($cancelUrl !== null && in_array($type, [NotificationType::BookingRequested, NotificationType::BookingConfirmed, NotificationType::AppointmentReminder], true)) {
+            $body .= " Need to cancel or check the details? {$cancelUrl}";
+        }
 
         if ($channel === CommunicationChannel::Sms) {
             // Same facts, no subject line — a text message has nowhere to put one.

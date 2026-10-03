@@ -3,6 +3,7 @@
 namespace Modules\Notifications\Actions;
 
 use Illuminate\Support\Collection;
+use Modules\Booking\Contracts\CancellationLinks;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Notifications\Domain\NotificationType;
 use Modules\Notifications\Models\NotificationLog;
@@ -29,6 +30,7 @@ final class SendAppointmentReminders
         private readonly AppointmentScheduler $scheduler,
         private readonly NotificationDispatcher $dispatcher,
         private readonly ServiceCatalog $catalog,
+        private readonly CancellationLinks $cancellationLinks,
     ) {}
 
     public function execute(): int
@@ -52,6 +54,7 @@ final class SendAppointmentReminders
                         [
                             'service_name' => $service?->name ?? 'your appointment',
                             'starts_at' => $appointment->startsAt->format('D, M j \a\t g:i A'),
+                            'cancel_url' => $this->cancellationLinks->urlFor($appointment->id),
                         ],
                         $appointment->id,
                     );

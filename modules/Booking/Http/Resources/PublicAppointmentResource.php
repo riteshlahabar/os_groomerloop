@@ -4,6 +4,7 @@ namespace Modules\Booking\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Modules\Booking\Contracts\CancellationLinks;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Scheduling\Domain\AppointmentSummary;
 use Modules\Team\Contracts\StaffDirectory;
@@ -33,6 +34,7 @@ final class PublicAppointmentResource extends JsonResource
             'staff_member_name' => $this->resource->staffMemberId === null
                 ? null
                 : app(StaffDirectory::class)->find($this->resource->staffMemberId)?->displayName,
+            'manage_url' => app(CancellationLinks::class)->urlFor($this->resource->id),
         ];
     }
 }

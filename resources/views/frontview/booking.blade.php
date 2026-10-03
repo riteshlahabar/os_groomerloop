@@ -228,7 +228,10 @@
                             <i class="ti ti-circle-check" style="font-size:48px;color:#2fb380"></i>
                             <h4 class="mt-3 mb-1" id="doneHeadline"></h4>
                             <p class="f-light" id="doneDetail"></p>
-                            <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn dark-btn mt-2">Back to website</a>
+                            <div>
+                                <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn dark-btn mt-2">Back to website</a>
+                                <a href="#" id="doneManageLink" class="btn light-btn mt-2 d-none" target="_blank">Manage this booking</a>
+                            </div>
                             <p class="f-light mt-2" id="redirectCountdown"></p>
                         </div>
                     </div>
@@ -639,6 +642,13 @@
                             status === 'confirmed'
                                 ? 'Your appointment for ' + result.body.data.service_name + ' is confirmed.'
                                 : 'We have received your request for ' + result.body.data.service_name + ' and will confirm it shortly.';
+
+                        var manageLink = document.getElementById('doneManageLink');
+                        if (result.body.data.manage_url) {
+                            manageLink.href = result.body.data.manage_url;
+                            manageLink.classList.remove('d-none');
+                        }
+
                         showStep(6);
                         startRedirectCountdown();
                         return;

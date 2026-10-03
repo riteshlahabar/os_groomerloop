@@ -2,6 +2,7 @@
 
 namespace Modules\Notifications\Listeners;
 
+use Modules\Booking\Contracts\CancellationLinks;
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Notifications\Domain\NotificationType;
 use Modules\Notifications\Services\NotificationDispatcher;
@@ -20,6 +21,7 @@ final class SendAppointmentStatusNotification
     public function __construct(
         private readonly NotificationDispatcher $dispatcher,
         private readonly ServiceCatalog $catalog,
+        private readonly CancellationLinks $cancellationLinks,
     ) {}
 
     public function handle(AppointmentStatusChanged $event): void
@@ -36,13 +38,20 @@ final class SendAppointmentStatusNotification
 
         $service = $this->catalog->find($event->appointment->serviceId);
 
+        $context = [
+            'service_name' => $service?->name ?? 'your appointment',
+            'starts_at' => $event->appointment->startsAt->format('D, M j \a\t g:i A'),
+        ];
+
+        // Nothing left to cancel once the appointment is already cancelled.
+        if ($type === NotificationType::BookingConfirmed) {
+            $context['cancel_url'] = $this->cancellationLinks->urlFor($event->appointment->id);
+        }
+
         $this->dispatcher->send(
             $event->appointment->customerId,
             $type,
-            [
-                'service_name' => $service?->name ?? 'your appointment',
-                'starts_at' => $event->appointment->startsAt->format('D, M j \a\t g:i A'),
-            ],
+            $context,
             $event->appointment->id,
         );
     }
