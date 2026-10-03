@@ -26,15 +26,13 @@
           </div>
 
           {{--
-            The Rota column's red "No hours" badge has carried this warning since 2026-10-02, but
-            the consequence lived in a `title` attribute nobody hovers — and on 2026-10-03 a real
-            salon hit it: its only published groomer had no working hours, so every customer who
-            chose them was told the business had no availability for 14 days. Said in a sentence
-            here, naming the people, because that is what an owner can act on. Rendered from the
-            roster payload the table already loads; no endpoint change.
+            A warning alert naming any staff member published to the booking page without a rota
+            was added and then removed the same day (2026-10-03) on the owner's instruction, with
+            the rest of this page's explanatory text. The Rota column's red "No hours" badge is
+            now the only signal for that state — it is still accurate, and the real guard is
+            `StaffDirectory::bookableOnline()`, which keeps such a person out of the customer's
+            chooser regardless of whether anyone notices the badge.
           --}}
-          <div id="staffRotaWarning" class="alert alert-warning" style="display:none"></div>
-
           <div class="table-responsive">
             <table class="table">
               <thead>
@@ -258,8 +256,10 @@
               </div>
               <div class="col-span-6 sm:col-span-12" id="staffStatusWrapper" style="display:none">
                 <label class="form-label">Status</label>
+                {{-- Hint text removed on the owner's instruction (2026-10-03); the field is
+                     disabled, so the Deactivate/Reactivate actions remain the only way to
+                     change status whether or not anything says so. --}}
                 <input type="text" class="form-control" id="staffStatus" disabled>
-                <span class="f-light">Change status with the Deactivate/Reactivate action, not here.</span>
               </div>
               <div class="col-span-6 sm:col-span-12">
                 <label class="form-label">Email</label>
@@ -316,17 +316,13 @@
             @endcan
           </div>
 
-          {{-- A bordered note rather than `alert alert-light`, which renders grey-on-grey and
-               unreadable in this template — the same fix the Online Booking page needed. --}}
-          <p class="f-light mt-2" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
-            The whole week saves in one go: whatever rows are here when you press Save
-            <em>replace</em> the stored rota. Saving with no rows at all is a real state rather
-            than a mistake — it takes this person off the rota without removing them, and they
-            then become bookable at no time whatsoever. Times are this business's own wall
-            clock. Two shifts on one day may touch (09:00–13:00 then 13:00–17:00) but may not
-            overlap.
-          </p>
-
+          {{--
+            The explanatory note that used to sit here was removed on the owner's instruction
+            (2026-10-03). The behaviour it described is unchanged and still enforced: Save
+            replaces the whole week, saving no rows takes the person off the rota entirely,
+            times are the business's own wall clock, and two shifts on a day may touch but not
+            overlap (`SetWorkingHours` refuses an overlap with a 422 the form surfaces).
+          --}}
           <div id="shiftError" class="alert alert-danger" style="display:none"></div>
           <div id="shiftSaved" class="alert alert-success" style="display:none">Working hours saved.</div>
 
@@ -340,14 +336,11 @@
 
           {{-- --- Time off ------------------------------------------------------------ --}}
           <h6>Time off</h6>
-          <p class="f-light mb-2" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
-            Holidays, sickness, an afternoon out — added one at a time, so booking August off
-            does not mean resending March's sick day. Recording an absence does
-            <strong>not</strong> cancel appointments already booked inside it: the API leaves
-            that to a person on purpose, because a groomer taking a day off with four dogs on
-            the book is four conversations, not a cascade delete.
-          </p>
-
+          {{--
+            Note removed on the owner's instruction (2026-10-03), same as the working-hours one
+            above. Unchanged behaviour: absences are added one at a time, and recording one does
+            not cancel appointments already booked inside it — the API leaves that to a person.
+          --}}
           <div id="timeOffError" class="alert alert-danger" style="display:none"></div>
 
           <div class="table-responsive">
@@ -407,34 +400,8 @@
       var api = window.GroomerLoopAdmin;
       var currentPage = 1;
 
-      // Appears when it spots a problem; its absence is never a clean bill of health, because the
-      // roster is filtered and paginated and this only ever sees the rows currently loaded. Worded
-      // so it makes no claim about the staff it cannot see.
-      function renderRotaWarning(staff) {
-        var box = document.getElementById('staffRotaWarning');
-        var stranded = staff.filter(function (s) {
-          return s.is_publicly_bookable && !s.has_working_hours;
-        });
-
-        if (stranded.length === 0) {
-          box.style.display = 'none';
-          return;
-        }
-
-        var names = stranded.map(function (s) { return api.escapeHtml(s.display_name); }).join(', ');
-
-        box.innerHTML = '<strong>' + names + '</strong> '
-          + (stranded.length === 1 ? 'is' : 'are')
-          + ' on your booking page with no working hours, so nobody can book '
-          + (stranded.length === 1 ? 'them' : 'any of them')
-          + ' at any time. Set a rota with <em>Schedule</em>, or turn online booking off until you do.';
-        box.style.display = 'block';
-      }
-
       function renderRows(staff) {
         var tbody = document.getElementById('staffRows');
-
-        renderRotaWarning(staff);
 
         if (staff.length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" class="f-light">No staff match these filters.</td></tr>';
@@ -643,10 +610,10 @@
       function renderShifts(shifts) {
         var container = document.getElementById('shiftRows');
 
+        // A bare state label, not an explanation (the owner's instruction, 2026-10-03) — but not
+        // nothing either, or an empty rota renders as a blank gap that reads as a failed load.
         if (shifts.length === 0) {
-          container.innerHTML = '<p class="f-light mb-0">' + (canManageStaff
-            ? 'No working hours set, so this person is not bookable at any time. Add a shift to put them on the rota.'
-            : 'No working hours set, so this person is not bookable at any time.') + '</p>';
+          container.innerHTML = '<p class="f-light mb-0">No working hours set.</p>';
           return;
         }
 
