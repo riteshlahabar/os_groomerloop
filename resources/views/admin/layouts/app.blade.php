@@ -34,6 +34,22 @@
       .form-grid {
         row-gap: 18px;
       }
+
+      /*
+        The §6 nav is 16 items. Cuba sizes the sidebar scroller to the viewport minus its header
+        and leaves nothing below the final link, so on a short window the last one — Billing &
+        Plan — sits under the sidebar's bottom edge and will not scroll fully into view.
+
+        The padding goes on SimpleBar's scroll content (`admin-assets/js/scrollbar/custom.js`
+        wraps `#simple-bar` on every page load), because that is the element whose height decides
+        how far the list can scroll. `.sidebar-links` itself is covered as a fallback for any
+        breakpoint where SimpleBar has not wrapped it, and needs `!important` there: the template
+        resets that element with `padding: 0 !important` in its compact layouts.
+      */
+      .sidebar-wrapper .sidebar-main .sidebar-links .simplebar-content,
+      .sidebar-wrapper .sidebar-main .sidebar-links {
+        padding-bottom: 40px !important;
+      }
     </style>
 
     @stack('styles')
