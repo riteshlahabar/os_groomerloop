@@ -149,6 +149,7 @@
                       ['label' => 'Tenants', 'route' => 'platform.tenants', 'icon' => 'client'],
                       ['label' => 'Audit Log', 'route' => 'platform.audit-log', 'icon' => 'note'],
                       ['label' => 'Mail Settings', 'route' => 'platform.mail-settings', 'icon' => 'email'],
+                      ['label' => 'GroomerLoop Admins', 'route' => 'platform.admins', 'icon' => 'user'],
                       ['label' => 'Platform Health', 'route' => 'platform.health', 'icon' => 'activity'],
                     ];
                   @endphp
@@ -335,6 +336,9 @@
           get: function (url) { return apiRequest('GET', url); },
           post: function (url, body) { return apiRequest('POST', url, body); },
           put: function (url, body) { return apiRequest('PUT', url, body); },
+          // Added with the admins screen (`D-034`) — the first destructive action in this
+          // console. A 204 has no body, which `apiRequest` already handles.
+          del: function (url) { return apiRequest('DELETE', url); },
           escapeHtml: escapeHtml,
           debounce: debounce,
           renderPagination: renderPagination,

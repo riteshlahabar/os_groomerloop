@@ -173,5 +173,10 @@ Route::middleware(['auth', 'permission:platform.administer'])->prefix('platform'
     Route::get('tenants', fn () => view('platform.tenants'))->name('tenants');
     Route::get('audit-log', fn () => view('platform.audit-log'))->name('audit-log');
     Route::get('mail-settings', fn () => view('platform.mail-settings'))->name('mail-settings');
+
+    // GroomerLoop's own staff accounts (`D-034`). `platform-admin:create` still bootstraps the
+    // first one on a fresh host — there is nobody to grant it from inside the console yet.
+    Route::get('admins', fn () => view('platform.admins'))->name('admins');
+
     Route::get('health', fn () => view('platform.health'))->name('health');
 });

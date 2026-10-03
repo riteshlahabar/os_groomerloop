@@ -11,9 +11,13 @@ use Modules\Identity\Domain\Role;
  * so there is no registration flow for it (D-007: a tenant's own registration cannot be how
  * GroomerLoop's own staff get an account, or any business could create one for itself).
  *
- * The only caller is `platform-admin:create` (console-only, by design): a role this powerful
- * must be granted by someone with shell access to the production host, never by an HTTP
- * endpoint, however permission-gated.
+ * Two callers since `D-034`: `platform-admin:create`, which bootstraps the **first** account on a
+ * fresh host and is the only way in when none exists, and `PlatformAdminController::store`, which
+ * lets an existing GroomerLoop Admin add colleagues from `/platform/admins`. `D-029` originally
+ * made this console-only on the reasoning that a role this powerful should need shell access; the
+ * owner overrode that, so the HTTP path exists and is gated on `permission:platform.administer` —
+ * which only an existing platform admin holds, so the privilege can be shared but never
+ * self-granted from a tenant account.
  */
 final class CreatePlatformAdmin
 {

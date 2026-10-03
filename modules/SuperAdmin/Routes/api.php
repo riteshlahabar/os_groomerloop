@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\SuperAdmin\Http\Controllers\Api\V1\PlatformAdminController;
 use Modules\SuperAdmin\Http\Controllers\Api\V1\PlatformAuditLogController;
 use Modules\SuperAdmin\Http\Controllers\Api\V1\PlatformMailSettingsController;
 use Modules\SuperAdmin\Http\Controllers\Api\V1\PlatformOverviewController;
@@ -38,4 +39,19 @@ Route::prefix('admin')
             ->name('admin.tenants.reactivate');
 
         Route::get('audit-log', [PlatformAuditLogController::class, 'index'])->name('admin.audit-log.index');
+
+        /*
+         | GroomerLoop's own staff accounts (`D-034`, overriding `D-029`'s console-only stance).
+         | The gate is the same `permission:platform.administer` as everything else here, which
+         | only an existing platform admin holds — so this shares the privilege, never grants it
+         | from outside. `platform-admin:create` stays as the bootstrap for a fresh host.
+         */
+        Route::get('platform-admins', [PlatformAdminController::class, 'index'])
+            ->name('admin.platform-admins.index');
+        Route::post('platform-admins', [PlatformAdminController::class, 'store'])
+            ->name('admin.platform-admins.store');
+        Route::put('platform-admins/{admin}', [PlatformAdminController::class, 'update'])
+            ->name('admin.platform-admins.update');
+        Route::delete('platform-admins/{admin}', [PlatformAdminController::class, 'destroy'])
+            ->name('admin.platform-admins.destroy');
     });
