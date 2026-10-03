@@ -114,6 +114,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('settings/email', fn () => view('admin.settings-email'))
         ->middleware('permission:settings.manage')->name('settings.email');
 
+    // The week the business is open (spec §11, §7 step 1). Same `settings.manage` gate as the
+    // `PUT /api/v1/business-hours` endpoint it writes — business-wide configuration, Owner only,
+    // distinct from `calendar.view`'s read access to the same hours. Lives on its own screen
+    // rather than as a second card on `/admin/settings` so that one place writes the
+    // replace-the-whole-week endpoint, and so that a week with no open day gets a warning big
+    // enough to explain why the booking page says there is no availability.
+    Route::get('settings/hours', fn () => view('admin.settings-hours'))
+        ->middleware('permission:settings.manage')->name('settings.hours');
+
     // Service categories (spec §10) live operationally under Catalog's own `services.manage`
     // permission — Manager holds it too — but this screen sits in the Settings group at the
     // owner's request and so inherits Settings' narrower `settings.manage` gate, same as its two

@@ -69,25 +69,20 @@
       </div>
     </div>
 
+    {{--
+      Business hours used to be a second card here. It is its own screen now
+      (`/admin/settings/hours`): this one could only express a single window per day, so saving
+      it silently discarded a business's lunch split, and two screens writing the same
+      replace-the-whole-week endpoint is one too many.
+    --}}
     <div class="col-span-12">
       <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>Business Hours</h5>
-        </div>
-        <div class="card-body pt-0">
-          <p class="f-light">One open window per day. Leave a day unchecked to stay closed that day.</p>
-          <div id="hoursFormError" class="alert alert-danger" style="display:none"></div>
-
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr><th>Day</th><th>Open</th><th>Opens</th><th>Closes</th></tr>
-              </thead>
-              <tbody id="hoursRows"></tbody>
-            </table>
-          </div>
-
-          <button type="button" class="btn btn-primary" id="saveHoursBtn">Save Business Hours</button>
+        <div class="card-body">
+          <h6 class="mb-1">Business Hours</h6>
+          <p class="f-light mb-2" style="font-size:13px">
+            When you are open, and therefore when customers can book. Now on its own screen.
+          </p>
+          <a class="btn btn-light btn-sm" href="{{ route('admin.settings.hours') }}">Open Business Hours</a>
         </div>
       </div>
     </div>
@@ -98,16 +93,6 @@
   <script>
     (function () {
       var api = window.GroomerLoopAdmin;
-
-      var DAYS = [
-        { value: 1, label: 'Monday' },
-        { value: 2, label: 'Tuesday' },
-        { value: 3, label: 'Wednesday' },
-        { value: 4, label: 'Thursday' },
-        { value: 5, label: 'Friday' },
-        { value: 6, label: 'Saturday' },
-        { value: 7, label: 'Sunday' },
-      ];
 
       // --- Business profile -----------------------------------------------------------
       async function loadProfile() {
@@ -171,82 +156,7 @@
         errorBox.style.display = 'block';
       });
 
-      // --- Business hours --------------------------------------------------------------
-      function renderHoursRows(windowsByDay) {
-        var tbody = document.getElementById('hoursRows');
-        tbody.innerHTML = DAYS.map(function (day) {
-          var w = windowsByDay[day.value];
-          var checked = w ? 'checked' : '';
-          var starts = w ? w.starts_at : '09:00';
-          var ends = w ? w.ends_at : '17:00';
-          return '<tr>' +
-            '<td>' + day.label + '</td>' +
-            '<td><input type="checkbox" class="dayOpenToggle" data-day="' + day.value + '" ' + checked + '></td>' +
-            '<td><input type="time" class="form-control dayStarts" data-day="' + day.value + '" value="' + starts + '" ' + (checked ? '' : 'disabled') + '></td>' +
-            '<td><input type="time" class="form-control dayEnds" data-day="' + day.value + '" value="' + ends + '" ' + (checked ? '' : 'disabled') + '></td>' +
-            '</tr>';
-        }).join('');
-
-        document.querySelectorAll('.dayOpenToggle').forEach(function (toggle) {
-          toggle.addEventListener('change', function () {
-            var day = toggle.dataset.day;
-            var disabled = !toggle.checked;
-            document.querySelector('.dayStarts[data-day="' + day + '"]').disabled = disabled;
-            document.querySelector('.dayEnds[data-day="' + day + '"]').disabled = disabled;
-          });
-        });
-      }
-
-      async function loadHours() {
-        var result = await api.get('/api/v1/business-hours');
-        var windowsByDay = {};
-        if (result.ok) {
-          result.body.data.forEach(function (w) {
-            // Only the first window per day is shown — this screen manages one open
-            // window per day. A business with a split (lunch-break) schedule set up another
-            // way keeps it; saving here would simplify it to one window.
-            if (!windowsByDay[w.day_of_week]) {
-              windowsByDay[w.day_of_week] = w;
-            }
-          });
-        }
-        renderHoursRows(windowsByDay);
-      }
-
-      document.getElementById('saveHoursBtn').addEventListener('click', async function () {
-        var errorBox = document.getElementById('hoursFormError');
-        errorBox.style.display = 'none';
-
-        var windows = [];
-        document.querySelectorAll('.dayOpenToggle').forEach(function (toggle) {
-          if (!toggle.checked) {
-            return;
-          }
-          var day = toggle.dataset.day;
-          windows.push({
-            day_of_week: parseInt(day, 10),
-            starts_at: document.querySelector('.dayStarts[data-day="' + day + '"]').value,
-            ends_at: document.querySelector('.dayEnds[data-day="' + day + '"]').value,
-          });
-        });
-
-        var result = await api.put('/api/v1/business-hours', { windows: windows });
-
-        if (result.ok) {
-          loadHours();
-          return;
-        }
-
-        if (result.status === 422 && result.body.errors) {
-          errorBox.innerHTML = Object.values(result.body.errors).map(function (m) { return m[0]; }).join('<br>');
-        } else {
-          errorBox.textContent = result.body.message || 'Could not save business hours.';
-        }
-        errorBox.style.display = 'block';
-      });
-
       loadProfile();
-      loadHours();
     })();
   </script>
 @endpush

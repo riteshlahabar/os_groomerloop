@@ -240,6 +240,7 @@
                       // declare no `permission` of their own — the parent's filter decides.
                       ['label' => 'Settings', 'icon' => 'form', 'permission' => ['settings.manage'], 'children' => [
                         ['label' => 'Business profile', 'route' => 'admin.settings'],
+                        ['label' => 'Business hours', 'route' => 'admin.settings.hours'],
                         ['label' => 'Email delivery', 'route' => 'admin.settings.email'],
                         ['label' => 'Service categories', 'route' => 'admin.settings.categories'],
                       ]],
