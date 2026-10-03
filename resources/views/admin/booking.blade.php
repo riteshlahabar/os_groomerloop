@@ -29,10 +29,6 @@
               <h5>Pending booking requests <span class="badge badge-light-warning" id="bkReqCount" style="display:none">0</span></h5>
               <a href="{{ route('admin.appointments') }}" class="btn btn-light btn-sm">All appointments</a>
             </div>
-            <p class="f-light mb-0" style="font-size:12px">
-              Requests arrive here when Confirmation mode is set to <strong>Manual review</strong>.
-              Confirming one books the slot; declining it cancels the request.
-            </p>
           </div>
           <div class="card-body pt-0">
             <div id="bkReqError" class="alert alert-danger" style="display:none"></div>
@@ -79,18 +75,11 @@
                 <div class="col-span-6 sm:col-span-12">
                   <label class="form-label">Minimum notice <span class="f-light">(minutes)</span></label>
                   <input type="number" class="form-control" id="bkLeadTime" min="0" max="10080" step="5" required>
-                  <p class="f-light mb-0" style="font-size:12px">
-                    How far ahead a customer must book. <span id="bkLeadTimeHuman"></span>
-                    0 lets someone book the next open slot; the maximum is 10080 (7 days).
-                  </p>
                 </div>
 
                 <div class="col-span-6 sm:col-span-12">
                   <label class="form-label">Cancellation window <span class="f-light">(hours)</span></label>
                   <input type="number" class="form-control" id="bkCancellationWindow" min="0" max="720" required>
-                  <p class="f-light mb-0" style="font-size:12px">
-                    How late a customer may cancel without penalty. Maximum 720 (30 days).
-                  </p>
                 </div>
 
                 <div class="col-span-12">
@@ -99,12 +88,6 @@
                     <option value="manual">Manual review — requests wait for a human</option>
                     <option value="automatic">Automatic — bookings confirm themselves</option>
                   </select>
-                  <p class="f-light mb-0" style="font-size:12px">
-                    On <strong>Manual review</strong> a public booking is created as
-                    <em>Requested</em> and appears in the list above. On <strong>Automatic</strong> it
-                    is confirmed immediately — the slot is still checked server-side first, so a
-                    double-booking is refused either way.
-                  </p>
                 </div>
               </div>
 
@@ -112,27 +95,8 @@
                 <button type="submit" class="btn btn-primary">Save booking rules</button>
               </div>
             </form>
-
-            {{--
-              Honest about a stored-but-unenforced value rather than implying it works. Same
-              precedent as the Team page's disabled Status field: showing a control that silently
-              does nothing is the kind of fabricated capability this product's own guardrails
-              argue against.
-            --}}
-            {{-- A plain bordered note rather than `alert alert-light`: that variant renders
-                 near-invisible grey-on-grey in this theme, which is the wrong treatment for a
-                 caveat the owner actually needs to read. --}}
-            <p class="f-light mt-3 mb-0" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
-              <strong>Note on the cancellation window:</strong> it is saved and will be shown to
-              customers, but nothing enforces it yet — there is no customer-facing
-              self-service cancellation to enforce it against. Staff cancellations from the
-              Appointments screen are never subject to it.
-            </p>
           @else
-            <p class="f-light mb-0">
-              Only the business owner can change booking rules. Ask them if these need to be
-              different.
-            </p>
+            <p class="f-light mb-0">Owner only.</p>
           @endcan
         </div>
       </div>
@@ -150,10 +114,6 @@
             <input type="text" class="form-control" id="bkSlug" value="{{ $bookingTenant->slug }}" readonly>
             <button type="button" class="btn btn-light" id="bkCopySlug">Copy</button>
           </div>
-          <p class="f-light mt-1" style="font-size:12px">
-            This identifies {{ $bookingTenant->name }} on every public booking request. It is
-            already live.
-          </p>
 
           <h6 class="mt-3">Page to hand your customers</h6>
           <div class="flex" style="gap:8px">
@@ -161,11 +121,6 @@
             <a href="{{ url('/book/'.$bookingTenant->slug) }}" target="_blank" class="btn btn-light">Open</a>
             <button type="button" class="btn btn-light" id="bkCopyUrl">Copy</button>
           </div>
-          <p class="f-light mt-1 mb-0" style="font-size:12px">
-            Share this link anywhere — your website, social bio, email signature. It walks a
-            customer through choosing a service, a groomer, a time, and their own and their pet's
-            details, then submits the same booking API below.
-          </p>
 
           <h6 class="mt-3">Live booking endpoints</h6>
           <ul class="f-light mb-0" style="font-size:12px;word-break:break-all;list-style:disc;padding-left:18px">
@@ -175,13 +130,6 @@
             <li><code>GET {{ url('/api/v1/public/'.$bookingTenant->slug.'/availability/open-slots') }}</code></li>
             <li><code>POST {{ url('/api/v1/public/'.$bookingTenant->slug.'/appointments') }}</code></li>
           </ul>
-
-          <div class="alert alert-info mt-3 mb-0" style="font-size:12px">
-            <strong>There is still no self-service cancellation.</strong> Your cancellation
-            window above is stored but not enforced anywhere yet — a customer who wants to
-            cancel or reschedule has to contact you directly, which is what the booking page
-            itself tells them.
-          </div>
         </div>
       </div>
     </div>
@@ -194,11 +142,6 @@
             <h5>Bookable online <span class="badge badge-light-primary" id="bkServiceCount" style="display:none">0</span></h5>
             <a href="{{ route('admin.services') }}" class="btn btn-light btn-sm">Edit services</a>
           </div>
-          <p class="f-light mb-0" style="font-size:12px">
-            Exactly what a customer can pick. A service appears here only when it is active,
-            marked bookable online, and not an add-on — add-ons are chosen alongside a main
-            service, never on their own.
-          </p>
         </div>
         <div class="card-body pt-0">
           <div id="bkServicesError" class="alert alert-danger" style="display:none"></div>
@@ -238,10 +181,6 @@
             <p id="bkDeclineSummary" class="mb-2"></p>
             <label class="form-label">Reason <span class="f-light">(optional, kept on the appointment's history)</span></label>
             <textarea class="form-control" id="bkDeclineNote" rows="2" maxlength="500"></textarea>
-            <p class="f-light mt-1 mb-0" style="font-size:12px">
-              This cancels the request. The customer is not messaged automatically — notifications
-              are not live yet.
-            </p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-light" data-dismiss="modal">Keep it</button>
@@ -262,26 +201,6 @@
 
       var settingsForm = document.getElementById('bkSettingsForm');
 
-      function describeLeadTime(minutes) {
-        var el = document.getElementById('bkLeadTimeHuman');
-        if (!el) {
-          return;
-        }
-        var n = parseInt(minutes, 10);
-        if (isNaN(n) || n <= 0) {
-          el.textContent = '';
-          return;
-        }
-        if (n < 60) {
-          el.textContent = '(' + n + ' minutes ahead.)';
-        } else if (n % 60 === 0) {
-          var hours = n / 60;
-          el.textContent = '(' + hours + (hours === 1 ? ' hour' : ' hours') + ' ahead.)';
-        } else {
-          el.textContent = '(' + Math.floor(n / 60) + 'h ' + (n % 60) + 'm ahead.)';
-        }
-      }
-
       async function loadSettings() {
         if (!settingsForm) {
           return; // Not an owner — the form was never rendered.
@@ -298,33 +217,25 @@
         var settings = result.body.data;
 
         // The endpoint deliberately answers `null` — not a default-filled object — for a
-        // business that has never saved these. Say so, and show the documented fallbacks the
-        // public booking action actually applies in the meantime, rather than pretending the
-        // row exists.
+        // business that has never saved these. The fields are filled with the same fallbacks
+        // the public booking action actually applies until a save happens.
         if (settings === null) {
           var status = document.getElementById('bkSettingsStatus');
-          status.textContent = 'You have not set booking rules yet. The defaults below are what '
-            + 'public bookings use until you save: 60 minutes notice and manual review.';
+          status.textContent = 'Not yet configured.';
           status.style.display = 'block';
 
           document.getElementById('bkLeadTime').value = 60;
           document.getElementById('bkCancellationWindow').value = 24;
           document.getElementById('bkConfirmationMode').value = 'manual';
-          describeLeadTime(60);
           return;
         }
 
         document.getElementById('bkLeadTime').value = settings.lead_time_minutes;
         document.getElementById('bkCancellationWindow').value = settings.cancellation_window_hours;
         document.getElementById('bkConfirmationMode').value = settings.confirmation_mode;
-        describeLeadTime(settings.lead_time_minutes);
       }
 
       if (settingsForm) {
-        document.getElementById('bkLeadTime').addEventListener('input', function () {
-          describeLeadTime(this.value);
-        });
-
         settingsForm.addEventListener('submit', async function (e) {
           e.preventDefault();
 
@@ -386,8 +297,7 @@
         count.style.display = total > 0 ? 'inline-block' : 'none';
 
         if (rows.length === 0) {
-          requestsBody.innerHTML = '<tr><td colspan="7" class="f-light">No requests waiting. '
-            + 'Anything a customer books in manual-review mode shows up here.</td></tr>';
+          requestsBody.innerHTML = '<tr><td colspan="7" class="f-light">No requests waiting.</td></tr>';
           document.getElementById('bkReqPagination').innerHTML = '';
           return;
         }
@@ -499,9 +409,7 @@
         count.style.display = 'inline-block';
 
         if (bookable.length === 0) {
-          body.innerHTML = '<tr><td colspan="4" class="f-light">Nothing is bookable online yet, so a '
-            + 'customer cannot book anything. Mark a service "bookable online" on the Services '
-            + 'screen to offer it.</td></tr>';
+          body.innerHTML = '<tr><td colspan="4" class="f-light">Nothing is bookable online yet.</td></tr>';
           return;
         }
 
