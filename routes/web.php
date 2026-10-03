@@ -114,6 +114,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('settings/email', fn () => view('admin.settings-email'))
         ->middleware('permission:settings.manage')->name('settings.email');
 
+    // The §7 setup checklist — step 5 of §32.1's critical journey. `settings.manage`, matching
+    // every `/api/v1/onboarding/*` endpoint it calls: spec §5 gives setting the business up to the
+    // Owner alone, and the §16 dashboard reads the same information through `OnboardingStatus`
+    // rather than through these endpoints, so no other role loses anything.
+    //
+    // Deliberately not a 17th sidebar item — §6 fixes the navigation at 16. Discovery is the
+    // dashboard banner, which is where an owner who has just paid actually lands.
+    Route::get('onboarding', fn () => view('admin.onboarding'))
+        ->middleware('permission:settings.manage')->name('onboarding');
+
     // The week the business is open (spec §11, §7 step 1). Same `settings.manage` gate as the
     // `PUT /api/v1/business-hours` endpoint it writes — business-wide configuration, Owner only,
     // distinct from `calendar.view`'s read access to the same hours. Lives on its own screen

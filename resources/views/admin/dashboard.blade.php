@@ -6,6 +6,34 @@
 @section('content')
   <div class="grid grid-cols-12 card-gap widget-grid">
     {{--
+      The §7 checklist's entry point, and the reason the checklist screen is reachable at all:
+      §6 fixes the navigation at 16 items and none of them is Onboarding, so without this an
+      owner who has just paid lands here with nothing pointing at setup. Rendered only for
+      `settings.manage` (the Owner), because nobody else can act on it, and removed from the DOM
+      entirely once setup is finished rather than sitting there as a permanent congratulation.
+
+      Hidden until the fetch answers, so a finished business never sees it flash.
+    --}}
+    @can('settings.manage')
+      <div class="col-span-12" id="obBannerWrap" style="display:none">
+        <div class="card">
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+              <div style="flex:1 1 320px;min-width:0">
+                <h6 class="mb-1" id="obBannerHeadline">Finish setting up your business</h6>
+                <p class="f-light mb-2" style="font-size:13px" id="obBannerText">&nbsp;</p>
+                <div class="progress" style="height:6px;max-width:420px">
+                  <div class="progress-bar" id="obBannerBar" role="progressbar" style="width:0%"></div>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="{{ route('admin.onboarding') }}">Continue setup</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    @endcan
+
+    {{--
       The greeting card that used to sit here was removed on the owner's instruction: it filled a
       third of the row above the fold to say the viewer's own name back to them, which the header
       already shows alongside their role. The stat row now takes the full width, so the four §16
@@ -179,10 +207,52 @@
         }
       }
 
+      // The §7 setup banner. Only the Owner's dashboard renders the markup at all, so a missing
+      // wrapper is the normal case for every other role — and `/api/v1/onboarding` would answer
+      // 403 for them anyway. Both are treated as "say nothing", never as an error worth showing:
+      // the banner is a nudge, and a nudge that cannot load should disappear rather than alarm.
+      async function loadSetupBanner() {
+        var wrap = document.getElementById('obBannerWrap');
+
+        if (!wrap) {
+          return;
+        }
+
+        var result = await api.get('/api/v1/onboarding');
+
+        if (!result.ok || !result.body.data || result.body.data.is_finished) {
+          return;
+        }
+
+        var data = result.body.data;
+        var required = data.steps.filter(function (step) {
+          return !step.skippable && step.outstanding;
+        });
+
+        document.getElementById('obBannerBar').style.width = data.percent_complete + '%';
+
+        // Names the blocking steps rather than only showing a percentage: "45% complete" does not
+        // tell an owner that nobody can book them, and that gap is exactly how a tenant ended up
+        // with no business hours and a booking page reporting no availability.
+        if (required.length > 0) {
+          document.getElementById('obBannerHeadline').textContent = 'Customers cannot book you yet';
+          document.getElementById('obBannerText').textContent = data.percent_complete
+            + '% of setup done. Still required: '
+            + required.map(function (step) { return step.label; }).join('; ') + '.';
+        } else {
+          document.getElementById('obBannerHeadline').textContent = 'You are ready to take bookings';
+          document.getElementById('obBannerText').textContent = data.percent_complete
+            + '% of setup done — the required steps are finished. Anything optional is still waiting.';
+        }
+
+        wrap.style.display = 'block';
+      }
+
       loadCount('/api/v1/customers?per_page=1', 'statCustomers');
       loadCount('/api/v1/staff?per_page=1', 'statStaff');
       loadCount('/api/v1/services?per_page=1', 'statServices');
       loadTodaysSchedule();
+      loadSetupBanner();
     })();
   </script>
 @endpush
