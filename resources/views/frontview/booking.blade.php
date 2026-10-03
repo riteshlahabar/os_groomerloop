@@ -236,7 +236,9 @@
     <script>
         (function () {
             var TENANT = @json($tenant->slug);
+            var TENANT_NAME = @json($tenant->name);
             var API_BASE = '/api/v1/public/' + TENANT;
+            var SLOT_SEARCH_DAYS = 14; // how far ahead to look for the next open day
 
             var state = {
                 step: 1,
@@ -382,28 +384,34 @@
                 loadSlots(this.value);
             });
 
-            async function loadSlots(date) {
-                state.date = date;
-                state.selectedSlot = null;
-                document.getElementById('btnScheduleNext').disabled = true;
+            // Calendar-day arithmetic on a plain "YYYY-MM-DD" string, deliberately not via
+            // `new Date(dateStr)` — that parses a date-only ISO string as UTC midnight, which
+            // can print as the previous day in a negative-offset timezone (the same family of
+            // bug as CLAUDE.md's "wall-clock trap"). Splitting into fields and using the
+            // multi-argument constructor keeps every operation in local wall-clock time.
+            function addDays(dateStr, days) {
+                var parts = dateStr.split('-').map(Number);
+                var d = new Date(parts[0], parts[1] - 1, parts[2]);
+                d.setDate(d.getDate() + days);
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
 
-                var grid = document.getElementById('slotGrid');
-                var status = document.getElementById('slotStatus');
-                grid.innerHTML = '';
-                status.textContent = 'Loading available times…';
+            function formatDateLabel(dateStr) {
+                var parts = dateStr.split('-').map(Number);
+                return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+            }
 
+            async function fetchSlotsFor(date) {
                 var query = '/availability/open-slots?service_id=' + state.selectedService.id + '&date=' + date +
                     (state.selectedStaffId ? '&staff_member_id=' + state.selectedStaffId : '');
                 var result = await apiGet(query);
-                state.slots = result.ok ? (result.body.data || []) : [];
+                return result.ok ? (result.body.data || []) : [];
+            }
 
-                if (state.slots.length === 0) {
-                    status.textContent = 'No times available this day. Try another date.';
-                    return;
-                }
-
-                status.textContent = 'Times shown in ' + TENANT + "'s local time.";
-                state.slots.forEach(function (iso) {
+            function renderSlotButtons(slots) {
+                var grid = document.getElementById('slotGrid');
+                grid.innerHTML = '';
+                slots.forEach(function (iso) {
                     var naive = iso.slice(0, 19); // trims any offset the API stamps on — see CLAUDE.md "wall-clock trap"
                     var btn = document.createElement('button');
                     btn.type = 'button';
@@ -417,6 +425,46 @@
                     });
                     grid.appendChild(btn);
                 });
+            }
+
+            // A closed day (no staff working, fully booked, etc.) used to be a dead end: the
+            // customer picked a date, got "No times available", and had to guess which other
+            // date might work. This now searches forward for the next day that actually has an
+            // open slot, within `SLOT_SEARCH_DAYS`, and lands the customer there directly.
+            async function loadSlots(requestedDate) {
+                state.selectedSlot = null;
+                document.getElementById('btnScheduleNext').disabled = true;
+
+                var status = document.getElementById('slotStatus');
+                document.getElementById('slotGrid').innerHTML = '';
+                status.textContent = 'Loading available times…';
+
+                var date = requestedDate;
+                var slots = await fetchSlotsFor(date);
+
+                for (var i = 0; slots.length === 0 && i < SLOT_SEARCH_DAYS; i++) {
+                    status.textContent = 'Looking for the next open day…';
+                    date = addDays(date, 1);
+                    slots = await fetchSlotsFor(date);
+                }
+
+                state.date = date;
+                state.slots = slots;
+
+                if (slots.length === 0) {
+                    status.textContent = 'No availability in the next ' + SLOT_SEARCH_DAYS + ' days. Please contact '
+                        + TENANT_NAME + ' directly.';
+                    return;
+                }
+
+                document.getElementById('bookingDate').value = date;
+
+                status.textContent = date === requestedDate
+                    ? 'Times shown in ' + TENANT_NAME + "'s local time."
+                    : 'No times on ' + formatDateLabel(requestedDate) + '. Showing the next open day, '
+                        + formatDateLabel(date) + '.';
+
+                renderSlotButtons(slots);
             }
 
             function formatTime(naive) {
