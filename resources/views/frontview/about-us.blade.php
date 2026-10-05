@@ -322,7 +322,7 @@
                     <!-- row start -->
                     <div class="row row-gap-4">
 
-                        <div class="col-xl-5 col-lg-5 col-md-12">
+                        <div class="col-12 col-md-12 col-lg-5 col-xl-5">
                             <div class="footer-support">
                                 <div class="footer-logo">
                                     <img src="{{ asset('frontview-assets/img/logo.png') }}" alt="logo" class="img-fluid logo">
@@ -336,7 +336,7 @@
 
                         <div class="col-lg-7">
                             <div class="row row-gap-4">
-                                <div class="col-lg-4 col-sm-4">
+                                <div class="col-12 col-sm-4 col-lg-4">
                                     <div class="footer-widget">
                                         <h3 class="footer-title">Useful Links</h3>
                                         <ul class="footer-menu">
@@ -349,7 +349,7 @@
                                         </ul>
                                     </div>
                                 </div>
-                                <div class="col-lg-4 col-sm-4">
+                                <div class="col-12 col-sm-4 col-lg-4">
                                     <div class="footer-widget">
                                         <h3 class="footer-title">Pages</h3>
                                         <ul class="footer-menu">
@@ -362,7 +362,7 @@
                                         </ul>
                                     </div>
                                 </div>
-                                <div class="col-lg-4 col-sm-4">
+                                <div class="col-12 col-sm-4 col-lg-4">
                                     <div class="footer-widget footer-address">
                                         <h3 class="footer-title">Our Location</h3>
                                         <p>123 Madison Street, New York, NY 10016, United States</p>

@@ -33,6 +33,10 @@
         .booking-steps-indicator li { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: #9aa1ab; padding-bottom: 10px; border-bottom: 3px solid #e9ecef; }
         .booking-steps-indicator li.active { color: #1a1a1a; border-bottom-color: #ff6f61; }
         .booking-steps-indicator li.done { color: #1a1a1a; border-bottom-color: #c9e7c4; }
+        @media (max-width: 575px) {
+            .booking-steps-indicator { gap: 2px; }
+            .booking-steps-indicator li { font-size: 10px; padding-bottom: 6px; }
+        }
         .booking-option { display: block; border: 1px solid #e9ecef; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
         .booking-option:hover { border-color: #ff6f61; }
         .booking-option input { margin-right: 10px; }
