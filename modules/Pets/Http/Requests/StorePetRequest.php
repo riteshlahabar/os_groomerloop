@@ -9,7 +9,6 @@ use Illuminate\Validation\Validator;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Pets\Domain\CoatType;
 use Modules\Pets\Domain\PetSex;
-use Modules\Pets\Domain\PetSpecies;
 use Modules\Pets\Domain\PetStatus;
 
 final class StorePetRequest extends FormRequest
@@ -22,11 +21,11 @@ final class StorePetRequest extends FormRequest
         return [
             'customer_id' => ['required', 'integer', 'min:1', $this->customerExists()],
 
-            // Name and species are the only requirements. A front desk taking a booking over the
+            // Name and species_id are the only requirements. A front desk taking a booking over the
             // phone has those two and often nothing else; demanding a breed or a birthday would
             // have staff typing guesses, which is worse than holding nothing.
             'name' => ['required', 'string', 'max:255'],
-            'species' => ['required', Rule::enum(PetSpecies::class)],
+            'species_id' => ['required', 'integer', 'min:1', new SpeciesBelongsToTenant],
 
             'breed' => ['nullable', 'string', 'max:255'],
             'sex' => ['nullable', Rule::enum(PetSex::class)],

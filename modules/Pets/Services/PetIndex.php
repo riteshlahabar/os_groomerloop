@@ -23,7 +23,6 @@ final class PetIndex
      */
     private const SORTABLE = [
         'name' => ['name'],
-        'species' => ['species', 'name'],
         'created_at' => ['created_at'],
         'updated_at' => ['updated_at'],
     ];
@@ -36,7 +35,10 @@ final class PetIndex
      */
     public function query(array $filters): Builder
     {
-        $query = Pet::query();
+        // Eager-loaded because PetResource reads $pet->species->name for every row — an
+        // intra-module relation (unlike customer_name, which goes through Crm's contract), so
+        // there is no D-007 reason to avoid it the way CustomerDirectory::namesOf() does.
+        $query = Pet::query()->with('species');
 
         $query->search(isset($filters['search']) ? (string) $filters['search'] : null);
 
@@ -70,8 +72,8 @@ final class PetIndex
             $query->forCustomer((int) $filters['customer_id']);
         }
 
-        if (! empty($filters['species'])) {
-            $query->whereIn('species', (array) $filters['species']);
+        if (! empty($filters['species_id'])) {
+            $query->whereIn('species_id', (array) $filters['species_id']);
         }
 
         if (! empty($filters['coat_type'])) {

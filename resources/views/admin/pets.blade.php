@@ -23,9 +23,6 @@
             <div class="col-span-3 sm:col-span-6">
               <select class="form-control" id="petSpeciesFilter">
                 <option value="">All species</option>
-                <option value="dog">Dog</option>
-                <option value="cat">Cat</option>
-                <option value="other">Other</option>
               </select>
             </div>
             <div class="col-span-5 sm:col-span-6 flex items-center">
@@ -84,9 +81,6 @@
               <div class="col-span-6 sm:col-span-12">
                 <label class="form-label">Species *</label>
                 <select class="form-control" id="petSpecies" required>
-                  <option value="dog">Dog</option>
-                  <option value="cat">Cat</option>
-                  <option value="other">Other</option>
                 </select>
               </div>
               <div class="col-span-6 sm:col-span-12">
@@ -191,7 +185,7 @@
           }
           return '<tr>' +
             '<td>' + api.escapeHtml(p.name) + (p.needs_handling_care ? ' <span class="badge badge-light-danger">care notes</span>' : '') + '</td>' +
-            '<td>' + api.escapeHtml(p.species_label) + '</td>' +
+            '<td>' + api.escapeHtml(p.species_name) + '</td>' +
             '<td>' + api.escapeHtml(p.breed || '—') + '</td>' +
             '<td>' + api.escapeHtml(p.customer_name || '—') + '</td>' +
             '<td>' + api.escapeHtml(age) + '</td>' +
@@ -213,6 +207,18 @@
         });
       }
 
+      async function loadSpecies() {
+        var result = await api.get('/api/v1/pet-species');
+        var species = result.ok ? result.body.data : [];
+
+        var options = species.map(function (s) {
+          return '<option value="' + s.id + '">' + api.escapeHtml(s.name) + '</option>';
+        }).join('');
+
+        document.getElementById('petSpecies').innerHTML = options;
+        document.getElementById('petSpeciesFilter').innerHTML = '<option value="">All species</option>' + options;
+      }
+
       function buildQuery(page) {
         var params = new URLSearchParams();
         params.set('per_page', '10');
@@ -225,7 +231,7 @@
 
         var species = document.getElementById('petSpeciesFilter').value;
         if (species) {
-          params.append('species[]', species);
+          params.append('species_id[]', species);
         }
 
         if (document.getElementById('petIncludeInactive').checked) {
@@ -273,7 +279,7 @@
         document.getElementById('petCustomerSearch').value = p.customer_name || '';
         document.getElementById('petCustomerSearch').disabled = true;
         document.getElementById('petName').value = p.name;
-        document.getElementById('petSpecies').value = p.species;
+        document.getElementById('petSpecies').value = p.species_id;
         document.getElementById('petBreed').value = p.breed || '';
         document.getElementById('petSex').value = p.sex;
         document.getElementById('petDob').value = p.date_of_birth || '';
@@ -363,7 +369,7 @@
 
         var payload = {
           name: document.getElementById('petName').value,
-          species: document.getElementById('petSpecies').value,
+          species_id: document.getElementById('petSpecies').value,
           breed: document.getElementById('petBreed').value || null,
           sex: document.getElementById('petSex').value,
           date_of_birth: document.getElementById('petDob').value || null,
@@ -402,6 +408,7 @@
       document.getElementById('petSpeciesFilter').addEventListener('change', function () { load(1); });
       document.getElementById('petIncludeInactive').addEventListener('change', function () { load(1); });
 
+      loadSpecies();
       load(1);
     })();
   </script>

@@ -29,8 +29,8 @@ final class PetResource extends JsonResource
             'customer_name' => app(CustomerDirectory::class)->nameOf($this->resource->customer_id),
 
             'name' => $this->resource->name,
-            'species' => $this->resource->species->value,
-            'species_label' => $this->resource->species->label(),
+            'species_id' => $this->resource->species_id,
+            'species_name' => $this->resource->species?->name,
             'breed' => $this->resource->breed,
             'sex' => $this->resource->sex->value,
 

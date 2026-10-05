@@ -142,6 +142,13 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('settings/categories', fn () => view('admin.settings-categories'))
         ->middleware('permission:settings.manage')->name('settings.categories');
 
+    // Pet species (spec §9) — same Settings-tab pattern as categories above, added 2026-10-05
+    // when species moved from a fixed dog/cat/other enum to a tenant-owned table. Read access
+    // for the pet form and filter sits on `pets.view` via `/api/v1/pet-species`; only adding or
+    // retiring a species is gated here.
+    Route::get('settings/species', fn () => view('admin.settings-species'))
+        ->middleware('permission:settings.manage')->name('settings.species');
+
     // Two halves, two audiences: the booking-requests queue needs appointments.manage, the
     // rules form needs settings.manage. The page renders whichever half the viewer holds.
     Route::get('booking', fn () => view('admin.booking'))

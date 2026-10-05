@@ -74,7 +74,24 @@ interface PetDirectory
      * guessing. §8's existing merge tooling is the place to reconcile that later, the same as any
      * other duplicate.
      *
-     * @param  array<string, mixed>  $attributes  name, species (required); breed, sex optional
+     * @param  array<string, mixed>  $attributes  name, species_id (required); breed, sex optional
      */
     public function createForPublicBooking(int $customerId, array $attributes): int;
+
+    /**
+     * This tenant's species list, for the public booking page's picker — a tenant-owned list
+     * (`Models\Species`, added 2026-10-05) rather than the fixed enum it replaced, so a public,
+     * unauthenticated caller needs this to build the dropdown at all rather than hard-coding
+     * Dog/Cat/Other.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function listSpecies(): array;
+
+    /**
+     * Does this species id belong to this tenant? `SubmitPublicBooking`'s existence check for
+     * `pet_species_id`, the same split `PublicBookingRequest`'s own docblock already describes
+     * for `service_id`/`staff_member_id` — shape only in the request, existence here.
+     */
+    public function speciesExists(int $speciesId): bool;
 }

@@ -7,7 +7,6 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Modules\Pets\Domain\CoatType;
 use Modules\Pets\Domain\PetSex;
-use Modules\Pets\Domain\PetSpecies;
 use Modules\Pets\Domain\PetStatus;
 
 final class UpdatePetRequest extends FormRequest
@@ -26,7 +25,7 @@ final class UpdatePetRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'species' => ['sometimes', 'required', Rule::enum(PetSpecies::class)],
+            'species_id' => ['sometimes', 'required', 'integer', 'min:1', new SpeciesBelongsToTenant],
 
             'breed' => ['sometimes', 'nullable', 'string', 'max:255'],
             'sex' => ['sometimes', 'nullable', Rule::enum(PetSex::class)],

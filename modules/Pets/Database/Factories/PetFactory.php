@@ -3,11 +3,12 @@
 namespace Modules\Pets\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 use Modules\Pets\Domain\CoatType;
 use Modules\Pets\Domain\PetSex;
-use Modules\Pets\Domain\PetSpecies;
 use Modules\Pets\Domain\PetStatus;
 use Modules\Pets\Models\Pet;
+use Modules\Pets\Models\Species;
 
 /**
  * @extends Factory<Pet>
@@ -29,7 +30,10 @@ final class PetFactory extends Factory
     {
         return [
             'name' => fake()->randomElement(['Bella', 'Luna', 'Max', 'Charlie', 'Daisy', 'Cooper']),
-            'species' => PetSpecies::Dog,
+            // firstOrCreate rather than Species::factory(): a fresh factory call per pet would
+            // collide with the unique (tenant_id, slug) index the second time any test makes a
+            // second "Dog" within the same tenant.
+            'species_id' => fn (): int => self::speciesNamed('Dog'),
             'breed' => fake()->randomElement(['Labrador', 'Poodle', 'Cockapoo', 'Shih Tzu', 'Collie']),
             'sex' => PetSex::Unknown,
             'coat_type' => CoatType::Medium,
@@ -53,9 +57,22 @@ final class PetFactory extends Factory
     public function cat(): self
     {
         return $this->state(fn (): array => [
-            'species' => PetSpecies::Cat,
+            'species_id' => self::speciesNamed('Cat'),
             'breed' => fake()->randomElement(['Persian', 'Maine Coon', 'Domestic Shorthair']),
         ]);
+    }
+
+    /**
+     * Shared across every pet a test creates in the same tenant, rather than one new row per
+     * pet — `Species::factory()` alone would collide with the unique (tenant_id, slug) index the
+     * second time any test made a second "Dog".
+     */
+    private static function speciesNamed(string $name): int
+    {
+        return Species::query()->firstOrCreate(
+            ['slug' => Str::slug($name)],
+            ['name' => $name],
+        )->getKey();
     }
 
     public function archived(): self

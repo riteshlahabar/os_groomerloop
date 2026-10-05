@@ -3,12 +3,17 @@
 namespace Modules\Pets\Services;
 
 use Modules\Pets\Actions\CreatePet;
+use Modules\Pets\Actions\EnsureDefaultSpecies;
 use Modules\Pets\Contracts\PetDirectory;
 use Modules\Pets\Models\Pet;
+use Modules\Pets\Models\Species;
 
 final class EloquentPetDirectory implements PetDirectory
 {
-    public function __construct(private readonly CreatePet $create) {}
+    public function __construct(
+        private readonly CreatePet $create,
+        private readonly EnsureDefaultSpecies $ensureDefaultSpecies,
+    ) {}
 
     /**
      * Memoised per request. Scheduling asks about the same pet more than once while validating a
@@ -95,6 +100,26 @@ final class EloquentPetDirectory implements PetDirectory
     public function createForPublicBooking(int $customerId, array $attributes): int
     {
         return (int) $this->create->execute($customerId, $attributes)->getKey();
+    }
+
+    /**
+     * @return list<array{id: int, name: string}>
+     */
+    public function listSpecies(): array
+    {
+        $this->ensureDefaultSpecies->execute();
+
+        return Species::query()
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (Species $s): array => ['id' => (int) $s->getKey(), 'name' => $s->name])
+            ->all();
+    }
+
+    public function speciesExists(int $speciesId): bool
+    {
+        return Species::query()->whereKey($speciesId)->exists();
     }
 
     /**

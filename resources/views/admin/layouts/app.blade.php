@@ -245,6 +245,7 @@
                         ['label' => 'Business hours', 'route' => 'admin.settings.hours'],
                         ['label' => 'Email delivery', 'route' => 'admin.settings.email'],
                         ['label' => 'Service categories', 'route' => 'admin.settings.categories'],
+                        ['label' => 'Pet species', 'route' => 'admin.settings.species'],
                       ]],
                       ['label' => 'Billing & Plan', 'route' => 'admin.billing', 'icon' => 'subscribe', 'permission' => ['billing.view']],
                     ];

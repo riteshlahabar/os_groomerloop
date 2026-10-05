@@ -32,7 +32,7 @@ final class SubmitPublicBooking
 
     /**
      * @param  array<string, mixed>  $attributes  customer: first_name, last_name, email, phone;
-     *                                            pet: pet_name, pet_species, pet_breed (optional), pet_sex (optional); booking:
+     *                                            pet: pet_name, pet_species_id, pet_breed (optional), pet_sex (optional); booking:
      *                                            service_id, staff_member_id (optional), starts_at, customer_notes (optional)
      */
     public function execute(array $attributes): AppointmentSummary
@@ -49,6 +49,17 @@ final class SubmitPublicBooking
             ]);
         }
 
+        // species_id is shape-only in PublicBookingRequest (an integer) — this is where its
+        // existence is actually checked, the same split that request's own docblock already
+        // describes for service_id/staff_member_id. Nothing downstream would catch an unknown
+        // one otherwise: unlike service_id, species is not part of the scheduling engine
+        // `$this->scheduler->book()` validates.
+        if (! $this->pets->speciesExists((int) $attributes['pet_species_id'])) {
+            throw ValidationException::withMessages([
+                'pet_species_id' => 'The selected species could not be found.',
+            ]);
+        }
+
         return DB::transaction(function () use ($attributes, $start, $confirmationMode): AppointmentSummary {
             $customerId = $this->customers->findOrCreateForPublicBooking([
                 'first_name' => $attributes['first_name'],
@@ -59,7 +70,7 @@ final class SubmitPublicBooking
 
             $petAttributes = [
                 'name' => $attributes['pet_name'],
-                'species' => $attributes['pet_species'],
+                'species_id' => $attributes['pet_species_id'],
                 'breed' => $attributes['pet_breed'] ?? null,
             ];
 

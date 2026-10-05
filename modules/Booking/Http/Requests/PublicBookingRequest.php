@@ -5,7 +5,6 @@ namespace Modules\Booking\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Pets\Domain\PetSex;
-use Modules\Pets\Domain\PetSpecies;
 
 /**
  * Shape-only validation — whether the service/staff ids exist, are sellable/assignable, and the
@@ -35,7 +34,7 @@ final class PublicBookingRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:30'],
 
             'pet_name' => ['required', 'string', 'max:255'],
-            'pet_species' => ['required', Rule::enum(PetSpecies::class)],
+            'pet_species_id' => ['required', 'integer', 'min:1'],
             'pet_breed' => ['nullable', 'string', 'max:255'],
             'pet_sex' => ['nullable', Rule::enum(PetSex::class)],
 

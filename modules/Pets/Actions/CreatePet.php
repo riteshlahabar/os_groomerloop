@@ -30,7 +30,7 @@ final class CreatePet
 
         $this->audit->record('pet.created', $pet, [
             'name' => $pet->name,
-            'species' => $pet->species->value,
+            'species_id' => $pet->species_id,
             'customer_id' => $customerId,
         ]);
 

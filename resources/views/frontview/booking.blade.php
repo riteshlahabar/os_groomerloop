@@ -165,9 +165,7 @@
                                     <div class="col-md-3">
                                         <label class="form-label" for="pet_species">Species</label>
                                         <select class="form-control" id="pet_species" required>
-                                            <option value="dog">Dog</option>
-                                            <option value="cat">Cat</option>
-                                            <option value="other">Other</option>
+                                            <option value="">Loading…</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -621,7 +619,7 @@
                     email: fieldValue('email'),
                     phone: fieldValue('phone') || null,
                     pet_name: fieldValue('pet_name'),
-                    pet_species: document.getElementById('pet_species').value,
+                    pet_species_id: parseInt(document.getElementById('pet_species').value, 10),
                     pet_breed: fieldValue('pet_breed') || null,
                     pet_sex: document.getElementById('pet_sex').value || null,
                     policies_accepted: true,
@@ -703,6 +701,13 @@
                 apiGet('/services').then(function (result) {
                     state.services = result.ok ? (result.body.data || []) : [];
                     renderServices();
+                });
+
+                apiGet('/pet-species').then(function (result) {
+                    var species = result.ok ? (result.body.data || []) : [];
+                    document.getElementById('pet_species').innerHTML = species.map(function (s) {
+                        return '<option value="' + s.id + '">' + escapeHtml(s.name) + '</option>';
+                    }).join('');
                 });
 
                 showStep(1);

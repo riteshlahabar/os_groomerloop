@@ -5,11 +5,11 @@ namespace Modules\Pets\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Pets\Database\Factories\PetFactory;
 use Modules\Pets\Domain\CoatType;
 use Modules\Pets\Domain\PetSex;
-use Modules\Pets\Domain\PetSpecies;
 use Modules\Pets\Domain\PetStatus;
 use Modules\Tenancy\Concerns\BelongsToTenant;
 
@@ -19,9 +19,10 @@ use Modules\Tenancy\Concerns\BelongsToTenant;
  * Note what is absent: any relationship to Customer. Pets belongs to a customer by id and asks
  * Crm about that customer through `CustomerDirectory` (D-007) — an Eloquent `belongsTo` here
  * would import another module's model and is exactly what `ModuleBoundaryGuardTest` fails on.
+ * `species` is different: `Species` lives in this same module, so the relation below is an
+ * ordinary intra-module `belongsTo`, not a boundary crossing.
  *
  * @property string $name
- * @property PetSpecies $species
  * @property PetStatus $status
  * @property CoatType|null $coat_type
  */
@@ -47,7 +48,7 @@ final class Pet extends Model
      */
     protected $fillable = [
         'name',
-        'species',
+        'species_id',
         'breed',
         'sex',
         'date_of_birth',
@@ -117,6 +118,14 @@ final class Pet extends Model
     public function isAgeApproximate(): bool
     {
         return $this->date_of_birth === null && $this->approximate_age_years !== null;
+    }
+
+    /**
+     * @return BelongsTo<Species, $this>
+     */
+    public function species(): BelongsTo
+    {
+        return $this->belongsTo(Species::class);
     }
 
     /**
@@ -191,7 +200,6 @@ final class Pet extends Model
     protected function casts(): array
     {
         return [
-            'species' => PetSpecies::class,
             'sex' => PetSex::class,
             'coat_type' => CoatType::class,
             'status' => PetStatus::class,

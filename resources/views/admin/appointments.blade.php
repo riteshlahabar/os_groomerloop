@@ -405,7 +405,7 @@
           return;
         }
         petSelect.innerHTML = '<option value="">Select a pet…</option>' +
-          result.body.data.map(function (p) { return '<option value="' + p.id + '">' + api.escapeHtml(p.name) + ' (' + api.escapeHtml(p.species_label) + ')</option>'; }).join('');
+          result.body.data.map(function (p) { return '<option value="' + p.id + '">' + api.escapeHtml(p.name) + ' (' + api.escapeHtml(p.species_name) + ')</option>'; }).join('');
         petSelect.disabled = false;
       }
 

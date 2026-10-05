@@ -5,7 +5,6 @@ namespace Modules\Pets\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Pets\Domain\CoatType;
-use Modules\Pets\Domain\PetSpecies;
 use Modules\Pets\Domain\PetStatus;
 use Modules\Pets\Services\PetIndex;
 
@@ -30,8 +29,10 @@ final class ListPetsRequest extends FormRequest
             // pets, which is the right answer and tells the caller nothing.
             'customer_id' => ['nullable', 'integer', 'min:1'],
 
-            'species' => ['nullable', 'array'],
-            'species.*' => [Rule::enum(PetSpecies::class)],
+            // Not validated for existence, the same reasoning as customer_id above: an id from
+            // another business or one that never existed simply matches no pets.
+            'species_id' => ['nullable', 'array'],
+            'species_id.*' => ['integer', 'min:1'],
 
             'coat_type' => ['nullable', 'array'],
             'coat_type.*' => [Rule::enum(CoatType::class)],

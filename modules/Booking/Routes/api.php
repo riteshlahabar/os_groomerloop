@@ -5,6 +5,7 @@ use Modules\Booking\Http\Controllers\Api\V1\BookingSettingsController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicAvailabilityController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicBookingController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicOpenSlotsController;
+use Modules\Booking\Http\Controllers\Api\V1\PublicPetSpeciesController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicServiceController;
 use Modules\Booking\Http\Controllers\Api\V1\PublicStaffController;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
@@ -31,6 +32,7 @@ Route::prefix('public/{tenant}')
     ->group(function (): void {
         Route::get('services', [PublicServiceController::class, 'index'])->name('public.services.index');
         Route::get('staff', [PublicStaffController::class, 'index'])->name('public.staff.index');
+        Route::get('pet-species', PublicPetSpeciesController::class)->name('public.pet-species.index');
         Route::get('availability', PublicAvailabilityController::class)->name('public.availability.show');
         Route::post('appointments', [PublicBookingController::class, 'store'])->name('public.appointments.store');
     });
