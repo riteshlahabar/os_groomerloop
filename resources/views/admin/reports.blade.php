@@ -214,7 +214,7 @@
             : '<h4 class="mb-0">' + tile.value + '</h4>';
 
           return '<div class="col-span-6 md:col-span-2">' +
-            '<div class="card mb-0"><div class="card-body">' +
+            '<div class="card"><div class="card-body">' +
             '<p class="f-light mb-1">' + api.escapeHtml(tile.label) + '</p>' +
             body +
             '</div></div></div>';
@@ -366,7 +366,7 @@
             : '<p class="f-light mb-0">' + tile.state + '</p>';
 
           return '<div class="col-span-6 md:col-span-3">' +
-            '<div class="card mb-0"><div class="card-body">' +
+            '<div class="card"><div class="card-body">' +
             '<p class="f-light mb-1">' + api.escapeHtml(tile.label) + '</p>' +
             content +
             '</div></div></div>';
