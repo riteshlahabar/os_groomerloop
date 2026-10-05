@@ -262,8 +262,8 @@
       function renderTemplates() {
         document.getElementById('wsTemplates').innerHTML = site.templates.map(function (template) {
           var isCurrent = template.key === site.template_key;
-          return '<div class="col-span-12 md:col-span-4">' +
-            '<div class="card ' + (isCurrent ? 'border-primary' : '') + '" style="height:100%">' +
+          return '<div class="col-span-12 md:col-span-4 mb-4">' +
+            '<div class="card mb-0 ' + (isCurrent ? 'border-primary' : '') + '" style="height:100%">' +
             '<div class="card-body">' +
             '<div class="flex items-center justify-between mb-2">' +
             '<h6 class="mb-0">' + api.escapeHtml(template.label) + '</h6>' +
