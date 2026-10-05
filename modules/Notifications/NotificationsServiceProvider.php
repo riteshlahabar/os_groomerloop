@@ -8,12 +8,14 @@ use Modules\Notifications\Actions\SendTestEmail;
 use Modules\Notifications\Console\RetryFailedNotificationsCommand;
 use Modules\Notifications\Console\SendAppointmentRemindersCommand;
 use Modules\Notifications\Contracts\MailProvider;
+use Modules\Notifications\Contracts\MessageSender;
 use Modules\Notifications\Contracts\SmsProvider;
 use Modules\Notifications\Contracts\TenantMailSettings;
 use Modules\Notifications\Contracts\TestMailSender;
 use Modules\Notifications\Listeners\SendAppointmentBookedNotification;
 use Modules\Notifications\Listeners\SendAppointmentRescheduledNotification;
 use Modules\Notifications\Listeners\SendAppointmentStatusNotification;
+use Modules\Notifications\Services\NotificationDispatcher;
 use Modules\Notifications\Services\Providers\LogSmsProvider;
 use Modules\Notifications\Services\Providers\SmtpMailProvider;
 use Modules\Notifications\Services\TenantMailConfiguration;
@@ -26,9 +28,11 @@ use Modules\Scheduling\Events\AppointmentStatusChanged;
  *
  * It depends on Crm (consent and contact details), Catalog (the service name in the copy), Scheduling
  * (the events it reacts to and the reminder sweep's appointment list) and Tenancy — all through
- * contracts and domain events, never another module's model (`D-007`). Nothing depends on *it*: the
- * modules that cause a message are decoupled by events, which is how Scheduling can book an
- * appointment without knowing this module exists.
+ * contracts and domain events, never another module's model (`D-007`). The modules that *cause* a
+ * message are decoupled by events, which is how Scheduling can book an appointment without knowing
+ * this module exists. Automation (§18) is the one module that depends on this one directly, through
+ * `Contracts\MessageSender` — it decides on its own schedule when to send, rather than reacting to
+ * an event this module already listens for.
  *
  * **Email sends for real; SMS still logs.** `MailProvider` is bound to `SmtpMailProvider` (`D-032`),
  * which sends through the business's own SMTP account when a GroomerLoop admin has configured one,
@@ -66,6 +70,8 @@ final class NotificationsServiceProvider extends ModuleServiceProvider
 
         $this->app->bind(TenantMailSettings::class, TenantMailConfiguration::class);
         $this->app->bind(TestMailSender::class, SendTestEmail::class);
+
+        $this->app->bind(MessageSender::class, NotificationDispatcher::class);
     }
 
     public function boot(): void

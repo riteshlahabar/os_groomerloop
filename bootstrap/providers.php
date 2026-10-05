@@ -3,6 +3,7 @@
 use App\Providers\AppServiceProvider;
 use App\Providers\RateLimitServiceProvider;
 use Modules\Audit\AuditServiceProvider;
+use Modules\Automation\AutomationServiceProvider;
 use Modules\Billing\BillingServiceProvider;
 use Modules\Booking\BookingServiceProvider;
 use Modules\Catalog\CatalogServiceProvider;
@@ -91,6 +92,12 @@ return [
     // point of the event boundary (D-007). Registered 2026-10-02; before that the folder was on disk
     // with no provider at all and therefore dead code.
     NotificationsServiceProvider::class,
+
+    // Automation (§18) depends on Scheduling's AppointmentMetrics, Crm's CustomerDirectory,
+    // Catalog's ServiceCatalog and — the one dependency that puts it here, after — Notifications'
+    // MessageSender, the contract it sends every message through rather than reaching
+    // NotificationDispatcher directly (D-007).
+    AutomationServiceProvider::class,
 
     // Website (§14) depends on Catalog's ServiceCatalog, Team's StaffDirectory and Onboarding's
     // BusinessProfileDirectory to render a tenant's public site, so it boots after all three. It

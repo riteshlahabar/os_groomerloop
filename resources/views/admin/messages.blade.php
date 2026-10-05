@@ -62,6 +62,10 @@
                 <option value="booking_rescheduled">Booking rescheduled</option>
                 <option value="appointment_reminder">Appointment reminder</option>
                 <option value="no_show_follow_up">No-show follow-up</option>
+                <option value="appointment_follow_up">Appointment follow-up</option>
+                <option value="rebooking_reminder">Rebooking reminder</option>
+                <option value="review_request">Review request</option>
+                <option value="customer_retention">Customer retention check-in</option>
               </select>
             </div>
             <div class="col-span-12 md:col-span-3">

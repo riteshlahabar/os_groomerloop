@@ -5,11 +5,12 @@ namespace Modules\Scheduling\Contracts;
 use DateTimeInterface;
 
 /**
- * Aggregate reads over the appointment book, for Insights (spec §16) alone (D-007).
+ * Aggregate reads over the appointment book, for Insights (spec §16) and Automation (spec §18) —
+ * the two modules that report or act on the book in bulk rather than one slot at a time (D-007).
  *
  * `AppointmentScheduler` answers "what can I book" one slot at a time; this contract answers
  * "what happened", in bulk, over a range — a different shape of question that would otherwise
- * tempt Insights into loading the Appointment model itself. Every method states which column it
+ * tempt a caller into loading the Appointment model itself. Every method states which column it
  * ranges over (`starts_at` for "when did this happen", `created_at` for "when was this booked")
  * because the two give different and both legitimate answers to "how many appointments in
  * October" — invariant #7 requires the formula be stated, not just the number.
@@ -84,4 +85,36 @@ interface AppointmentMetrics
      * counted — they are not lapsed, they never started.
      */
     public function staleCustomerCount(DateTimeInterface $asOf, int $inactivityDays): int;
+
+    /**
+     * The same customers {@see self::staleCustomerCount()} counts, as ids rather than a number —
+     * Automation's retention sweep needs to know *who*, not just how many.
+     *
+     * @return list<int>
+     */
+    public function staleCustomerIds(DateTimeInterface $asOf, int $inactivityDays): array;
+
+    /**
+     * Completed appointments whose `ends_at` falls at least `$minDaysAgo` days before `$asOf` —
+     * the candidate pool for Automation's rebooking-reminder and review-request sweeps, which
+     * differ only in whether a rebooking since disqualifies a candidate (checked separately via
+     * {@see self::hasBookedSince()}, so this one query serves both).
+     *
+     * @return list<array{appointment_id: int, customer_id: int, service_id: int, ends_at: string}>
+     */
+    public function completedAppointmentsOlderThan(DateTimeInterface $asOf, int $minDaysAgo): array;
+
+    /**
+     * No-show appointments whose `starts_at` falls at least `$minDaysAgo` days before `$asOf` —
+     * the candidate pool for Automation's no-show follow-up sweep.
+     *
+     * @return list<array{appointment_id: int, customer_id: int, service_id: int, starts_at: string}>
+     */
+    public function noShowAppointmentsOlderThan(DateTimeInterface $asOf, int $minDaysAgo): array;
+
+    /**
+     * Has this customer got any appointment (any status) starting after `$since`? Used to decide
+     * whether a completed visit still needs a rebooking reminder, or the customer already acted.
+     */
+    public function hasBookedSince(int $customerId, DateTimeInterface $since): bool;
 }

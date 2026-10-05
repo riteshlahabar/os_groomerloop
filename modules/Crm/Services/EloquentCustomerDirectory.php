@@ -3,14 +3,20 @@
 namespace Modules\Crm\Services;
 
 use Modules\Crm\Actions\CreateCustomer;
+use Modules\Crm\Actions\UpsertCustomerTag;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Crm\Domain\CommunicationChannel;
 use Modules\Crm\Domain\CustomerContactDetails;
 use Modules\Crm\Models\Customer;
+use Modules\Tenancy\Support\TenantContext;
 
 final class EloquentCustomerDirectory implements CustomerDirectory
 {
-    public function __construct(private readonly CreateCustomer $create) {}
+    public function __construct(
+        private readonly CreateCustomer $create,
+        private readonly UpsertCustomerTag $upsertTag,
+        private readonly TenantContext $tenants,
+    ) {}
 
     /**
      * Memoised per request. Notifications asks about the same customer once per message
@@ -112,6 +118,29 @@ final class EloquentCustomerDirectory implements CustomerDirectory
             email: $customer->email,
             phone: $customer->phone,
         );
+    }
+
+    public function tagCustomer(int $customerId, string $tagName): void
+    {
+        $customer = $this->find($customerId);
+
+        if ($customer === null) {
+            return;
+        }
+
+        $tag = $this->upsertTag->execute($tagName);
+
+        if ($tag === null) {
+            return;
+        }
+
+        // The pivot carries its own tenant_id (see `SyncCustomerTags`'s identical comment) —
+        // attach()/sync() do not know about it, so it is supplied explicitly rather than left to
+        // fail the NOT NULL constraint. Additive and idempotent: never touches a tag already on
+        // the customer, and attaching an already-attached one twice is a no-op, not a duplicate row.
+        $customer->tags()->syncWithoutDetaching([
+            $tag->getKey() => ['tenant_id' => $this->tenants->id()],
+        ]);
     }
 
     /**

@@ -202,12 +202,14 @@
                     // is refused too.
                     //
                     // `null` means deliberately ungated: Dashboard, which every role gets, and
-                    // the placeholders for modules that do not exist yet (Reviews §20, AI &
-                    // Automation §18/§19) and therefore have no permission in the enum.
-                    // Inventing a permission for an unbuilt module would be deciding §5 policy
-                    // here, in a view, rather than in the matrix that owns it — and the
-                    // placeholder reveals nothing anyway. Messages (§13) left that set on
-                    // 2026-10-02: the module is real, so it has real permissions (`D-031`).
+                    // the placeholder for a module that does not exist yet (Reviews §20) and
+                    // therefore has no permission in the enum. Inventing a permission for an
+                    // unbuilt module would be deciding §5 policy here, in a view, rather than in
+                    // the matrix that owns it — and the placeholder reveals nothing anyway.
+                    // Messages (§13) left that set on 2026-10-02: the module is real, so it has
+                    // real permissions (`D-031`). AI & Automation did the same 2026-10-05 — only
+                    // §18's half of it is built (`automation.view`); §19's AI Voice Agent is
+                    // still the placeholder this nav item's label half-promises.
                     $adminNav = [
                       // `feature` is the §25 capability key the item needs, gated through the one
                       // entitlement service (invariant #3 — a feature key here, never a plan
@@ -233,7 +235,7 @@
                       ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null, 'feature' => 'review_support'],
                       ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage'], 'feature' => 'growth_reporting'],
                       ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view'], 'feature' => 'business_insights'],
-                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => null, 'feature' => 'automation'],
+                      ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => ['automation.view'], 'feature' => 'automation'],
                       ['label' => 'Team', 'route' => 'admin.team', 'icon' => 'user', 'permission' => ['staff.view']],
                       // The first §6 item with a submenu. Both halves are the owner's job and
                       // carry the same `settings.manage` gate the parent does, so the children

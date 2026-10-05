@@ -148,6 +148,11 @@ final class EloquentAppointmentMetrics implements AppointmentMetrics
 
     public function staleCustomerCount(DateTimeInterface $asOf, int $inactivityDays): int
     {
+        return count($this->staleCustomerIds($asOf, $inactivityDays));
+    }
+
+    public function staleCustomerIds(DateTimeInterface $asOf, int $inactivityDays): array
+    {
         $cutoff = Carbon::parse($asOf)->subDays($inactivityDays);
         $occupying = $this->occupyingStatusValues();
 
@@ -165,7 +170,7 @@ final class EloquentAppointmentMetrics implements AppointmentMetrics
             ->pluck('customer_id');
 
         if ($staleCustomerIds->isEmpty()) {
-            return 0;
+            return [];
         }
 
         $withUpcoming = Appointment::query()
@@ -175,7 +180,49 @@ final class EloquentAppointmentMetrics implements AppointmentMetrics
             ->distinct()
             ->pluck('customer_id');
 
-        return $staleCustomerIds->diff($withUpcoming)->count();
+        return $staleCustomerIds->diff($withUpcoming)->map(static fn (mixed $id): int => (int) $id)->values()->all();
+    }
+
+    public function completedAppointmentsOlderThan(DateTimeInterface $asOf, int $minDaysAgo): array
+    {
+        $cutoff = Carbon::parse($asOf)->subDays($minDaysAgo);
+
+        return Appointment::query()
+            ->where('status', AppointmentStatus::Completed->value)
+            ->where('ends_at', '<=', $cutoff)
+            ->get(['id', 'customer_id', 'service_id', 'ends_at'])
+            ->map(static fn (Appointment $a): array => [
+                'appointment_id' => (int) $a->getKey(),
+                'customer_id' => (int) $a->customer_id,
+                'service_id' => (int) $a->service_id,
+                'ends_at' => (string) $a->ends_at,
+            ])
+            ->all();
+    }
+
+    public function noShowAppointmentsOlderThan(DateTimeInterface $asOf, int $minDaysAgo): array
+    {
+        $cutoff = Carbon::parse($asOf)->subDays($minDaysAgo);
+
+        return Appointment::query()
+            ->where('status', AppointmentStatus::NoShow->value)
+            ->where('starts_at', '<=', $cutoff)
+            ->get(['id', 'customer_id', 'service_id', 'starts_at'])
+            ->map(static fn (Appointment $a): array => [
+                'appointment_id' => (int) $a->getKey(),
+                'customer_id' => (int) $a->customer_id,
+                'service_id' => (int) $a->service_id,
+                'starts_at' => (string) $a->starts_at,
+            ])
+            ->all();
+    }
+
+    public function hasBookedSince(int $customerId, DateTimeInterface $since): bool
+    {
+        return Appointment::query()
+            ->where('customer_id', $customerId)
+            ->where('starts_at', '>', $since)
+            ->exists();
     }
 
     /**

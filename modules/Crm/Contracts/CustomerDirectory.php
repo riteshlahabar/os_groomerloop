@@ -90,4 +90,15 @@ interface CustomerDirectory
      * Null for an unknown customer, the same fail-closed shape every other lookup here uses.
      */
     public function contactDetailsOf(int $customerId): ?CustomerContactDetails;
+
+    /**
+     * Put this customer in front of staff without sending them anything — Automation's (spec
+     * §18) "create a retention task" action, which this product has no separate task entity for.
+     * A tag is the honest fit: it is additive (never clears a customer's existing tags, unlike
+     * `SyncCustomerTags`'s replace-the-whole-set shape), already visible and filterable on
+     * `/admin/customers`, and idempotent — tagging an already-tagged customer again is a no-op,
+     * not a duplicate, so a sweep that runs more than once before a flag is cleared cannot pile
+     * up the same tag.
+     */
+    public function tagCustomer(int $customerId, string $tagName): void;
 }

@@ -5,6 +5,7 @@ namespace Modules\Notifications\Services;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Crm\Domain\CommunicationChannel;
 use Modules\Notifications\Contracts\MailProvider;
+use Modules\Notifications\Contracts\MessageSender;
 use Modules\Notifications\Contracts\SmsProvider;
 use Modules\Notifications\Domain\DeliveryStatus;
 use Modules\Notifications\Domain\NotificationType;
@@ -12,15 +13,16 @@ use Modules\Notifications\Models\NotificationLog;
 
 /**
  * The one place a message actually goes out (spec §13). Every caller — a Scheduling event
- * listener today, a future Reviews/Retention module tomorrow — goes through this rather than
- * reaching a provider directly, so opt-out (invariant #9) and the delivery log are enforced
- * exactly once, not re-implemented per caller.
+ * listener today, Automation's (§18) sweeps and immediate listener since 2026-10-05 — goes
+ * through this rather than reaching a provider directly, so opt-out (invariant #9) and the
+ * delivery log are enforced exactly once, not re-implemented per caller. Exposed to other
+ * modules only as {@see MessageSender} (D-007); this class itself stays internal.
  *
  * Tries email and SMS independently: a customer who allows one but not the other still gets
  * whichever they said yes to, rather than an all-or-nothing send. Push is not wired yet — no
  * `PushProvider` exists this phase (see `D-025`).
  */
-final class NotificationDispatcher
+final class NotificationDispatcher implements MessageSender
 {
     public function __construct(
         private readonly CustomerDirectory $customers,
@@ -154,6 +156,10 @@ final class NotificationDispatcher
             NotificationType::BookingRescheduled => "Booking rescheduled: {$service}",
             NotificationType::AppointmentReminder => "Reminder: {$service} tomorrow",
             NotificationType::NoShowFollowUp => "We missed you — {$service}",
+            NotificationType::AppointmentFollowUp => "Thanks for visiting — {$service}",
+            NotificationType::RebookingReminder => "Time for another {$service}?",
+            NotificationType::ReviewRequest => 'How did we do?',
+            NotificationType::CustomerRetention => "We'd love to see you again",
         };
 
         $body = match ($type) {
@@ -163,6 +169,10 @@ final class NotificationDispatcher
             NotificationType::BookingRescheduled => "Hi {$customerName}, your {$service} appointment has moved from {$previousWhen} to {$when}.",
             NotificationType::AppointmentReminder => "Hi {$customerName}, a reminder that {$service} is coming up on {$when}.",
             NotificationType::NoShowFollowUp => "Hi {$customerName}, we missed you for {$service} on {$when}. Let us know if you'd like to rebook.",
+            NotificationType::AppointmentFollowUp => "Hi {$customerName}, thanks for bringing your pet in for {$service}. Let us know if you have any questions.",
+            NotificationType::RebookingReminder => "Hi {$customerName}, it's been a while since your last {$service}. Ready to book the next one?",
+            NotificationType::ReviewRequest => "Hi {$customerName}, we hope you and your pet enjoyed {$service}. We'd really appreciate a review.",
+            NotificationType::CustomerRetention => "Hi {$customerName}, we haven't seen you in a while — we'd love to have you back.",
         };
 
         // Only the two types a customer can still act on carry the link — a cancelled or

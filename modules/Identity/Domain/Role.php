@@ -123,6 +123,10 @@ enum Role: string
                 // §13: a manager answers for whether the customer was told, so they both read the
                 // delivery log and may push a failed message out again (`D-031`).
                 Permission::ViewMessages, Permission::SendMessages,
+
+                // §18: a manager is who decides whether a rebooking reminder or review request
+                // goes out automatically, the same bar as sending a message by hand above.
+                Permission::ViewAutomation, Permission::ManageAutomation,
             ],
 
             self::Groomer => [
@@ -158,6 +162,11 @@ enum Role: string
                 Permission::ManageWebsite,
                 Permission::ManageGrowth,
                 Permission::ViewReports,
+
+                // Read-only, same reasoning as ViewMessages below: Marketing should see what
+                // automated outreach is configured and what it has sent, but turning one on or
+                // off is an operational call, not theirs to make alone.
+                Permission::ViewAutomation,
 
                 // Read-only on §13: marketing needs to see deliverability, but every message type
                 // that exists today is transactional and belongs to operations, not to them. When

@@ -95,6 +95,14 @@ enum Permission: string
     case ViewReports = 'reports.view';
     case ManageGrowth = 'growth.manage';
 
+    /**
+     * Spec §18 Automation. `automation.view` reads the five automations and the run log;
+     * `automation.manage` may enable/disable one and change its delay — the same read/write split
+     * `messages.view`/`messages.send` already draws for a capability that reaches a customer.
+     */
+    case ViewAutomation = 'automation.view';
+    case ManageAutomation = 'automation.manage';
+
     case ViewAuditLog = 'audit.view';
 
     /**

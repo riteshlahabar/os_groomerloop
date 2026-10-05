@@ -81,10 +81,11 @@ Route::get('/contact-us', function () {
 | is refused too. Several permissions on one route mean "any one of these is enough".
 |
 | Dashboard carries none: every role lands somewhere after login, and its own content is already
-| permission-aware. The placeholders for modules that do not exist yet (Messages §13, Reviews
-| §20, AI & Automation §18/§19) carry none either — there is no permission in the enum for an
-| unbuilt module, and inventing one here would be deciding §5 policy outside the matrix that
-| owns it. They reveal nothing; each says only that the screen is not built.
+| permission-aware. The one remaining placeholder, Reviews (§20), carries none either — there is
+| no permission in the enum for an unbuilt module, and inventing one here would be deciding §5
+| policy outside the matrix that owns it. It reveals nothing; it only says the screen is not
+| built. Messages (§13, `D-031`), Reports & Insights (§16, `D-038`) and Automation (§18,
+| 2026-10-05) all went from this shape to a real permission the day each module shipped.
 */
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/', function () {
@@ -165,11 +166,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('reports', fn () => view('admin.reports'))
         ->middleware(['permission:reports.view', 'entitlement:business_insights'])->name('reports');
 
+    // §18. Real module, real screen — see modules/Automation. §19's AI Voice Agent (the other
+    // half this nav item's label names) is not built — no telephony or LLM provider exists in
+    // this product yet (§30 gap) — so this screen covers Automation only; AI Voice Agent stays
+    // out of scope until a provider is chosen.
+    Route::get('automation', fn () => view('admin.automation'))
+        ->middleware(['permission:automation.view', 'entitlement:automation'])->name('automation');
+
     // slug => [title, icon, permission or null]
     $comingSoon = [
         'reviews' => ['Reviews', 'social', null],
         'growth' => ['Growth', 'activity', 'permission:growth.manage'],
-        'automation' => ['AI & Automation', 'api', null],
     ];
 
     foreach ($comingSoon as $slug => [$title, $icon, $permission]) {
