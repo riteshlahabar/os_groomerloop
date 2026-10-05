@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Website\Http\Controllers\Api\V1\WebsiteController;
+use Modules\Website\Http\Controllers\Api\V1\WebsiteImageController;
 use Modules\Website\Http\Controllers\Api\V1\WebsitePageController;
 use Modules\Website\Http\Controllers\Api\V1\WebsitePublicationController;
 
@@ -35,6 +36,15 @@ Route::middleware([
 ])->group(function (): void {
     Route::get('website', [WebsiteController::class, 'show'])->name('website.show');
     Route::put('website', [WebsiteController::class, 'update'])->name('website.update');
+
+    // The first §28 upload surface (D-016) — `{field}` is closed to the two branding images
+    // UploadWebsiteImage::COLUMNS knows about, never an arbitrary column name.
+    Route::post('website/images/{field}', [WebsiteImageController::class, 'store'])
+        ->whereIn('field', ['logo', 'hero'])
+        ->name('website.images.store');
+    Route::delete('website/images/{field}', [WebsiteImageController::class, 'destroy'])
+        ->whereIn('field', ['logo', 'hero'])
+        ->name('website.images.destroy');
 
     Route::put('website/pages/{pageKey}', [WebsitePageController::class, 'update'])
         ->name('website.pages.update');

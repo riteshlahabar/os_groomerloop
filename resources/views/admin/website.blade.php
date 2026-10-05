@@ -58,6 +58,26 @@
           <h5>Branding &amp; search</h5>
         </div>
         <div class="card-body pt-0">
+          <div id="wsImageError" class="alert alert-danger" style="display:none"></div>
+
+          <div class="mb-3">
+            <label class="form-label">Logo</label>
+            <div class="flex items-center gap-2 mb-2 d-none" id="wsLogoPreviewWrap">
+              <img id="wsLogoPreview" alt="Logo" style="max-height:48px;max-width:160px;object-fit:contain">
+              <button type="button" class="btn btn-light btn-sm" id="wsLogoRemove">Remove</button>
+            </div>
+            <input type="file" class="form-control" id="wsLogoFile" accept="image/png,image/jpeg,image/webp,image/gif">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Main photo</label>
+            <div class="flex items-center gap-2 mb-2 d-none" id="wsHeroPreviewWrap">
+              <img id="wsHeroPreview" alt="Main photo" style="max-height:48px;max-width:160px;object-fit:contain">
+              <button type="button" class="btn btn-light btn-sm" id="wsHeroRemove">Remove</button>
+            </div>
+            <input type="file" class="form-control" id="wsHeroFile" accept="image/png,image/jpeg,image/webp,image/gif">
+          </div>
+
           <form id="wsSettingsForm">
             <div class="mb-3">
               <label class="form-label" for="wsSeoTitle">Search title</label>
@@ -66,15 +86,6 @@
             <div class="mb-3">
               <label class="form-label" for="wsSeoDescription">Search description</label>
               <textarea class="form-control" id="wsSeoDescription" rows="2" maxlength="320"></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="wsLogoUrl">Logo image link</label>
-              <input type="url" class="form-control" id="wsLogoUrl" maxlength="2048" placeholder="https://…">
-              <small class="f-light">Paste a link for now — uploading files from this screen arrives with secure uploads.</small>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="wsHeroUrl">Main photo link</label>
-              <input type="url" class="form-control" id="wsHeroUrl" maxlength="2048" placeholder="https://…">
             </div>
             <div class="mb-3">
               <label class="form-label" for="wsColor">Accent colour</label>
@@ -284,8 +295,6 @@
       function renderSettings() {
         document.getElementById('wsSeoTitle').value = site.seo_title || '';
         document.getElementById('wsSeoDescription').value = site.seo_description || '';
-        document.getElementById('wsLogoUrl').value = site.logo_url || '';
-        document.getElementById('wsHeroUrl').value = site.hero_image_url || '';
         document.getElementById('wsColor').value = site.primary_color || '#0f766e';
 
         document.getElementById('wsSocialFields').innerHTML = SOCIAL_NETWORKS.map(function (network) {
@@ -303,8 +312,6 @@
         var result = await api.put('/api/v1/website', {
           seo_title: document.getElementById('wsSeoTitle').value || null,
           seo_description: document.getElementById('wsSeoDescription').value || null,
-          logo_url: document.getElementById('wsLogoUrl').value || null,
-          hero_image_url: document.getElementById('wsHeroUrl').value || null,
           primary_color: document.getElementById('wsColor').value || null
         });
 
@@ -317,6 +324,77 @@
         renderAll();
         showOk('Saved. Publish to put the change live.');
       }
+
+      // ---- branding images (§28 upload, D-016) --------------------------------------------------
+
+      var IMAGE_FIELDS = [
+        { field: 'logo', column: 'logo_url', fileInput: 'wsLogoFile', previewWrap: 'wsLogoPreviewWrap', preview: 'wsLogoPreview', removeBtn: 'wsLogoRemove' },
+        { field: 'hero', column: 'hero_image_url', fileInput: 'wsHeroFile', previewWrap: 'wsHeroPreviewWrap', preview: 'wsHeroPreview', removeBtn: 'wsHeroRemove' },
+      ];
+
+      function renderImages() {
+        IMAGE_FIELDS.forEach(function (spec) {
+          var url = site[spec.column];
+          var wrap = document.getElementById(spec.previewWrap);
+          var img = document.getElementById(spec.preview);
+          var fileInput = document.getElementById(spec.fileInput);
+
+          fileInput.value = '';
+
+          if (url) {
+            img.src = url;
+            wrap.classList.remove('d-none');
+          } else {
+            wrap.classList.add('d-none');
+          }
+        });
+      }
+
+      function hideImageError() {
+        document.getElementById('wsImageError').style.display = 'none';
+      }
+
+      function showImageError(message) {
+        var el = document.getElementById('wsImageError');
+        el.textContent = message;
+        el.style.display = 'block';
+      }
+
+      IMAGE_FIELDS.forEach(function (spec) {
+        document.getElementById(spec.fileInput).addEventListener('change', async function () {
+          var file = this.files[0];
+          if (!file) {
+            return;
+          }
+
+          hideImageError();
+
+          var result = await api.upload('/api/v1/website/images/' + spec.field, 'image', file);
+
+          if (!result.ok) {
+            showImageError(firstErrorFrom(result, 'Could not upload that image.'));
+            this.value = '';
+            return;
+          }
+
+          site = result.body.data;
+          renderImages();
+        });
+
+        document.getElementById(spec.removeBtn).addEventListener('click', async function () {
+          hideImageError();
+
+          var result = await api.del('/api/v1/website/images/' + spec.field);
+
+          if (!result.ok) {
+            showImageError(firstErrorFrom(result, 'Could not remove that image.'));
+            return;
+          }
+
+          site = result.body.data;
+          renderImages();
+        });
+      });
 
       async function saveSocial(event) {
         event.preventDefault();
@@ -543,6 +621,7 @@
         renderStatus();
         renderTemplates();
         renderSettings();
+        renderImages();
         renderPages();
       }
 

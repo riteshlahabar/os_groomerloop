@@ -33,11 +33,6 @@ final class UpdateWebsiteRequest extends FormRequest
             'seo_title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'seo_description' => ['sometimes', 'nullable', 'string', 'max:320'],
 
-            // URLs, not uploads: §28 secure file uploads do not exist yet (D-016), so the owner
-            // pastes a link for now and the field becomes an upload target unchanged later.
-            'logo_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
-            'hero_image_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
-
             // Hex only. The value is interpolated into a style attribute, so anything else would be
             // CSS injection wearing a colour's name.
             'primary_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -74,8 +69,6 @@ final class UpdateWebsiteRequest extends FormRequest
             'template_key',
             'seo_title',
             'seo_description',
-            'logo_url',
-            'hero_image_url',
             'primary_color',
         ]);
 

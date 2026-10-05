@@ -486,6 +486,24 @@
           return { ok: res.ok, status: res.status, body: json };
         }
 
+        // A file upload, not JSON — `FormData` as the body so the browser sets its own
+        // multipart boundary; setting `Content-Type` manually here would omit that boundary and
+        // the server would fail to parse the request at all.
+        async function uploadFile(url, fieldName, file) {
+          await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+          var token = getCookie('XSRF-TOKEN');
+          var form = new FormData();
+          form.append(fieldName, file);
+          var res = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-XSRF-TOKEN': token },
+            body: form,
+          });
+          var json = await res.json().catch(function () { return {}; });
+          return { ok: res.ok, status: res.status, body: json };
+        }
+
         function escapeHtml(value) {
           var div = document.createElement('div');
           div.textContent = value === null || value === undefined ? '' : String(value);
@@ -584,6 +602,7 @@
           // DELETE takes an optional body: §24's cancellation carries `immediately` and
           // `reason`, which belong in the request rather than a query string.
           del: function (url, body) { return apiRequest('DELETE', url, body); },
+          upload: uploadFile,
           escapeHtml: escapeHtml,
           debounce: debounce,
           openModal: openModal,
