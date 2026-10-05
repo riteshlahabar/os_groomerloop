@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Modules\Tenancy\Models\Tenant;
 
 Route::get('/', function () {
@@ -180,10 +181,26 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('automation', fn () => view('admin.automation'))
         ->middleware(['permission:automation.view', 'entitlement:automation'])->name('automation');
 
+    // §17. Real screen — composes existing Insights/Automation/Entitlements endpoints
+    // client-side (D-007); no new module. Entitlement key matches the sidebar's own `feature`
+    // filter for this nav item, so nothing else needed changing to make the two agree.
+    //
+    // ResolveTenant is listed explicitly here (same as modules/Website/Routes/web.php's own
+    // web route) rather than relying on this group's documented "no tenant middleware needed"
+    // rule above: that rule holds for every page whose own content comes from a later
+    // client-side fetch, but `entitlement:` middleware evaluates *on this request*, before any
+    // fetch happens. Without a resolved tenant, PlanEntitlements' second resolution step
+    // silently grades against the default (Starter) plan — invisible for `reports`/`automation`
+    // only because business_insights and automation both happen to be in every plan, but
+    // `growth_reporting` is Business-tier-and-up, so the gap surfaced here. Found live while
+    // building this route — see docs/summaries/2026-10-05-growth-dashboard.md.
+    Route::get('growth', fn () => view('admin.growth'))
+        ->middleware([ResolveTenant::class, 'permission:growth.manage', 'entitlement:growth_reporting'])
+        ->name('growth');
+
     // slug => [title, icon, permission or null]
     $comingSoon = [
         'reviews' => ['Reviews', 'social', null],
-        'growth' => ['Growth', 'activity', 'permission:growth.manage'],
     ];
 
     foreach ($comingSoon as $slug => [$title, $icon, $permission]) {
