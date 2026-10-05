@@ -33,15 +33,17 @@
   </div>
 
   <div class="grid grid-cols-12 card-gap mt-3">
-    <div class="col-span-6">
+    <div class="col-span-6 sm:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Tenants by plan</h5></div>
         <div class="card-body pt-0">
-          <table class="table"><tbody id="planRows"><tr><td class="f-light">Loading…</td></tr></tbody></table>
+          <div class="table-responsive">
+            <table class="table"><tbody id="planRows"><tr><td class="f-light">Loading…</td></tr></tbody></table>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-span-6">
+    <div class="col-span-6 sm:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Quick links</h5></div>
         <div class="card-body pt-0">

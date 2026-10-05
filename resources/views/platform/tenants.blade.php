@@ -50,13 +50,13 @@
           <div id="tdError" class="alert alert-danger" style="display:none"></div>
 
           <div class="grid grid-cols-12 card-gap">
-            <div class="col-span-6">
+            <div class="col-span-6 sm:col-span-12">
               <p class="mb-1"><strong>Slug:</strong> <span id="tdSlug"></span></p>
               <p class="mb-1"><strong>Email:</strong> <span id="tdEmail"></span></p>
               <p class="mb-1"><strong>Timezone:</strong> <span id="tdTimezone"></span></p>
               <p class="mb-1"><strong>Status:</strong> <span id="tdStatus"></span></p>
             </div>
-            <div class="col-span-6">
+            <div class="col-span-6 sm:col-span-12">
               <p class="mb-1"><strong>Plan:</strong> <span id="tdPlan"></span></p>
               <p class="mb-1"><strong>Subscription:</strong> <span id="tdSubscription"></span></p>
               <p class="mb-1"><strong>Trial ends:</strong> <span id="tdTrial"></span></p>
@@ -70,10 +70,14 @@
           </div>
 
           <h6 class="mt-4">Users</h6>
-          <table class="table"><tbody id="tdUserRows"></tbody></table>
+          <div class="table-responsive">
+            <table class="table"><tbody id="tdUserRows"></tbody></table>
+          </div>
 
           <h6 class="mt-4">Feature entitlements</h6>
-          <table class="table"><tbody id="tdFeatureRows"></tbody></table>
+          <div class="table-responsive">
+            <table class="table"><tbody id="tdFeatureRows"></tbody></table>
+          </div>
         </div>
       </div>
     </div>

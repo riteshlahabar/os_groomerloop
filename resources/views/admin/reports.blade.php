@@ -24,7 +24,7 @@
               <label class="form-label" for="repTo">To</label>
               <input type="date" class="form-control" id="repTo">
             </div>
-            <div class="col-span-6">
+            <div class="col-span-6 sm:col-span-12">
               <div class="flex flex-wrap gap-2">
                 <button type="button" class="btn btn-light btn-sm" data-range="today">Today</button>
                 <button type="button" class="btn btn-light btn-sm" data-range="week">This week</button>

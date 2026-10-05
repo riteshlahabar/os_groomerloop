@@ -23,15 +23,15 @@
         </div>
 
         <div class="grid grid-cols-12 card-gap form-grid">
-          <div class="col-span-8">
+          <div class="col-span-8 sm:col-span-12">
             <label class="form-label">Host</label>
             <input type="text" class="form-control" id="ms_host">
           </div>
-          <div class="col-span-4">
+          <div class="col-span-4 sm:col-span-12">
             <label class="form-label">Port</label>
             <input type="number" class="form-control" id="ms_port">
           </div>
-          <div class="col-span-6">
+          <div class="col-span-6 sm:col-span-12">
             <label class="form-label">Encryption</label>
             <select class="form-control" id="ms_encryption">
               <option value="none">None</option>
@@ -39,7 +39,7 @@
               <option value="ssl">SSL</option>
             </select>
           </div>
-          <div class="col-span-6">
+          <div class="col-span-6 sm:col-span-12">
             <label class="form-label">Username</label>
             <input type="text" class="form-control" id="ms_username">
           </div>
@@ -47,11 +47,11 @@
             <label class="form-label">Password <span class="f-light" id="msPasswordNote" style="font-size:12px"></span></label>
             <input type="password" class="form-control" id="ms_password" placeholder="Leave blank to keep the stored password">
           </div>
-          <div class="col-span-6">
+          <div class="col-span-6 sm:col-span-12">
             <label class="form-label">From address</label>
             <input type="email" class="form-control" id="ms_from_address">
           </div>
-          <div class="col-span-6">
+          <div class="col-span-6 sm:col-span-12">
             <label class="form-label">From name</label>
             <input type="text" class="form-control" id="ms_from_name">
           </div>
