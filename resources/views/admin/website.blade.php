@@ -469,7 +469,7 @@
               '<label class="form-check-label" for="wsEnabled_' + page.key + '">Show this page</label>' +
               '</div>';
 
-          return '<div class="card mb-3" data-page="' + page.key + '">' +
+          return '<div class="card" data-page="' + page.key + '">' +
             '<div class="card-header card-no-border pb-2">' +
             '<div class="flex flex-wrap items-center justify-between gap-2">' +
             '<h6 class="mb-0">' + api.escapeHtml(page.label) + '</h6>' + toggle +
