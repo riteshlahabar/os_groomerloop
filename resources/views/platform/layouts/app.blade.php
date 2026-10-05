@@ -32,6 +32,26 @@
       .form-grid {
         row-gap: 18px;
       }
+
+      /*
+        `.table-responsive` is a Bootstrap class name this app's pages reuse by convention, but
+        style.css ships no rule for it at all — it does nothing here. Combined with `body`'s own
+        unconditional `overflow-x: hidden` (style.css), a table wider than its card on a narrow
+        screen was silently clipped at the viewport edge instead of scrolling — only the first
+        two or so columns stayed visible, with no way to reach the rest. Defining it here gives
+        every existing `.table-responsive` wrapper real behavior with no Blade changes needed.
+
+        `.card-body { overflow-wrap: break-word }` fixes the matching symptom for plain text:
+        a long, unbreakable string (an email, a URL) inside a card had the same silent-clip fate
+        for the same reason. Breaking it onto a second line instead is the standard fix.
+      */
+      .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .card-body {
+        overflow-wrap: break-word;
+      }
     </style>
 
     @stack('styles')
