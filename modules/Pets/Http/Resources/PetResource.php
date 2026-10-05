@@ -42,6 +42,10 @@ final class PetResource extends JsonResource
             'age_years' => $this->resource->ageYears(),
             'age_is_approximate' => $this->resource->isAgeApproximate(),
 
+            // Years/months/days, only when a real date of birth exists — lets the UI show
+            // "4mo 20d" for a pet under a year old instead of a bare "0" that reads as a bug.
+            'age_breakdown' => $this->resource->ageBreakdown(),
+
             'weight_lb' => $this->resource->weight_lb,
 
             'coat_type' => $this->resource->coat_type?->value,

@@ -91,6 +91,29 @@ final class Pet extends Model
             : null;
     }
 
+    /**
+     * Years/months/days, for a pet under a year old whose whole-number {@see self::ageYears()}
+     * would otherwise read as "0" with nothing distinguishing a newborn from an almost-one-year-
+     * old. Only available from a real date of birth — an approximate age is a single number
+     * someone typed, with no month/day precision to break down.
+     *
+     * @return array{years: int, months: int, days: int}|null
+     */
+    public function ageBreakdown(): ?array
+    {
+        if ($this->date_of_birth === null) {
+            return null;
+        }
+
+        $diff = $this->date_of_birth->diff(now());
+
+        return [
+            'years' => $diff->y,
+            'months' => $diff->m,
+            'days' => $diff->d,
+        ];
+    }
+
     public function isAgeApproximate(): bool
     {
         return $this->date_of_birth === null && $this->approximate_age_years !== null;

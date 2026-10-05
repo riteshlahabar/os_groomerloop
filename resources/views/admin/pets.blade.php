@@ -181,7 +181,14 @@
         }
 
         tbody.innerHTML = pets.map(function (p) {
-          var age = p.age_years === null ? '—' : p.age_years + (p.age_is_approximate ? ' (approx.)' : '');
+          var age;
+          if (p.age_breakdown) {
+            age = p.age_breakdown.years + 'y ' + p.age_breakdown.months + 'm ' + p.age_breakdown.days + 'd';
+          } else if (p.age_years !== null) {
+            age = '~' + p.age_years + (p.age_years === 1 ? ' year' : ' years');
+          } else {
+            age = '—';
+          }
           return '<tr>' +
             '<td>' + api.escapeHtml(p.name) + (p.needs_handling_care ? ' <span class="badge badge-light-danger">care notes</span>' : '') + '</td>' +
             '<td>' + api.escapeHtml(p.species_label) + '</td>' +
