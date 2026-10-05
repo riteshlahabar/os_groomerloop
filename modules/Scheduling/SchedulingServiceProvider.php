@@ -5,10 +5,12 @@ namespace Modules\Scheduling;
 use App\Support\ModuleServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Modules\Onboarding\Services\StepVerifiers;
+use Modules\Scheduling\Contracts\AppointmentMetrics;
 use Modules\Scheduling\Contracts\AppointmentScheduler;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Policies\AppointmentPolicy;
 use Modules\Scheduling\Services\BusinessHoursVerifier;
+use Modules\Scheduling\Services\EloquentAppointmentMetrics;
 use Modules\Scheduling\Services\EloquentAppointmentScheduler;
 
 /**
@@ -27,6 +29,9 @@ final class SchedulingServiceProvider extends ModuleServiceProvider
 
         $this->app->singleton(EloquentAppointmentScheduler::class);
         $this->app->alias(EloquentAppointmentScheduler::class, AppointmentScheduler::class);
+
+        $this->app->singleton(EloquentAppointmentMetrics::class);
+        $this->app->alias(EloquentAppointmentMetrics::class, AppointmentMetrics::class);
     }
 
     public function boot(): void

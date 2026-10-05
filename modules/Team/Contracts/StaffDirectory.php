@@ -103,4 +103,18 @@ interface StaffDirectory
      * what refuses the request.
      */
     public function lockForBooking(int $staffMemberId): void;
+
+    /**
+     * Minutes each assignable staff member is scheduled to be at work across `[$from, $to)`,
+     * from their rota minus any time off that overlaps a shift — the denominator Insights (§16)
+     * divides booked minutes by to report staff utilization. Nobody with zero rota minutes is
+     * omitted; a staff member on no rota at all simply has 0 available minutes, which utilization
+     * must be able to see rather than divide by.
+     *
+     * Bulk rather than per-staff, matching {@see self::namesOf()}: a utilization report asks this
+     * once for the whole team, not once per row.
+     *
+     * @return array<int, int> staff_member_id => available minutes
+     */
+    public function availableMinutesBetween(DateTimeInterface $from, DateTimeInterface $to): array;
 }

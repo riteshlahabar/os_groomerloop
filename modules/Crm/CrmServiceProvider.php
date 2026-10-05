@@ -4,7 +4,9 @@ namespace Modules\Crm;
 
 use App\Support\ModuleServiceProvider;
 use Modules\Crm\Contracts\CustomerDirectory;
+use Modules\Crm\Contracts\CustomerMetrics;
 use Modules\Crm\Services\EloquentCustomerDirectory;
+use Modules\Crm\Services\EloquentCustomerMetrics;
 use Modules\Crm\Services\MergeParticipants;
 
 /**
@@ -25,6 +27,9 @@ final class CrmServiceProvider extends ModuleServiceProvider
         // asking about consent gets the same answer within one request.
         $this->app->singleton(EloquentCustomerDirectory::class);
         $this->app->alias(EloquentCustomerDirectory::class, CustomerDirectory::class);
+
+        $this->app->singleton(EloquentCustomerMetrics::class);
+        $this->app->alias(EloquentCustomerMetrics::class, CustomerMetrics::class);
 
         // One registry per process, populated by other modules during boot.
         $this->app->singleton(MergeParticipants::class);

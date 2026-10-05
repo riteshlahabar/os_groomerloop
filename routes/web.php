@@ -159,11 +159,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     Route::get('messages', fn () => view('admin.messages'))
         ->middleware('permission:messages.view')->name('messages');
 
+    // §16. Real module, real screen — see modules/Insights. entitlement:business_insights is a
+    // presence check only (every plan has at least the Basic grade); the page itself grades each
+    // metric row against the tenant's actual grade via DashboardReportBuilder.
+    Route::get('reports', fn () => view('admin.reports'))
+        ->middleware(['permission:reports.view', 'entitlement:business_insights'])->name('reports');
+
     // slug => [title, icon, permission or null]
     $comingSoon = [
         'reviews' => ['Reviews', 'social', null],
         'growth' => ['Growth', 'activity', 'permission:growth.manage'],
-        'reports' => ['Reports & Insights', 'report', 'permission:reports.view'],
         'automation' => ['AI & Automation', 'api', null],
     ];
 

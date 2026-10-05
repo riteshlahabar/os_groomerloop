@@ -9,6 +9,7 @@ use Modules\Catalog\CatalogServiceProvider;
 use Modules\Crm\CrmServiceProvider;
 use Modules\Entitlements\EntitlementsServiceProvider;
 use Modules\Identity\IdentityServiceProvider;
+use Modules\Insights\InsightsServiceProvider;
 use Modules\Notifications\NotificationsServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
@@ -74,6 +75,11 @@ return [
     // verifier registry, so it boots last. Booking (§12) will depend on this module's
     // AppointmentScheduler (D-023) rather than building a second appointment engine.
     SchedulingServiceProvider::class,
+
+    // Insights (§16) reports on Scheduling's AppointmentMetrics, Crm's CustomerMetrics, Catalog's
+    // ServiceCatalog and Team's StaffDirectory, all read-only, so it boots after every one of
+    // them — and after Entitlements, whose grade it checks before computing a single metric.
+    InsightsServiceProvider::class,
 
     // Booking (§12) depends on Scheduling's AppointmentScheduler plus Catalog/Team/Crm/Pets'
     // read contracts, so it boots after all of them.

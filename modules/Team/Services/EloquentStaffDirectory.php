@@ -5,10 +5,13 @@ namespace Modules\Team\Services;
 use App\Domain\DayOfWeek;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Modules\Team\Contracts\StaffDirectory;
 use Modules\Team\Domain\StaffSummary;
 use Modules\Team\Models\StaffMember;
+use Modules\Team\Models\StaffTimeOff;
+use Modules\Team\Models\StaffWorkingHour;
 
 final class EloquentStaffDirectory implements StaffDirectory
 {
@@ -187,6 +190,75 @@ final class EloquentStaffDirectory implements StaffDirectory
     public function lockForBooking(int $staffMemberId): void
     {
         StaffMember::query()->whereKey($staffMemberId)->lockForUpdate()->first();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function availableMinutesBetween(DateTimeInterface $from, DateTimeInterface $to): array
+    {
+        $staff = StaffMember::query()->active()->with(['workingHours', 'timeOff'])->get();
+
+        $minutes = [];
+
+        foreach ($staff as $member) {
+            $minutes[(int) $member->getKey()] = $this->minutesAvailable($member, $from, $to);
+        }
+
+        return $minutes;
+    }
+
+    /**
+     * Walks each calendar day in the range, sums that day's shifts from the rota, then subtracts
+     * whatever portion of each shift a time-off entry overlaps. Deliberately day-by-day rather
+     * than a single aggregate query: a split shift and a half-day absence both need the actual
+     * overlapping minutes, not just whether the two ranges touch.
+     */
+    private function minutesAvailable(StaffMember $member, DateTimeInterface $from, DateTimeInterface $to): int
+    {
+        $day = Carbon::parse($from)->startOfDay();
+        $end = Carbon::parse($to);
+        $total = 0;
+
+        while ($day->lt($end)) {
+            $shifts = $member->workingHours->where('day_of_week', DayOfWeek::fromDate($day));
+
+            foreach ($shifts as $shift) {
+                $total += $this->shiftMinutesAfterTimeOff($member, $day, $shift);
+            }
+
+            $day = $day->copy()->addDay();
+        }
+
+        return $total;
+    }
+
+    private function shiftMinutesAfterTimeOff(StaffMember $member, Carbon $day, StaffWorkingHour $shift): int
+    {
+        $shiftStart = $day->copy()->setTimeFromTimeString($shift->startsAtString());
+        $shiftEnd = $day->copy()->setTimeFromTimeString($shift->endsAtString());
+
+        if ($shiftEnd->lte($shiftStart)) {
+            return 0;
+        }
+
+        $minutes = $shiftStart->diffInMinutes($shiftEnd);
+
+        /** @var StaffTimeOff $absence */
+        foreach ($member->timeOff as $absence) {
+            if (! $absence->overlaps($shiftStart, $shiftEnd)) {
+                continue;
+            }
+
+            $overlapStart = $absence->starts_at->greaterThan($shiftStart) ? $absence->starts_at : $shiftStart;
+            $overlapEnd = $absence->ends_at->lessThan($shiftEnd) ? $absence->ends_at : $shiftEnd;
+
+            if ($overlapEnd->gt($overlapStart)) {
+                $minutes -= $overlapStart->diffInMinutes($overlapEnd);
+            }
+        }
+
+        return max(0, $minutes);
     }
 
     /**
