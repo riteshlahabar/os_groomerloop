@@ -115,12 +115,29 @@
     <div class="col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2">
-          <h5>Today's schedule</h5>
+          <div class="flex items-center justify-between">
+            <h5>Today's schedule</h5>
+            <a href="{{ route('admin.appointments') }}" class="f-light">View all</a>
+          </div>
         </div>
         <div class="card-body pt-0">
-          <ul class="simple-list" id="todaysScheduleList">
-            <li class="f-light">Loading…</li>
-          </ul>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Customer</th>
+                  <th>Pet</th>
+                  <th>Service</th>
+                  <th>Staff</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="todaysScheduleRows">
+                <tr><td colspan="6" class="f-light">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -174,36 +191,58 @@
         }
       }
 
+      // Mirrors admin/appointments.blade.php's statusBadgeClass() so a status reads the same
+      // color on both screens.
+      function statusBadgeClass(status) {
+        return {
+          requested: 'badge-light-warning',
+          confirmed: 'badge-light-info',
+          'checked-in': 'badge-light-primary',
+          'in-service': 'badge-light-primary',
+          completed: 'badge-light-success',
+          cancelled: 'badge-light-secondary',
+          'no-show': 'badge-light-danger',
+        }[status] || 'badge-light-secondary';
+      }
+
       async function loadTodaysSchedule() {
-        var list = document.getElementById('todaysScheduleList');
+        var rows = document.getElementById('todaysScheduleRows');
         try {
           var from = literalDateTime(startOfToday());
           var to = literalDateTime(endOfToday());
           var result = await api.get(
-            '/api/v1/appointments?per_page=10&sort=starts_at&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)
+            '/api/v1/appointments?per_page=25&sort=starts_at&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)
           );
 
           if (!result.ok) {
-            list.innerHTML = '<li class="f-light">Could not load today\'s schedule.</li>';
+            rows.innerHTML = '<tr><td colspan="6" class="f-light">Could not load today\'s schedule.</td></tr>';
             return;
           }
 
           setStat('statAppointmentsToday', result.body.meta ? result.body.meta.total : result.body.data.length);
 
           if (result.body.data.length === 0) {
-            list.innerHTML = '<li class="f-light">Nothing booked for today.</li>';
+            rows.innerHTML = '<tr><td colspan="6" class="f-light">Nothing booked for today.</td></tr>';
             return;
           }
 
-          list.innerHTML = result.body.data.map(function (appointment) {
-            var time = api.wallClockTimeLabel(appointment.starts_at);
-            return '<li class="flex items-center justify-between">' +
-              '<span>' + time + ' — ' + (appointment.customer_name || 'Customer') + ' / ' + (appointment.pet_name || 'Pet') + '</span>' +
-              '<span class="badge badge-light-secondary">' + appointment.status_label + '</span>' +
-              '</li>';
+          rows.innerHTML = result.body.data.map(function (appointment) {
+            var time = api.wallClockTimeLabel(appointment.starts_at) + ' – ' + api.wallClockTimeLabel(appointment.ends_at);
+            var service = appointment.service_name
+              ? api.escapeHtml(appointment.service_name) + ' <span class="f-light">($' + api.escapeHtml(appointment.service_price || '0.00') + ')</span>'
+              : '<span class="f-light">—</span>';
+
+            return '<tr>' +
+              '<td>' + time + '</td>' +
+              '<td>' + api.escapeHtml(appointment.customer_name || '—') + '</td>' +
+              '<td>' + api.escapeHtml(appointment.pet_name || '—') + '</td>' +
+              '<td>' + service + '</td>' +
+              '<td>' + api.escapeHtml(appointment.staff_member_name || 'Unassigned') + '</td>' +
+              '<td><span class="badge ' + statusBadgeClass(appointment.status) + '">' + api.escapeHtml(appointment.status_label) + '</span></td>' +
+              '</tr>';
           }).join('');
         } catch (e) {
-          list.innerHTML = '<li class="f-light">Could not load today\'s schedule.</li>';
+          rows.innerHTML = '<tr><td colspan="6" class="f-light">Could not load today\'s schedule.</td></tr>';
         }
       }
 
