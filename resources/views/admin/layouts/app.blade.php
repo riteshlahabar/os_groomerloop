@@ -232,7 +232,7 @@
                       ['label' => 'Online Booking', 'route' => 'admin.booking', 'icon' => 'bookmark', 'permission' => ['appointments.manage', 'settings.manage'], 'feature' => 'online_booking'],
                       ['label' => 'Website', 'route' => 'admin.website', 'icon' => 'landing-page', 'permission' => ['website.manage'], 'feature' => 'basic_website'],
                       ['label' => 'Messages', 'route' => 'admin.messages', 'icon' => 'chat', 'permission' => ['messages.view']],
-                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => null, 'feature' => 'review_support'],
+                      ['label' => 'Reviews', 'route' => 'admin.reviews', 'icon' => 'social', 'permission' => ['reviews.view'], 'feature' => 'review_support'],
                       ['label' => 'Growth', 'route' => 'admin.growth', 'icon' => 'activity', 'permission' => ['growth.manage'], 'feature' => 'growth_reporting'],
                       ['label' => 'Reports & Insights', 'route' => 'admin.reports', 'icon' => 'report', 'permission' => ['reports.view'], 'feature' => 'business_insights'],
                       ['label' => 'AI & Automation', 'route' => 'admin.automation', 'icon' => 'api', 'permission' => ['automation.view'], 'feature' => 'automation'],

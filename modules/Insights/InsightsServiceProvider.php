@@ -19,6 +19,7 @@ use Modules\Insights\Domain\Metrics\ServicePopularityMetric;
 use Modules\Insights\Domain\Metrics\StaffUtilizationMetric;
 use Modules\Insights\Domain\Metrics\WebsiteActivityMetric;
 use Modules\Insights\Services\MetricRegistry;
+use Modules\Reviews\Contracts\ReviewMetrics;
 use Modules\Scheduling\Contracts\AppointmentMetrics;
 use Modules\Team\Contracts\StaffDirectory;
 
@@ -41,6 +42,7 @@ final class InsightsServiceProvider extends ModuleServiceProvider
             $customers = $app->make(CustomerMetrics::class);
             $services = $app->make(ServiceCatalog::class);
             $staff = $app->make(StaffDirectory::class);
+            $reviews = $app->make(ReviewMetrics::class);
 
             // Display order on the page. Basic-tier rows first, then Standard, then Advanced —
             // the same ladder FeatureGrade ranks, so a Starter plan's page reads top-to-bottom as
@@ -56,7 +58,7 @@ final class InsightsServiceProvider extends ModuleServiceProvider
                 new EstimatedAppointmentValueMetric($appointments, $services),
                 new ReturningCustomersMetric($appointments),
                 new ActionableAlertsMetric($appointments),
-                new ReviewTrendMetric,
+                new ReviewTrendMetric($reviews),
                 new WebsiteActivityMetric,
 
                 new StaffUtilizationMetric($appointments, $staff),

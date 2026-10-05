@@ -103,6 +103,15 @@ enum Permission: string
     case ViewAutomation = 'automation.view';
     case ManageAutomation = 'automation.manage';
 
+    /**
+     * Spec §20 Reviews & Reputation. `reviews.view` reads review destinations, the manual log
+     * and the review-request send history; `reviews.manage` configures a destination and
+     * records/edits/removes a logged review — the same read/write split this matrix already
+     * draws for every other screen a role might only need to watch.
+     */
+    case ViewReviews = 'reviews.view';
+    case ManageReviews = 'reviews.manage';
+
     case ViewAuditLog = 'audit.view';
 
     /**

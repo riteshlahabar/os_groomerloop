@@ -8,6 +8,7 @@ use Modules\Automation\Domain\AutomationKey;
 use Modules\Automation\Services\AutomationRunner;
 use Modules\Automation\Services\AutomationSettingsManager;
 use Modules\Catalog\Contracts\ServiceCatalog;
+use Modules\Reviews\Contracts\ReviewDestinations;
 use Modules\Scheduling\Contracts\AppointmentMetrics;
 use Modules\Tenancy\Models\Tenant;
 use Modules\Tenancy\Support\TenantContext;
@@ -27,6 +28,7 @@ final class RunDueAutomations
         private readonly ServiceCatalog $catalog,
         private readonly AutomationSettingsManager $settings,
         private readonly AutomationRunner $runner,
+        private readonly ReviewDestinations $reviewDestinations,
     ) {}
 
     public function execute(): int
@@ -81,9 +83,19 @@ final class RunDueAutomations
         $delayDays = $this->settings->delayDaysFor($key);
         $fired = 0;
 
+        // Spec §20's "correct review destination" — added to the ask only when the business has
+        // configured one, the same honest-gap shape every unconfigured lookup table in this
+        // product already has; the message still sends without it.
+        $context = [];
+        $reviewUrl = $this->reviewDestinations->primaryUrl();
+        if ($reviewUrl !== null) {
+            $context['review_url'] = $reviewUrl;
+        }
+
         foreach ($this->appointments->completedAppointmentsOlderThan(now(), $delayDays) as $candidate) {
             $didFire = $this->runner->fireForAppointment($key, $candidate['appointment_id'], $candidate['customer_id'], [
                 'service_name' => $this->serviceName($candidate['service_id']),
+                ...$context,
             ]);
             $fired += (int) $didFire;
         }

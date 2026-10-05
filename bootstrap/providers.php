@@ -15,6 +15,7 @@ use Modules\Notifications\NotificationsServiceProvider;
 use Modules\Onboarding\OnboardingServiceProvider;
 use Modules\Pets\PetsServiceProvider;
 use Modules\Platform\PlatformServiceProvider;
+use Modules\Reviews\ReviewsServiceProvider;
 use Modules\Scheduling\SchedulingServiceProvider;
 use Modules\SuperAdmin\SuperAdminServiceProvider;
 use Modules\Team\TeamServiceProvider;
@@ -61,6 +62,12 @@ return [
     // registry and Onboarding's §7 step-verifier registry, and both of those singletons are
     // declared by their own provider's register().
     PetsServiceProvider::class,
+
+    // Reviews (§20) depends on Crm's CustomerDirectory only (optional, read-only customer
+    // attribution on a logged review) and Entitlements for its own `entitlement:` gate.
+    // Automation and Insights each read this module's contracts in return, so it is listed
+    // ahead of both.
+    ReviewsServiceProvider::class,
 
     // Catalog depends on Tenancy, Audit and Onboarding's verifier registry only. It boots before
     // Team, which owns the §10 "eligible groomers" link and validates service ids through this

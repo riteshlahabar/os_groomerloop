@@ -6,16 +6,17 @@ use DateTimeImmutable;
 use Modules\Entitlements\Domain\FeatureGrade;
 use Modules\Insights\Contracts\MetricDefinition;
 use Modules\Insights\Domain\MetricResult;
+use Modules\Reviews\Contracts\ReviewMetrics;
 
 /**
- * Spec §16 "Review trend where integrated" — the "where integrated" is doing the work: §20
- * Reviews & Reputation has no code yet (CLAUDE.md pending module #18), so there is no review data
- * to trend. Kept as its own metric, always insufficient, rather than left off the dashboard
- * entirely — invariant #7 wants the gap shown, not hidden, and the moment §20 exists this class
- * is the one place that changes.
+ * Spec §16 "Review trend where integrated" — reads Reviews' (§20) manual review log, added
+ * 2026-10-05. Before that, §20 had no code at all and this always answered `insufficientData()`;
+ * it still does for a tenant whose log is empty, never a fabricated number (invariant #7).
  */
 final readonly class ReviewTrendMetric implements MetricDefinition
 {
+    public function __construct(private ReviewMetrics $reviews) {}
+
     public function key(): string
     {
         return 'review_trend';
@@ -33,6 +34,15 @@ final readonly class ReviewTrendMetric implements MetricDefinition
 
     public function compute(DateTimeImmutable $from, DateTimeImmutable $to): MetricResult
     {
-        return MetricResult::insufficientData();
+        $summary = $this->reviews->summaryBetween($from, $to);
+
+        if ($summary['count'] === 0) {
+            return MetricResult::insufficientData();
+        }
+
+        return MetricResult::ok([
+            'count' => $summary['count'],
+            'average_rating' => $summary['average_rating'],
+        ]);
     }
 }

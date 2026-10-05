@@ -198,20 +198,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         ->middleware([ResolveTenant::class, 'permission:growth.manage', 'entitlement:growth_reporting'])
         ->name('growth');
 
-    // slug => [title, icon, permission or null]
-    $comingSoon = [
-        'reviews' => ['Reviews', 'social', null],
-    ];
-
-    foreach ($comingSoon as $slug => [$title, $icon, $permission]) {
-        $route = Route::get($slug, function () use ($title, $icon) {
-            return view('admin.placeholder', ['pageTitle' => $title, 'icon' => $icon]);
-        })->name($slug);
-
-        if ($permission !== null) {
-            $route->middleware($permission);
-        }
-    }
+    // §20. Real screen — new modules/Reviews owns a configured review destination and a
+    // manual review log; see docs/summaries/2026-10-05-reviews-module.md for what §20 asks that
+    // still has no subject code (provider-API review activity and in-app reply). Same
+    // ResolveTenant note as `growth` above: `entitlement:review_support` evaluates on this bare
+    // request, and review_support is not in every plan.
+    //
+    // This was the last `$comingSoon` placeholder — the mechanism itself is removed below rather
+    // than left for a foreach over nothing.
+    Route::get('reviews', fn () => view('admin.reviews'))
+        ->middleware([ResolveTenant::class, 'permission:reviews.view', 'entitlement:review_support'])
+        ->name('reviews');
 });
 
 /*

@@ -127,6 +127,11 @@ enum Role: string
                 // §18: a manager is who decides whether a rebooking reminder or review request
                 // goes out automatically, the same bar as sending a message by hand above.
                 Permission::ViewAutomation, Permission::ManageAutomation,
+
+                // §20: operational visibility into reputation without owning it — the same
+                // view-only split Manager already has on ViewReports/ViewMessages. Marketing
+                // holds the manage half.
+                Permission::ViewReviews,
             ],
 
             self::Groomer => [
@@ -173,6 +178,12 @@ enum Role: string
                 // §20 review requests and §22 announcements land, revisit whether they get
                 // `messages.send` for those types (`D-031`).
                 Permission::ViewMessages,
+
+                // §20: reputation is explicitly this role's domain (spec §5: "Growth and
+                // marketing modules when enabled"), the same reasoning that already gave it
+                // ManageWebsite and ManageGrowth — full read/write, not the view-only split
+                // Manager gets above.
+                Permission::ViewReviews, Permission::ManageReviews,
             ],
 
             self::PlatformAdmin => [

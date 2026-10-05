@@ -148,6 +148,7 @@ final class NotificationDispatcher implements MessageSender
         $when = $context['starts_at'] ?? '';
         $previousWhen = $context['previous_starts_at'] ?? '';
         $cancelUrl = $context['cancel_url'] ?? null;
+        $reviewUrl = $context['review_url'] ?? null;
 
         $subject = match ($type) {
             NotificationType::BookingRequested => "Booking received: {$service}",
@@ -179,6 +180,12 @@ final class NotificationDispatcher implements MessageSender
         // past appointment has nothing left to cancel.
         if ($cancelUrl !== null && in_array($type, [NotificationType::BookingRequested, NotificationType::BookingConfirmed, NotificationType::AppointmentReminder], true)) {
             $body .= " Need to cancel or check the details? {$cancelUrl}";
+        }
+
+        // Spec §20's "correct review destination" — only the review request carries this, and
+        // only once a business has configured one (Modules\Reviews\Contracts\ReviewDestinations).
+        if ($reviewUrl !== null && $type === NotificationType::ReviewRequest) {
+            $body .= " You can leave one here: {$reviewUrl}";
         }
 
         if ($channel === CommunicationChannel::Sms) {
