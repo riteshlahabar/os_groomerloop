@@ -67,10 +67,14 @@
           <div class="flex items-center justify-between">
             <h5>Plans</h5>
           </div>
-          <p class="f-light mb-0" style="font-size:12px">
-            Changing plan never deletes anything. Losing a feature hides or locks it — your
-            customers, pets and appointment history stay exactly as they are.
-          </p>
+          {{--
+            A paragraph here used to say "Changing plan never deletes anything. Losing a feature
+            hides or locks it — your customers, pets and appointment history stay exactly as they
+            are." Removed on the owner's instruction (2026-10-06): /admin screens carry labels and
+            state, not prose. The fact it stated is invariant #4 and is enforced in code, not by
+            the owner reading this — a downgrade re-grades entitlements and leaves every customer,
+            pet and appointment row intact (exercised live in the 2026-10-05 §35 acceptance pass).
+          --}}
         </div>
         <div class="card-body pt-0">
           <div id="blPlansError" class="alert alert-danger" style="display:none"></div>
@@ -238,6 +242,42 @@
         return new Date(iso).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
       }
 
+      // How far a billing date is from right now, measured against the clock at render time.
+      // Calendar days apart, not 24-hour blocks, so a date later today reads "today" rather
+      // than "in 0 days".
+      function relativeDayLabel(iso) {
+        if (!iso) {
+          return null;
+        }
+
+        var target = new Date(iso);
+        var startOfDay = function (d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+        var days = Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
+
+        if (days === 0) {
+          return 'today';
+        }
+        if (days === 1) {
+          return 'tomorrow';
+        }
+        if (days === -1) {
+          return 'yesterday';
+        }
+        return days > 0 ? 'in ' + days + ' days' : Math.abs(days) + ' days ago';
+      }
+
+      // One labelled cell of the "Your plan" summary: a caption, a value, and an optional
+      // smaller line under it for the clock-relative part.
+      function summaryCell(caption, value, sub) {
+        return '<div><span class="f-light">' + caption + '</span><br>' + value +
+          (sub ? '<br><span class="f-light" style="font-size:12px">' + sub + '</span>' : '') +
+          '</div>';
+      }
+
+      function isPast(iso) {
+        return iso ? new Date(iso).getTime() <= Date.now() : false;
+      }
+
       /* ------------------------------------------------------- subscription + entitlements -- */
 
       async function loadSubscription() {
@@ -278,22 +318,59 @@
 
         var rows = [];
         if (plan) {
-          rows.push('<div><span class="f-light">Plan</span><br><strong>' + api.escapeHtml(plan.name) + '</strong> — $' + (plan.price_cents / 100).toFixed(2) + '/mo</div>');
+          rows.push(summaryCell(
+            'Plan',
+            '<strong>' + api.escapeHtml(plan.name) + '</strong> — $' + (plan.price_cents / 100).toFixed(2) + '/mo',
+            null
+          ));
         }
-        rows.push('<div><span class="f-light">Status</span><br><span class="badge ' + statusBadgeClass(subscription.status) + '">' + api.escapeHtml(subscription.status_label) + '</span></div>');
 
-        if (subscription.on_trial) {
-          rows.push('<div><span class="f-light">Trial ends</span><br>' + dateLabel(subscription.trial_ends_at) + '</div>');
+        // The badge is the server's own status, never a status derived here — the §24 state
+        // machine is the only thing allowed to decide what state a subscription is in. What is
+        // computed against the clock is the DATE line beside it, so the two can be read
+        // together.
+        rows.push(summaryCell(
+          'Status',
+          '<span class="badge ' + statusBadgeClass(subscription.status) + '">' + api.escapeHtml(subscription.status_label) + '</span>',
+          'as of ' + dateLabel(new Date().toISOString())
+        ));
+
+        // Shown whenever a trial date exists, not only while the trial is still running. The
+        // old condition was `on_trial`, which is false once the date passes — so a lapsed trial
+        // displayed a bare "Trialing" badge with no date anywhere, which is exactly when the
+        // date matters most. Nothing currently advances a lapsed trial (see the note in
+        // `ExpireLapsedSubscriptions`), so this row is how the real position becomes visible.
+        if (subscription.trial_ends_at) {
+          var trialOver = isPast(subscription.trial_ends_at);
+          rows.push(summaryCell(
+            trialOver ? 'Trial ended' : 'Trial ends',
+            dateLabel(subscription.trial_ends_at),
+            relativeDayLabel(subscription.trial_ends_at)
+          ));
         }
+
         if (subscription.current_period_end) {
-          rows.push('<div><span class="f-light">Current period ends</span><br>' + dateLabel(subscription.current_period_end) + '</div>');
+          rows.push(summaryCell(
+            subscription.cancelled_at ? 'Period ends' : 'Renews',
+            dateLabel(subscription.current_period_end),
+            relativeDayLabel(subscription.current_period_end)
+          ));
         }
+
         if (subscription.grace_ends_at) {
-          rows.push('<div><span class="f-light">Grace period ends</span><br>' + dateLabel(subscription.grace_ends_at) + '</div>');
+          rows.push(summaryCell(
+            isPast(subscription.grace_ends_at) ? 'Grace period ended' : 'Grace period ends',
+            dateLabel(subscription.grace_ends_at),
+            relativeDayLabel(subscription.grace_ends_at)
+          ));
         }
+
         if (subscription.cancelled_at) {
-          rows.push('<div><span class="f-light">Cancelled</span><br>' + dateLabel(subscription.cancelled_at) +
-            (subscription.ends_at ? ', access until ' + dateLabel(subscription.ends_at) : '') + '</div>');
+          rows.push(summaryCell(
+            'Cancelled',
+            dateLabel(subscription.cancelled_at),
+            subscription.ends_at ? 'access until ' + dateLabel(subscription.ends_at) : relativeDayLabel(subscription.cancelled_at)
+          ));
         }
 
         summary.innerHTML = '<div class="flex" style="gap:40px;flex-wrap:wrap">' + rows.join('') + '</div>';
