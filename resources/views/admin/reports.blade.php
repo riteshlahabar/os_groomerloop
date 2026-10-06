@@ -115,7 +115,10 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    {{-- Appointment volume and Service popularity pair into one row. Desktop-first: Cuba's
+         `md:` prefix is MAX-width (<=767px), so the base span governs the wide screen and the
+         prefixed one stacks them on a phone, where two side-by-side tables would not fit. --}}
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Appointment volume</h5>
@@ -133,7 +136,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Service popularity</h5>
