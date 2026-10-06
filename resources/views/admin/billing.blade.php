@@ -3,6 +3,47 @@
 @section('title', 'Billing & Plan')
 @section('page-heading', 'Billing & Plan')
 
+@push('styles')
+  <style>
+    /*
+      The plan the business is on is tinted with the template's own `.bg-light-primary` — the
+      10%-alpha form of `--theme-default`, the same variable `.btn-primary` fills with at full
+      strength. Reusing that utility rather than hard-coding a hex keeps the card in step with
+      the theme (style.css defines three different `--theme-default` values across its colour
+      schemes, so a literal would be wrong on two of them).
+
+      The class goes on the `.card`, but `.card-body` paints its own opaque
+      `--card-body-bg-color` on top, so the body has to be cleared for the tint to show.
+    */
+    #blPlans .card.bg-light-primary > .card-body {
+      background-color: transparent;
+    }
+
+    /*
+      Shorter cards: the default `--card-padding` (20px) plus the stock heading and paragraph
+      margins made these taller than their content needs. Scoped to `#blPlans` so no other card
+      on the page changes.
+    */
+    #blPlans .card-body {
+      padding: 14px 16px;
+    }
+
+    #blPlans h6 {
+      margin-bottom: 2px;
+    }
+
+    #blPlans h4 {
+      margin-top: 0;
+      margin-bottom: 2px;
+    }
+
+    #blPlans p {
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+  </style>
+@endpush
+
 @section('content')
   <div class="grid grid-cols-12 card-gap">
 
@@ -470,7 +511,7 @@
           var included = p.features.filter(function (f) { return f.included; }).length;
 
           return '<div class="col-span-3 lg:col-span-6 sm:col-span-12">' +
-            '<div class="card' + (isCurrent ? ' border-primary' : '') + '" style="height:100%">' +
+            '<div class="card' + (isCurrent ? ' border-primary bg-light-primary' : '') + '" style="height:100%">' +
               '<div class="card-body">' +
                 '<h6>' + api.escapeHtml(p.name) +
                   (isCurrent ? ' <span class="badge badge-light-primary">Current</span>' : '') +
