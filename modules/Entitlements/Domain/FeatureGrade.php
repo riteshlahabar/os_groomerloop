@@ -5,8 +5,8 @@ namespace Modules\Entitlements\Domain;
 /**
  * How much of a feature a plan includes (spec §25).
  *
- * The §25 matrix is not a grid of ticks. Several rows are graded — Automation is "Basic" on
- * Starter and Business, plain on Growth and "Advanced" on Growth Partner; Customer retention
+ * The §25 matrix is not a grid of ticks. Several rows are graded — Automation is plain on Growth
+ * and "Advanced" on Growth Partner, and absent below those two since `D-042`; Customer retention
  * runs Basic → Strategy → Managed. Modelling entitlement as a boolean would flatten that and
  * force the difference to be re-invented, plan name in hand, wherever it mattered.
  *
