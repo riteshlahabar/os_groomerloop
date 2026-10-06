@@ -118,14 +118,20 @@
           return;
         }
 
+        var meta = result.body.meta;
+
         document.getElementById('autoLimitBadge').textContent =
-          result.body.meta.currently_enabled + ' of ' + result.body.meta.max_enabled + ' enabled';
+          meta.currently_enabled + ' of ' + meta.max_enabled + ' enabled';
 
         var runFilter = document.getElementById('autoRunFilter');
         runFilter.innerHTML = '<option value="">All automations</option>' +
           result.body.data.map(function (a) {
             return '<option value="' + a.key + '">' + api.escapeHtml(a.label) + '</option>';
           }).join('');
+
+        // An automation already enabled can always be turned back off — the cap only blocks
+        // turning on one more once the plan's limit (meta.max_enabled) is already reached.
+        var atLimit = meta.currently_enabled >= meta.max_enabled;
 
         rows.innerHTML = result.body.data.map(function (automation) {
           var delayCell = automation.needs_delay
@@ -138,12 +144,17 @@
             ? '<span class="badge badge-light-success">Enabled</span>'
             : '<span class="badge badge-light-secondary">Disabled</span>';
 
-          var actionCell = canManage
-            ? '<td><button type="button" class="btn btn-light btn-sm" data-toggle="' + automation.key + '" data-enabled="' + (automation.is_enabled ? '1' : '0') + '">' +
-              (automation.is_enabled ? 'Disable' : 'Enable') + '</button></td>'
-            : '';
+          var locked = !automation.is_enabled && atLimit;
 
-          return '<tr>' +
+          var actionCell = '';
+          if (canManage && locked) {
+            actionCell = '<td><button type="button" class="btn btn-light btn-sm" disabled title="Your plan allows ' + meta.max_enabled + ' active automation(s). Upgrade to enable more.">Upgrade to enable</button></td>';
+          } else if (canManage) {
+            actionCell = '<td><button type="button" class="btn btn-light btn-sm" data-toggle="' + automation.key + '" data-enabled="' + (automation.is_enabled ? '1' : '0') + '">' +
+              (automation.is_enabled ? 'Disable' : 'Enable') + '</button></td>';
+          }
+
+          return '<tr' + (locked ? ' class="f-light"' : '') + '>' +
             '<td><strong>' + api.escapeHtml(automation.label) + '</strong><br><span class="f-light">' + api.escapeHtml(automation.description) + '</span></td>' +
             '<td>' + delayCell + '</td>' +
             '<td>' + statusBadge + '</td>' +

@@ -142,10 +142,13 @@
       }
 
       // One label per status, shown wherever a section has nothing to render instead of a number
-      // — never a fabricated 0 (invariant #7).
+      // — never a fabricated 0 (invariant #7). `below_grade` renders as a locked, linked badge
+      // rather than plain text so it reads as "upgrade to unlock" and isn't mistaken for the
+      // unrelated `insufficient_data` case (no data yet, upgrading wouldn't change it).
       function stateLabel(status) {
         if (status === 'below_grade') {
-          return 'Not included in your plan.';
+          return '<a href="{{ route('admin.billing') }}" class="badge badge-light-warning">'
+            + '<i class="fa-solid fa-lock" style="font-size:10px"></i> Upgrade to unlock</a>';
         }
         if (status === 'insufficient_data') {
           return 'Not enough data yet.';
