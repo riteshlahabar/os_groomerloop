@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenantById;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Modules\Website\Http\Controllers\PublicSiteController;
+use Modules\Website\Http\Controllers\PublicWebsiteAssetController;
 use Modules\Website\Http\Controllers\SitePreviewController;
 
 /*
@@ -30,6 +31,18 @@ use Modules\Website\Http\Controllers\SitePreviewController;
 | domain-scoped route group resolving the same controller. It is not built here because wildcard DNS
 | and a wildcard certificate cannot be verified from this environment.
 */
+
+/*
+ * Serves the §28 uploaded logo/hero (D-016, UploadWebsiteImage) through Laravel rather than
+ * through Apache's static handling of the public/storage symlink — see
+ * PublicWebsiteAssetController's docblock for why. Must be registered before the numeric
+ * {tenant}/{slug} group below; "website-assets" never matches that group's `[0-9]+` constraint
+ * either way, so the two cannot collide regardless of order.
+ */
+Route::get('website-assets/{tenantId}/{filename}', PublicWebsiteAssetController::class)
+    ->where(['tenantId' => '[0-9]+', 'filename' => '[A-Za-z0-9._-]+'])
+    ->middleware('throttle:public')
+    ->name('website.asset.show');
 
 Route::prefix('{tenant}/{slug}')
     ->where(['tenant' => '[0-9]+'])

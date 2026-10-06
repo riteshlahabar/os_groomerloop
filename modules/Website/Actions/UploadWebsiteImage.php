@@ -4,6 +4,7 @@ namespace Modules\Website\Actions;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Website\Models\Website;
@@ -19,6 +20,12 @@ use Modules\Website\Models\Website;
  * same isolation every other tenant-owned query gets from `BelongsToTenant`, just expressed in a
  * filesystem path instead of a `WHERE tenant_id = ?` clause, because a public disk has no query
  * scope to enforce it for us.
+ *
+ * The saved column holds a `website-assets/...` URL (PublicWebsiteAssetController), not the
+ * public disk's own `Storage::url()` — found live, 2026-10-06, that this host serves
+ * `/storage/...` (the `public/storage` symlink) as a bare Apache 403 no matter the file
+ * permissions, so every uploaded image 404'd/403'd in the browser despite the upload itself
+ * succeeding. Routing the read through Laravel sidesteps that host's symlink handling entirely.
  */
 final class UploadWebsiteImage
 {
@@ -39,13 +46,14 @@ final class UploadWebsiteImage
 
         $this->deleteExistingUpload($site, $column);
 
-        $path = $file->storeAs(
-            'website/'.$site->tenant_id,
-            $field.'-'.Str::random(20).'.'.$file->extension(),
-            'public',
-        );
+        $filename = $field.'-'.Str::random(20).'.'.$file->extension();
 
-        $site->{$column} = Storage::disk('public')->url($path);
+        $file->storeAs('website/'.$site->tenant_id, $filename, 'public');
+
+        $site->{$column} = URL::route('website.asset.show', [
+            'tenantId' => $site->tenant_id,
+            'filename' => $filename,
+        ]);
         $site->save();
 
         return $site;
@@ -81,12 +89,34 @@ final class UploadWebsiteImage
             return;
         }
 
-        $base = rtrim((string) config('filesystems.disks.public.url'), '/').'/';
+        $path = $this->diskPathFor($current, (int) $site->tenant_id);
 
-        if (! str_starts_with($current, $base)) {
-            return;
+        if ($path !== null) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    /**
+     * Resolves a stored URL back to its path on the `public` disk. Recognises both the current
+     * `website.asset.show` route URL and the legacy `Storage::url()` form a value saved before
+     * 2026-10-06 may still carry (that disk URL is what 403'd on this host — see the class
+     * docblock). Anything else — a plain URL pasted before this feature existed, or any other
+     * external image — resolves to null, so the caller leaves it alone.
+     */
+    private function diskPathFor(string $url, int $tenantId): ?string
+    {
+        $assetBase = rtrim(URL::to('website-assets/'.$tenantId), '/').'/';
+
+        if (str_starts_with($url, $assetBase)) {
+            return 'website/'.$tenantId.'/'.Str::after($url, $assetBase);
         }
 
-        Storage::disk('public')->delete(Str::after($current, $base));
+        $diskBase = rtrim((string) config('filesystems.disks.public.url'), '/').'/';
+
+        if (str_starts_with($url, $diskBase)) {
+            return Str::after($url, $diskBase);
+        }
+
+        return null;
     }
 }
