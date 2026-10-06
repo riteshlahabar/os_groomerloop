@@ -41,6 +41,35 @@
       margin-bottom: 6px;
       line-height: 1.35;
     }
+
+    /*
+      The action sits on the card's bottom edge, so the buttons line up across all four plans
+      instead of following taglines of different lengths.
+
+      `margin-top: auto` needs an unbroken flex column from the card down to the button, and
+      Cuba's `.card` is a plain block — so both the card and its body are made flex columns
+      here, with the body growing to fill the height the grid already stretches the card to
+      (the cards carry an inline `height:100%`). `align-self` keeps the button its natural
+      width; a flex column would otherwise stretch it edge to edge.
+
+      The current plan's card has no button at all (it offers nothing to switch to), which this
+      leaves alone — its text simply stays at the top.
+    */
+    #blPlans .card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #blPlans .card-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+    }
+
+    #blPlans .card-body .btn {
+      margin-top: auto;
+      align-self: flex-start;
+    }
   </style>
 @endpush
 
