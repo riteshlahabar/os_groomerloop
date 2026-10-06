@@ -19,10 +19,17 @@
     Each action link is wrapped in the same @can check the target route's own middleware uses,
     so a Marketing-role viewer (who holds growth.manage but not every permission an Owner has)
     never sees a link that would 403.
+
+    The six objective cards sit two per row. Their spans are desktop-first, because Cuba's
+    breakpoint prefixes are MAX-width, not Tailwind's min-width: the base span applies at every
+    width and `md:` (<=767px) overrides it. Written the other way round -- `col-span-12
+    md:col-span-6`, which reads as mobile-first -- the cards ran full width on a desktop and
+    doubled up on a phone, the exact inverse of the intent. The Growth Partner card below stays
+    full width and splits its own body instead; `sm:` there is <=575px.
   --}}
   <div class="grid grid-cols-12 card-gap">
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Get More Customers</h5></div>
         <div class="card-body pt-0">
@@ -37,7 +44,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Get More Bookings</h5></div>
         <div class="card-body pt-0">
@@ -55,7 +62,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-body text-center" style="padding:30px 20px">
           <h5>Google Business Growth</h5>
@@ -65,7 +72,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-body text-center" style="padding:30px 20px">
           <h5>Social Media Growth</h5>
@@ -75,7 +82,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Customer Retention</h5></div>
         <div class="card-body pt-0">
@@ -92,7 +99,7 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    <div class="col-span-6 md:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2"><h5>Reviews &amp; Reputation</h5></div>
         <div class="card-body pt-0">

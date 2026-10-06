@@ -61,8 +61,13 @@
           </div>
         </div>
         <div class="card-body pt-0">
+          {{-- Two filters per row. The spans are desktop-first, because Cuba's breakpoint
+               prefixes are MAX-width: the base span applies at every width and `md:` (<=767px)
+               overrides it, so the four controls stack one per row on a phone rather than
+               squeezing two long option labels ("Skipped (no consent)") side by side. The
+               `form-grid` class supplies the row gap `.card-gap` deliberately omits. --}}
           <div class="grid grid-cols-12 card-gap form-grid mb-3">
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-6 md:col-span-12">
               <label class="form-label" for="msgStatusFilter">Status</label>
               <select class="form-control" id="msgStatusFilter">
                 <option value="">All</option>
@@ -71,7 +76,7 @@
                 <option value="skipped_no_consent">Skipped (no consent)</option>
               </select>
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-6 md:col-span-12">
               <label class="form-label" for="msgTypeFilter">Type</label>
               <select class="form-control" id="msgTypeFilter">
                 <option value="">All</option>
@@ -87,7 +92,7 @@
                 <option value="customer_retention">Customer retention check-in</option>
               </select>
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-6 md:col-span-12">
               <label class="form-label" for="msgChannelFilter">Channel</label>
               <select class="form-control" id="msgChannelFilter">
                 <option value="">All</option>
@@ -95,7 +100,7 @@
                 <option value="sms">SMS</option>
               </select>
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-6 md:col-span-12">
               <label class="form-label" for="msgRecipientFilter">Recipient contains</label>
               <input type="text" class="form-control" id="msgRecipientFilter" placeholder="name@example.com">
             </div>
