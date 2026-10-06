@@ -6,8 +6,14 @@
 @section('content')
   <div class="grid grid-cols-12 card-gap">
 
-    {{-- Current subscription (§24 lifecycle) --}}
-    <div class="col-span-12">
+    {{--
+      Current subscription (§24 lifecycle) paired with Payment methods in the top row: the two
+      answer "what am I on" and "what is it charged to", so they are read together. 7/5 rather
+      than 6/6 because the lifecycle actions are buttons on one line while the payment card is a
+      short list. `lg:` is MAX-width (<=991px) in this template, so the base span governs the
+      wide screen and the pair stacks below it.
+    --}}
+    <div class="col-span-7 lg:col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Your plan</h5>
@@ -22,56 +28,6 @@
           @can('billing.manage')
             <div class="mt-3" id="blLifecycleActions"></div>
           @endcan
-        </div>
-      </div>
-    </div>
-
-    {{-- Plan catalogue (§2, §25) --}}
-    <div class="col-span-12">
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <div class="flex items-center justify-between">
-            <h5>Plans</h5>
-          </div>
-          <p class="f-light mb-0" style="font-size:12px">
-            Changing plan never deletes anything. Losing a feature hides or locks it — your
-            customers, pets and appointment history stay exactly as they are.
-          </p>
-        </div>
-        <div class="card-body pt-0">
-          <div id="blPlansError" class="alert alert-danger" style="display:none"></div>
-          <div class="grid grid-cols-12 card-gap" id="blPlans">
-            <div class="col-span-12 f-light">Loading…</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {{-- The §25 matrix, as it applies to this business right now --}}
-    <div class="col-span-7 lg:col-span-12">
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>What your plan includes</h5>
-          <p class="f-light mb-0" style="font-size:12px">
-            Every capability is listed, including the ones your plan does not have — a locked
-            feature is an upgrade, not a missing screen.
-          </p>
-        </div>
-        <div class="card-body pt-0">
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Capability</th>
-                  <th>Included</th>
-                  <th>Level</th>
-                </tr>
-              </thead>
-              <tbody id="blFeatureRows">
-                <tr><td colspan="3" class="f-light">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </div>
@@ -104,6 +60,27 @@
       </div>
     </div>
 
+    {{-- Plan catalogue (§2, §25) --}}
+    <div class="col-span-12">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <div class="flex items-center justify-between">
+            <h5>Plans</h5>
+          </div>
+          <p class="f-light mb-0" style="font-size:12px">
+            Changing plan never deletes anything. Losing a feature hides or locks it — your
+            customers, pets and appointment history stay exactly as they are.
+          </p>
+        </div>
+        <div class="card-body pt-0">
+          <div id="blPlansError" class="alert alert-danger" style="display:none"></div>
+          <div class="grid grid-cols-12 card-gap" id="blPlans">
+            <div class="col-span-12 f-light">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {{-- Invoice history (§24) --}}
     <div class="col-span-12">
       <div class="card">
@@ -132,6 +109,37 @@
         </div>
       </div>
     </div>
+
+    {{-- The §25 matrix, as it applies to this business right now. Full width now that Payment
+         methods has moved up to pair with Your plan. --}}
+    <div class="col-span-12">
+      <div class="card">
+        <div class="card-header card-no-border pb-2">
+          <h5>What your plan includes</h5>
+          <p class="f-light mb-0" style="font-size:12px">
+            Every capability is listed, including the ones your plan does not have — a locked
+            feature is an upgrade, not a missing screen.
+          </p>
+        </div>
+        <div class="card-body pt-0">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Capability</th>
+                  <th>Included</th>
+                  <th>Level</th>
+                </tr>
+              </thead>
+              <tbody id="blFeatureRows">
+                <tr><td colspan="3" class="f-light">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   {{-- Plan change confirmation. A modal rather than confirm(): changing what a business pays
