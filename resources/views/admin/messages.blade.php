@@ -3,6 +3,25 @@
 @section('title', 'Messages')
 @section('page-heading', 'Messages')
 
+@push('styles')
+  <style>
+    /*
+      The four count tiles are `.card`s inside another card's body, so they carry `mb-0` to keep
+      the last row from pushing a margin down onto the delivery notice. That leaves them with no
+      vertical separation at all the moment they wrap, because Cuba's `.card-gap` is
+      `gap: 0 <column-gap>` — a deliberately zero ROW gap, correct for cards that keep their own
+      bottom margin and wrong for these. The value mirrors `.card-gap`'s own fluid column gap so
+      the horizontal and vertical spacing match.
+
+      Scoped to `#msgTiles` rather than added to the layout's shared `.form-grid` helper: that
+      class means "a grid of form controls", and this is a grid of cards.
+    */
+    #msgTiles {
+      row-gap: calc(15px + (24 - 15) * ((100vw - 320px) / (1920 - 320)));
+    }
+  </style>
+@endpush
+
 @section('content')
   {{--
     §13 Notifications & Messaging — the delivery log.
@@ -155,8 +174,11 @@
           { label: 'Opted out', value: counts.skipped_no_consent || 0 }
         ];
 
+        // Cuba's breakpoint prefixes are MAX-width, not Tailwind's min-width: `md:` is
+        // <=767px and `sm:` is <=575px. So the base span is the widest screen — four tiles
+        // across one row — dropping to two across on a tablet and one per row on a phone.
         document.getElementById('msgTiles').innerHTML = tiles.map(function (tile) {
-          return '<div class="col-span-6 md:col-span-3">' +
+          return '<div class="col-span-3 md:col-span-6 sm:col-span-12">' +
             '<div class="card mb-0"><div class="card-body">' +
             '<p class="f-light mb-1">' + api.escapeHtml(tile.label) + '</p>' +
             '<h4 class="mb-0">' + tile.value + '</h4>' +
