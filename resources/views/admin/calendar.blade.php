@@ -28,7 +28,7 @@
 @section('content')
   <div class="container calendar-basic">
     <div class="card">
-      <div class="card-body pt-0">
+      <div class="card-body">
         <div id="calendarError" class="alert alert-danger" style="display:none"></div>
 
         <div class="grid grid-cols-12 card-gap" id="wrap">
@@ -95,9 +95,9 @@
           },
         } : {},
         headerToolbar: {
-          left: 'prev,next today',
+          left: 'prev,next today dayGridMonth,timeGridWeek,timeGridDay,listWeek',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' + (canManageAppointments ? ' manageAppointments' : ''),
+          right: canManageAppointments ? 'manageAppointments' : '',
         },
         initialView: 'dayGridMonth',
         navLinks: true,
