@@ -124,7 +124,23 @@
             `col-auto` logo out of 12, which overflows the row and is what pushed the header
             icons out of alignment. The business name is genuinely useful here and costs nothing.
           --}}
-          <div class="left-header col-span-5 xxl:col-span-6 xl:col-span-5 lg:col-span-4 md:col-span-3">
+          <div class="left-header col-span-5 xxl:col-span-6 xl:col-span-5 lg:col-span-4 md:col-span-3 flex items-center">
+            {{--
+              The sidebar collapse control, moved here from the sidebar's own `logo-wrapper` so it
+              sits in the header ahead of the business name. `sidebar-menu.js` binds it with
+              `$(".toggle-sidebar")` — a class selector over every match — so the handler follows
+              the element anywhere in the DOM and needs no change. The vendor rule that styles it
+              (`.page-wrapper.compact-wrapper .page-header .header-wrapper .toggle-sidebar`) is
+              scoped to any descendant of `.header-wrapper`, not to the logo block, so the border
+              and spacing come across for free; `flex items-center` on the column is what puts it
+              inline with the name rather than above it.
+
+              `lg:hidden` is desktop-first, as everywhere in this template (`lg: {max: "991px"}`):
+              it reads "hidden at ≤991px". Below that width the mobile toggle inside
+              `header-logo-wrapper` above takes over, so exactly one collapse control is visible
+              at any width rather than two side by side.
+            --}}
+            <div class="toggle-sidebar lg:hidden"><i class="status_toggle middle sidebar-toggle" data-feather="grid"></i></div>
             {{-- `loadMissing`, not a bare `->tenant`: AppServiceProvider calls
                  Model::shouldBeStrict() outside production, which turns lazy loading into a
                  thrown LazyLoadingViolationException — a bare relation access here would 500
@@ -199,8 +215,10 @@
                 <img class="max-w-full h-auto for-light" src="{{ asset('admin-assets/images/logo/logo.png') }}" alt="GroomerLoop">
                 <img class="max-w-full h-auto for-dark" src="{{ asset('admin-assets/images/logo/logo_dark.png') }}" alt="GroomerLoop">
               </a>
+              {{-- The collapse toggle that used to sit here now lives in the header's
+                   `left-header` column, ahead of the business name. `.back-btn` stays: it is the
+                   template's mobile-only close affordance, a different control. --}}
               <div class="back-btn hidden lg:block"><i class="fa-solid fa-angle-left"></i></div>
-              <div class="toggle-sidebar"><i class="status_toggle middle sidebar-toggle" data-feather="grid"></i></div>
             </div>
             <div class="logo-icon-wrapper"><a href="{{ route('admin.dashboard') }}"><img class="max-w-full h-auto" src="{{ asset('admin-assets/images/logo/logo-icon.png') }}" alt="GroomerLoop"></a></div>
             <nav class="sidebar-main">
