@@ -28,14 +28,6 @@
 @section('content')
   <div class="container calendar-basic">
     <div class="card">
-      <div class="card-header card-no-border pb-2">
-        <div class="flex items-center justify-between">
-          <h5>Calendar</h5>
-          @can('appointments.manage')
-            <a href="{{ route('admin.appointments') }}" class="btn btn-primary btn-sm">Manage appointments</a>
-          @endcan
-        </div>
-      </div>
       <div class="card-body pt-0">
         <div id="calendarError" class="alert alert-danger" style="display:none"></div>
 
@@ -87,13 +79,25 @@
       var calendarEl = document.getElementById('calendar');
       var errorBox = document.getElementById('calendarError');
 
+      // Moved into the calendar's own toolbar (right end, after the view switcher) so it sits in
+      // the same row as prev/next/today and the view buttons instead of a separate header row.
+      var canManageAppointments = @json(auth()->user()->can('appointments.manage'));
+
       var calendar = new FullCalendar.Calendar(calendarEl, {
         // Cuba's own options for the widget's shape, minus its demo-only drag-and-drop.
         aspectRatio: 2,
+        customButtons: canManageAppointments ? {
+          manageAppointments: {
+            text: 'Manage appointments',
+            click: function () {
+              window.location.href = '{{ route('admin.appointments') }}';
+            },
+          },
+        } : {},
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' + (canManageAppointments ? ' manageAppointments' : ''),
         },
         initialView: 'dayGridMonth',
         navLinks: true,
