@@ -3,6 +3,53 @@
 @section('title', 'Reports & Insights')
 @section('page-heading', 'Reports & Insights')
 
+@push('styles')
+  <style>
+    /*
+      The seven §11 appointment statuses as one row of small cards. This needs its own grid
+      rather than Cuba's utilities because the template ships only `.grid-cols-12` and
+      `.grid-cols-3` — there is no seven-column utility, and 7 does not divide 12.
+
+      Written desktop-first with max-width overrides to match the template's own convention
+      (its `md:`/`sm:` prefixes are max-width, not Tailwind's min-width). Seven across holds to
+      1200px; below that the sidebar is still expanded and the content column is too narrow for
+      seven, so it steps down. `gap` covers both axes, so the wrapped rows are spaced without
+      the cards needing their own bottom margin — which is why that margin is zeroed here.
+    */
+    #repStatusTiles {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: calc(15px + (24 - 15) * ((100vw - 320px) / (1920 - 320)));
+    }
+
+    #repStatusTiles .card {
+      margin-bottom: 0;
+    }
+
+    #repStatusTiles .card-body {
+      padding: 14px 12px;
+    }
+
+    @media (max-width: 1199px) {
+      #repStatusTiles {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 767px) {
+      #repStatusTiles {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 575px) {
+      #repStatusTiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+@endpush
+
 @section('content')
   {{--
     §16 Dashboard & Business Insights. One fetch against /api/v1/reports/dashboard (D-007) drives
@@ -54,18 +101,15 @@
       </div>
     </div>
 
-    <div class="col-span-12 md:col-span-6">
+    {{-- Full width, because the seven statuses render as one row of cards rather than a table. --}}
+    <div class="col-span-12">
       <div class="card">
         <div class="card-header card-no-border pb-2">
           <h5>Appointments by status</h5>
         </div>
         <div class="card-body pt-0">
-          <div class="table-responsive">
-            <table class="table">
-              <tbody id="repStatusRows">
-                <tr><td class="f-light">Loading…</td></tr>
-              </tbody>
-            </table>
+          <div id="repStatusTiles">
+            <p class="f-light mb-0">Loading…</p>
           </div>
         </div>
       </div>
@@ -216,7 +260,9 @@
             ? '<p class="f-light mb-0">' + state + '</p>'
             : '<h4 class="mb-0">' + tile.value + '</h4>';
 
-          return '<div class="col-span-6 md:col-span-2">' +
+          // Six across one row. Desktop-first: Cuba's prefixes are MAX-width, so the base span
+          // governs the widest screen and `md:` (<=767px) / `sm:` (<=575px) step it down.
+          return '<div class="col-span-2 md:col-span-4 sm:col-span-6">' +
             '<div class="card"><div class="card-body">' +
             '<p class="f-light mb-1">' + api.escapeHtml(tile.label) + '</p>' +
             body +
@@ -246,13 +292,15 @@
         }).join('');
       }
 
-      function renderStatusRows() {
+      function renderStatusTiles() {
         var metric = byKey('appointments_by_status');
-        var body = document.getElementById('repStatusRows');
+        var body = document.getElementById('repStatusTiles');
         var state = stateLabel(metric.status);
 
+        // The state label replaces the whole grid rather than filling seven cards with zeros:
+        // "below_grade"/"insufficient_data" means there is no number to show (invariant #7).
         if (state) {
-          body.innerHTML = '<tr><td class="f-light">' + state + '</td></tr>';
+          body.innerHTML = '<p class="f-light mb-0">' + state + '</p>';
           return;
         }
 
@@ -263,7 +311,10 @@
         };
 
         body.innerHTML = Object.keys(labels).map(function (key) {
-          return '<tr><td>' + labels[key] + '</td><td class="text-end">' + (byStatus[key] || 0) + '</td></tr>';
+          return '<div class="card"><div class="card-body">' +
+            '<p class="f-light mb-1">' + labels[key] + '</p>' +
+            '<h5 class="mb-0">' + (byStatus[key] || 0) + '</h5>' +
+            '</div></div>';
         }).join('');
       }
 
@@ -379,7 +430,7 @@
       function render() {
         renderOverviewTiles();
         renderAlerts();
-        renderStatusRows();
+        renderStatusTiles();
         renderVolumeRows();
         renderServiceRows();
         renderStaffRows();
