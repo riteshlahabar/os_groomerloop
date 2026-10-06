@@ -61,9 +61,15 @@ final class DowngradePreservesDataTest extends TestCase
         // The feature is gone...
         $this->assertFalse($this->entitlements()->allows(Feature::AiVoiceAgent));
         $this->assertFalse($this->entitlements()->allows(Feature::LocalSeo));
+        $this->assertFalse($this->entitlements()->allows(Feature::Automation));
+
+        // ...while a feature Starter still carries is re-graded rather than removed. That is the
+        // other half of invariant #4: dropping a tier lowers how much you get of something, it
+        // does not erase it. Asserted on business_insights because automation — which used to
+        // make this point — left Starter entirely on 2026-10-06 and now proves the case above.
         $this->assertSame(
             FeatureGrade::Basic,
-            $this->entitlements()->gradeOf(Feature::Automation)
+            $this->entitlements()->gradeOf(Feature::BusinessInsights)
         );
 
         // ...and every row is still there.

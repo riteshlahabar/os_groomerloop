@@ -44,8 +44,25 @@ final class AutomationSettingsManager
         return $rows;
     }
 
+    /**
+     * Whether this automation should actually fire.
+     *
+     * Answers false for a plan that no longer includes automation at all, not only for a row the
+     * owner switched off. Every firing path funnels through here — the cron sweep's four keys
+     * directly, the immediate listener's fifth through {@see AutomationRunner} — so this is the
+     * one check that can stop a downgraded business from being automated forever. Without it a
+     * tier change that removed the feature would hide the screen and 402 the API while the
+     * already-enabled rows kept sending, with no surface left to turn them off from.
+     *
+     * Invariant #4 is why the rows are left alone rather than disabled: losing a plan feature
+     * locks it, never destroys it, and an upgrade brings the owner's own choices straight back.
+     */
     public function isEnabled(AutomationKey $key): bool
     {
+        if (! $this->entitlements->allows(Feature::Automation)) {
+            return false;
+        }
+
         return AutomationSetting::query()
             ->where('automation_key', $key->value)
             ->first()?->is_enabled ?? false;

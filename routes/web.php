@@ -171,15 +171,28 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
     // §16. Real module, real screen — see modules/Insights. entitlement:business_insights is a
     // presence check only (every plan has at least the Basic grade); the page itself grades each
     // metric row against the tenant's actual grade via DashboardReportBuilder.
+    //
+    // ResolveTenant for the same reason `growth` and `reviews` below list it: `entitlement:`
+    // evaluates on this bare request, before the page's own client-side fetch, and with no
+    // resolved tenant PlanEntitlements falls back to the default plan instead of this business's.
+    // Harmless while business_insights is in every plan — which is precisely why it sat here
+    // unnoticed, and why it would become a silent hole the day the feature moves off Starter.
     Route::get('reports', fn () => view('admin.reports'))
-        ->middleware(['permission:reports.view', 'entitlement:business_insights'])->name('reports');
+        ->middleware([ResolveTenant::class, 'permission:reports.view', 'entitlement:business_insights'])
+        ->name('reports');
 
     // §18. Real module, real screen — see modules/Automation. §19's AI Voice Agent (the other
     // half this nav item's label names) is not built — no telephony or LLM provider exists in
     // this product yet (§30 gap) — so this screen covers Automation only; AI Voice Agent stays
     // out of scope until a provider is chosen.
+    //
+    // ResolveTenant is load-bearing here rather than precautionary: automation left the Starter
+    // plan on 2026-10-06, so this gate finally has a tier to refuse. Without a resolved tenant
+    // PlanEntitlements would grade against the default — Starter — and admit every business
+    // while the sidebar correctly hid the link.
     Route::get('automation', fn () => view('admin.automation'))
-        ->middleware(['permission:automation.view', 'entitlement:automation'])->name('automation');
+        ->middleware([ResolveTenant::class, 'permission:automation.view', 'entitlement:automation'])
+        ->name('automation');
 
     // §17. Real screen — composes existing Insights/Automation/Entitlements endpoints
     // client-side (D-007); no new module. Entitlement key matches the sidebar's own `feature`

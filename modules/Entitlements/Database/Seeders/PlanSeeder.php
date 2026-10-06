@@ -84,8 +84,16 @@ final class PlanSeeder extends Seeder
                 // The floor every business lands on before subscribing, and the tier a
                 // cancelled subscription falls back to (invariant #4: they keep their data).
                 'is_default' => true,
+
+                // Automation is deliberately absent, 2026-10-06. It was granted here at Basic,
+                // which let a $79 business run two of the five §18 automations — a capability
+                // the price list only sells from Growth up ("Automation Support" / "Business
+                // Automation"). The matrix, not the copy, was the thing out of step.
+                //
+                // BusinessInsights stays: Starter's five Basic metrics plus eight locked rows
+                // linking to Billing is a better upsell than an absent screen, and the price
+                // list's "Basic Business Dashboard" fairly covers it.
                 'features' => $this->core() + [
-                    Feature::Automation->value => FeatureGrade::Basic,
                     Feature::BusinessInsights->value => FeatureGrade::Basic,
                 ],
             ],

@@ -62,8 +62,9 @@ final class PlanMatrixTest extends TestCase
         ];
 
         return [
+            // No 'automation' row: it left this tier on 2026-10-06 because the price list only
+            // sells automation from Growth up. Starter is the one plan without it.
             'starter' => ['starter', $core + [
-                'automation' => FeatureGrade::Basic,
                 'business_insights' => FeatureGrade::Basic,
             ]],
             'business' => ['business', $core + [

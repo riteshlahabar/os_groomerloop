@@ -11,7 +11,7 @@
 
     §19 AI Voice Agent is not built — no telephony or LLM provider exists in this product yet —
     and gets a bare placeholder card at the bottom rather than a second screen, since this is the
-    one nav item that names both.
+    one nav item that names both. That card is entitlement-gated: see the @if around it.
   --}}
   <div class="grid grid-cols-12 card-gap">
 
@@ -78,17 +78,26 @@
       </div>
     </div>
 
-    <div class="col-span-12">
-      <div class="card">
-        <div class="card-body text-center" style="padding:40px 20px">
-          <svg style="width:40px;height:40px" class="stroke-icon">
-            <use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-api"></use>
-          </svg>
-          <h5 class="mt-3">AI Voice Agent</h5>
-          <p class="f-light">Not available yet.</p>
+    {{--
+      Shown only to a plan that actually buys it — ai_voice_agent is Growth Partner only. Naming
+      a $399 capability on a cheaper plan's screen reads as a delivery that is pending, when it
+      is really a tier the business has not bought; the honest upsell surface is /admin/billing.
+      Readable here because this route now carries ResolveTenant — without it the entitlement
+      would grade against the default plan rather than this business's.
+    --}}
+    @if (app(\Modules\Entitlements\Contracts\Entitlements::class)->allows(\Modules\Entitlements\Domain\Feature::AiVoiceAgent))
+      <div class="col-span-12">
+        <div class="card">
+          <div class="card-body text-center" style="padding:40px 20px">
+            <svg style="width:40px;height:40px" class="stroke-icon">
+              <use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#stroke-api"></use>
+            </svg>
+            <h5 class="mt-3">AI Voice Agent</h5>
+            <p class="f-light">Not available yet.</p>
+          </div>
         </div>
       </div>
-    </div>
+    @endif
   </div>
 @endsection
 

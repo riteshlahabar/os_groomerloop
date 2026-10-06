@@ -40,6 +40,11 @@ final class EntitlementMiddlewareTest extends TestCase
             Route::get('advanced-automation', fn () => response()->json(['ok' => true]))
                 ->middleware('entitlement:automation,advanced');
 
+            // A §25 core row, included in every tier. Gives the default-tier test below a
+            // positive case that survives any repackaging of the optional features.
+            Route::get('crm', fn () => response()->json(['ok' => true]))
+                ->middleware('entitlement:crm_pets');
+
             Route::get('nonsense', fn () => response()->json(['ok' => true]))
                 ->middleware('entitlement:not_a_real_feature');
 
@@ -91,14 +96,16 @@ final class EntitlementMiddlewareTest extends TestCase
 
     public function test_a_grade_below_the_minimum_is_refused(): void
     {
-        // Starter has automation, but only at Basic.
-        $starterUser = $this->userOn('starter');
+        // Business has automation, but only at Basic. Deliberately not Starter: automation left
+        // that tier on 2026-10-06, so a Starter user would now demonstrate "feature absent" —
+        // a different refusal, already covered above — rather than "grade below the minimum".
+        $businessUser = $this->userOn('business');
 
-        $this->actingAs($starterUser)
+        $this->actingAs($businessUser)
             ->getJson('/api/v1/testing/automation')
             ->assertOk();
 
-        $this->actingAs($starterUser)
+        $this->actingAs($businessUser)
             ->getJson('/api/v1/testing/advanced-automation')
             ->assertStatus(402)
             ->assertJsonPath('required_grade', 'advanced');
@@ -154,11 +161,17 @@ final class EntitlementMiddlewareTest extends TestCase
 
         $this->assertNull($tenant->plan_id);
 
-        // Starter includes automation at Basic...
-        $this->actingAs($user)->getJson('/api/v1/testing/automation')->assertOk();
+        // Starter includes CRM + pets. A core §25 row is the right positive here: it is what
+        // proves the fallback *resolved a plan* rather than answering with nothing, which is the
+        // entire difference between this test and the no-default case above — and unlike an
+        // optional feature it stays true through any later repackaging.
+        $this->actingAs($user)->getJson('/api/v1/testing/crm')->assertOk();
 
         // ...and does not include the voice agent.
         $this->actingAs($user)->getJson('/api/v1/testing/voice')->assertStatus(402);
+
+        // Nor automation, which left the Starter tier on 2026-10-06.
+        $this->actingAs($user)->getJson('/api/v1/testing/automation')->assertStatus(402);
     }
 
     private function userOn(string $planKey, Role $role = Role::Owner): User
