@@ -85,10 +85,10 @@ final class PlanSeeder extends Seeder
                 // cancelled subscription falls back to (invariant #4: they keep their data).
                 'is_default' => true,
 
-                // Automation is deliberately absent, 2026-10-06. It was granted here at Basic,
-                // which let a $79 business run two of the five §18 automations — a capability
-                // the price list only sells from Growth up ("Automation Support" / "Business
-                // Automation"). The matrix, not the copy, was the thing out of step.
+                // Automation is deliberately absent, 2026-10-06: the price list sells it from
+                // Growth up only ("Automation Support" / "Business Automation"), so Starter and
+                // Business both go without. Granting it here at Basic had let a $79 business run
+                // two of the five §18 automations for free.
                 //
                 // BusinessInsights stays: Starter's five Basic metrics plus eight locked rows
                 // linking to Billing is a better upsell than an absent screen, and the price
@@ -109,7 +109,9 @@ final class PlanSeeder extends Seeder
                     Feature::SocialManagement->value => FeatureGrade::Standard,
                     Feature::CustomerFollowUp->value => FeatureGrade::Standard,
                     Feature::CustomerRetention->value => FeatureGrade::Basic,
-                    Feature::Automation->value => FeatureGrade::Basic,
+
+                    // No Automation row, 2026-10-06 — see the Starter block above. §18 automation
+                    // is a Growth-tier-and-up capability, so this is the highest plan without it.
                     Feature::BusinessInsights->value => FeatureGrade::Standard,
                     Feature::GrowthReporting->value => FeatureGrade::Basic,
                 ],

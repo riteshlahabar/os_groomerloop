@@ -96,16 +96,16 @@ final class EntitlementMiddlewareTest extends TestCase
 
     public function test_a_grade_below_the_minimum_is_refused(): void
     {
-        // Business has automation, but only at Basic. Deliberately not Starter: automation left
-        // that tier on 2026-10-06, so a Starter user would now demonstrate "feature absent" —
-        // a different refusal, already covered above — rather than "grade below the minimum".
-        $businessUser = $this->userOn('business');
+        // Growth has automation, but only at Standard. It is the lowest tier that has the feature
+        // at all since 2026-10-06 — on Starter or Business this would demonstrate "feature
+        // absent", a different refusal already covered above, rather than "grade below minimum".
+        $growthUser = $this->userOn('growth');
 
-        $this->actingAs($businessUser)
+        $this->actingAs($growthUser)
             ->getJson('/api/v1/testing/automation')
             ->assertOk();
 
-        $this->actingAs($businessUser)
+        $this->actingAs($growthUser)
             ->getJson('/api/v1/testing/advanced-automation')
             ->assertStatus(402)
             ->assertJsonPath('required_grade', 'advanced');
