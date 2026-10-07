@@ -70,6 +70,37 @@
       .card-body {
         overflow-wrap: break-word;
       }
+
+      /*
+        Header notification bell. The template styles `.notification-box` as `position:
+        relative` only inside one of its layout variants, so the count badge anchors to the
+        bell reliably only if that is restated here. `rounded-pill` does not exist in this
+        stylesheet, hence the explicit radius.
+      */
+      .notification-box {
+        position: relative;
+      }
+
+      #hdrNotifBadge {
+        position: absolute;
+        top: -6px;
+        right: -8px;
+        min-width: 16px;
+        padding: 1px 4px;
+        border-radius: 10px;
+        font-size: 9px;
+        line-height: 14px;
+        text-align: center;
+      }
+
+      .notification-dropdown .hdr-notif-row {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(var(--light-semi-gray), 0.6);
+      }
+
+      .notification-dropdown .hdr-notif-row:last-of-type {
+        border-bottom: 0;
+      }
     </style>
 
     @stack('styles')
@@ -155,15 +186,34 @@
                   <svg><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#moon"></use></svg>
                 </div>
               </li>
-              <li class="onhover-dropdown">
-                <div class="notification-box">
-                  <svg><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#notification"></use></svg>
-                </div>
-                <div class="onhover-show-div notification-dropdown">
-                  <h6 class="mb-0 dropdown-title f-[18px]">Notifications</h6>
-                  <p class="f-light mb-0">Nothing yet — §13 notifications are not live in this environment.</p>
-                </div>
-              </li>
+              {{--
+                The §13 delivery log, read live from GET /api/v1/notifications (D-007) — it used
+                to be a hardcoded line claiming notifications were not live in this environment,
+                which stopped being true when `D-031` loaded the module and `D-032` gave it a
+                real SMTP driver.
+
+                Gated on `messages.view`, the same permission that endpoint carries, so the bell
+                is absent for a role that cannot read the log rather than present with a dropdown
+                whose fetch 403s. Groomer/Staff is the only role without it; Owner, Manager,
+                Front Desk and Marketing all have it.
+
+                The outer div/ul structure is left exactly as the Cuba template shipped it —
+                only the contents are swapped. Its positioning depends on the full header
+                scaffold, which is not safe to rework piecemeal.
+              --}}
+              @can('messages.view')
+                <li class="onhover-dropdown">
+                  <div class="notification-box">
+                    <svg><use href="{{ asset('admin-assets/svg/icon-sprite.svg') }}#notification"></use></svg>
+                    <span class="badge badge-danger" id="hdrNotifBadge" style="display:none"></span>
+                  </div>
+                  <div class="onhover-show-div notification-dropdown">
+                    <h6 class="mb-0 dropdown-title f-[18px]">Notifications</h6>
+                    <div id="hdrNotifList" class="f-light">Loading…</div>
+                    <a class="f-w-500" href="{{ route('admin.messages') }}" id="hdrNotifAll">View all</a>
+                  </div>
+                </li>
+              @endcan
               <li class="profile-nav onhover-dropdown !py-0 !pe-0">
                 <div class="flex profile-media items-center">
                   {{-- 35×35 on disk, matching the template's own profile.png. The vendor CSS
@@ -655,6 +705,89 @@
           toDatetimeLocalValue: toDatetimeLocalValue,
           fromDatetimeLocalValue: fromDatetimeLocalValue,
         };
+      })();
+
+      // Header notification bell — the §13 delivery log's most recent rows, read from the same
+      // endpoint /admin/messages uses. Absent entirely without `messages.view`, so the guard
+      // below is the normal path for a Groomer, not an error.
+      (function () {
+        var list = document.getElementById('hdrNotifList');
+
+        if (!list) {
+          return;
+        }
+
+        var api = window.GroomerLoopAdmin;
+        var badge = document.getElementById('hdrNotifBadge');
+        var lastLoadedAt = 0;
+
+        function statusBadge(row) {
+          if (row.status === 'sent') {
+            return '<span class="badge badge-light-success">Sent</span>';
+          }
+          if (row.status === 'skipped_no_consent') {
+            return '<span class="badge badge-light-secondary">Opted out</span>';
+          }
+          return '<span class="badge badge-light-danger">Failed</span>';
+        }
+
+        async function load() {
+          lastLoadedAt = Date.now();
+
+          var result = await api.get('/api/v1/notifications?per_page=5');
+
+          if (!result.ok) {
+            list.innerHTML = 'Unavailable.';
+            return;
+          }
+
+          var rows = result.body.data || [];
+          var counts = (result.body.meta || {}).status_counts || {};
+
+          // The badge counts failures, not "unread": `notification_logs` is an append-only
+          // record with no read state on it, so a number claiming to be unread messages would
+          // be invented. Failures are a real count with something to do about them.
+          var failed = counts.failed || 0;
+          if (badge) {
+            badge.textContent = failed > 99 ? '99+' : failed;
+            badge.style.display = failed > 0 ? 'inline-block' : 'none';
+          }
+
+          if (!rows.length) {
+            list.innerHTML = 'No messages yet.';
+            return;
+          }
+
+          list.innerHTML = rows.map(function (row) {
+            // Same wall-clock treatment the Messages screen gives these timestamps: the API
+            // stamps a +00:00 suffix that does not semantically apply, so the characters are
+            // read literally rather than through a Date.
+            var when = row.created_at
+              ? api.wallClockDateLabel(row.created_at) + ' ' + api.wallClockTimeLabel(row.created_at)
+              : '';
+
+            return '<div class="hdr-notif-row">' +
+              '<div>' + api.escapeHtml(row.type_label) + ' ' + statusBadge(row) + '</div>' +
+              '<div class="f-light" style="font-size:11px">' +
+                api.escapeHtml(row.recipient || '—') + ' · ' + api.escapeHtml(when) +
+              '</div>' +
+              '</div>';
+          }).join('');
+        }
+
+        // Refreshed when the bell is actually looked at rather than on a background timer, so
+        // the list is current at the moment it is read without every open admin tab polling.
+        // Rate-limited so repeated hovers do not re-request.
+        var box = document.querySelector('.notification-box');
+        if (box) {
+          box.addEventListener('mouseenter', function () {
+            if (Date.now() - lastLoadedAt > 15000) {
+              load();
+            }
+          });
+        }
+
+        load();
       })();
 
       document.getElementById('adminLogoutLink').addEventListener('click', async function (e) {
