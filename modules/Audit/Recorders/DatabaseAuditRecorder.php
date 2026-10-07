@@ -31,11 +31,19 @@ final class DatabaseAuditRecorder implements AuditRecorder
             // event may legitimately belong to no tenant and the intent should be visible here.
             'tenant_id' => $this->tenants->id(),
 
-            // Taken from the auth guard rather than from the request, because the guard is
-            // where "who is acting" actually lives. A request object only knows the user once
-            // authentication middleware has attached a resolver to it, so reading it here
-            // would miss the actor in console commands, queued jobs and tests.
-            'user_id' => Auth::id(),
+            // The `web` guard specifically, not the ambient default: this column is a foreign
+            // key into `users`, and Laravel's `auth:<guard>` middleware calls
+            // `Auth::shouldUse($guard)` the moment it authenticates a request — a documented
+            // mechanism so guard-agnostic code can call bare `Auth::id()` and get "whichever
+            // guard authenticated this request." Once the Customer Portal's `customer` guard
+            // (D-043) existed, a request authenticated on it made the ambient `Auth::id()`
+            // return a `customers.id` value here, which violated this column's FK the first
+            // time a customer action (`customer.logged_out`) tried to record one — caught live
+            // during Phase 2 verification, not by inspection. Reading `web` explicitly means
+            // this column keeps meaning exactly what it always meant — "which staff/platform
+            // user" — regardless of which other guard, present or future, a request happens to
+            // authenticate through.
+            'user_id' => Auth::guard('web')->id(),
 
             'event' => $event,
             'auditable_type' => $subject?->getMorphClass(),

@@ -2,6 +2,8 @@
 
 namespace Modules\Pets\Contracts;
 
+use Modules\Pets\Domain\PetSummary;
+
 /**
  * How other modules look a pet up (D-007).
  *
@@ -94,4 +96,13 @@ interface PetDirectory
      * for `service_id`/`staff_member_id` — shape only in the request, existence here.
      */
     public function speciesExists(int $speciesId): bool;
+
+    /**
+     * This customer's current pets, in the shape the Customer Portal's own "my pets" view needs
+     * (`D-043`) — richer than `idsForCustomer()`/`namesOf()`, and deliberately built from a DTO
+     * that has no `internal_notes` field at all rather than one a caller must remember to omit.
+     *
+     * @return list<PetSummary>
+     */
+    public function summariesForCustomer(int $customerId): array;
 }

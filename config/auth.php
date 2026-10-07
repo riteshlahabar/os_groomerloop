@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Modules\Crm\Models\Customer;
 
 return [
 
@@ -42,6 +43,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Customer Portal. A deliberately separate guard, not a 7th Identity role on `web` —
+        // a customer session must be structurally unable to reach any /admin or /platform
+        // route, not merely excluded from them by a permission check that could be missed.
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'customers',
+        ],
     ],
 
     /*
@@ -71,6 +80,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => Customer::class,
+        ],
     ],
 
     /*

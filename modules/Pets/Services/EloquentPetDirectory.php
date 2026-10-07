@@ -5,6 +5,7 @@ namespace Modules\Pets\Services;
 use Modules\Pets\Actions\CreatePet;
 use Modules\Pets\Actions\EnsureDefaultSpecies;
 use Modules\Pets\Contracts\PetDirectory;
+use Modules\Pets\Domain\PetSummary;
 use Modules\Pets\Models\Pet;
 use Modules\Pets\Models\Species;
 
@@ -120,6 +121,40 @@ final class EloquentPetDirectory implements PetDirectory
     public function speciesExists(int $speciesId): bool
     {
         return Species::query()->whereKey($speciesId)->exists();
+    }
+
+    /**
+     * @return list<PetSummary>
+     */
+    public function summariesForCustomer(int $customerId): array
+    {
+        return Pet::query()
+            ->forCustomer($customerId)
+            ->current()
+            ->with('species')
+            ->orderBy('name')
+            ->get()
+            ->map(static fn (Pet $pet): PetSummary => new PetSummary(
+                id: (int) $pet->getKey(),
+                name: $pet->name,
+                speciesName: $pet->species?->name,
+                breed: $pet->breed,
+                sex: $pet->sex->value,
+                dateOfBirth: $pet->date_of_birth?->toDateString(),
+                ageYears: $pet->ageYears(),
+                ageIsApproximate: $pet->isAgeApproximate(),
+                ageBreakdown: $pet->ageBreakdown(),
+                weightLb: $pet->weight_lb === null ? null : (string) $pet->weight_lb,
+                coatTypeLabel: $pet->coat_type?->label(),
+                coatNotes: $pet->coat_notes,
+                customerNotes: $pet->customer_notes,
+                temperamentNotes: $pet->temperament_notes,
+                specialInstructions: $pet->special_instructions,
+                medicalNotes: $pet->medical_notes,
+                status: $pet->status->value,
+                statusLabel: $pet->status->label(),
+            ))
+            ->all();
     }
 
     /**

@@ -6,6 +6,7 @@ use Modules\Crm\Actions\CreateCustomer;
 use Modules\Crm\Actions\UpsertCustomerTag;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Crm\Domain\CommunicationChannel;
+use Modules\Crm\Domain\ContactNormaliser;
 use Modules\Crm\Domain\CustomerContactDetails;
 use Modules\Crm\Models\Customer;
 use Modules\Tenancy\Support\TenantContext;
@@ -141,6 +142,28 @@ final class EloquentCustomerDirectory implements CustomerDirectory
         $customer->tags()->syncWithoutDetaching([
             $tag->getKey() => ['tenant_id' => $this->tenants->id()],
         ]);
+    }
+
+    public function findIdByEmail(string $email): ?int
+    {
+        $customer = Customer::query()
+            ->where('email_normalised', ContactNormaliser::email($email))
+            ->orderBy('id')
+            ->first();
+
+        return $customer?->getKey();
+    }
+
+    public function setPassword(int $customerId, string $plainPassword): void
+    {
+        $customer = Customer::query()->findOrFail($customerId);
+
+        // The model's own `hashed` cast does the actual hashing on save.
+        $customer->password = $plainPassword;
+        $customer->password_set_at = now();
+        $customer->save();
+
+        unset($this->resolved[$customerId]);
     }
 
     /**

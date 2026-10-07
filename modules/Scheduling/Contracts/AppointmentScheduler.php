@@ -78,4 +78,14 @@ interface AppointmentScheduler
     public function cancel(int $appointmentId): AppointmentSummary;
 
     public function updateStatus(int $appointmentId, AppointmentStatus $status, ?string $note = null): AppointmentSummary;
+
+    /**
+     * Every appointment ever booked for one customer, newest first — the Customer Portal's own
+     * history view (`D-043`), built the same contracts-only way the public booking page and the
+     * admin calendar already are: Customer Portal never reaches this module's `Appointment`
+     * model directly.
+     *
+     * @return list<AppointmentSummary>
+     */
+    public function appointmentsForCustomer(int $customerId): array;
 }

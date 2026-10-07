@@ -149,6 +149,7 @@ final class NotificationDispatcher implements MessageSender
         $previousWhen = $context['previous_starts_at'] ?? '';
         $cancelUrl = $context['cancel_url'] ?? null;
         $reviewUrl = $context['review_url'] ?? null;
+        $claimUrl = $context['claim_url'] ?? null;
 
         $subject = match ($type) {
             NotificationType::BookingRequested => "Booking received: {$service}",
@@ -161,6 +162,7 @@ final class NotificationDispatcher implements MessageSender
             NotificationType::RebookingReminder => "Time for another {$service}?",
             NotificationType::ReviewRequest => 'How did we do?',
             NotificationType::CustomerRetention => "We'd love to see you again",
+            NotificationType::AccountClaimLink => 'Set up your account',
         };
 
         $body = match ($type) {
@@ -174,6 +176,7 @@ final class NotificationDispatcher implements MessageSender
             NotificationType::RebookingReminder => "Hi {$customerName}, it's been a while since your last {$service}. Ready to book the next one?",
             NotificationType::ReviewRequest => "Hi {$customerName}, we hope you and your pet enjoyed {$service}. We'd really appreciate a review.",
             NotificationType::CustomerRetention => "Hi {$customerName}, we haven't seen you in a while — we'd love to have you back.",
+            NotificationType::AccountClaimLink => "Hi {$customerName}, set a password to view your appointments online: {$claimUrl}",
         };
 
         // Only the two types a customer can still act on carry the link — a cancelled or

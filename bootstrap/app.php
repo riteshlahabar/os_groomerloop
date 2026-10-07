@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Modules\Tenancy\Http\Middleware\ResolveCustomerTenant;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenant;
 use Modules\Tenancy\Http\Middleware\ResolvePublicTenantById;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
@@ -65,6 +66,27 @@ return Application::configure(basePath: dirname(__DIR__))
             before: SubstituteBindings::class,
             prepend: ResolvePublicTenantById::class,
         );
+
+        // Same guarantee again, for the Customer Portal, also id-keyed.
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolveCustomerTenant::class,
+        );
+
+        // Laravel's default Authenticate middleware has no per-guard redirect — every
+        // unauthenticated web request falls back to the single `login` route, which is staff's
+        // own `/login` (Identity, `web` guard). Without this, an unauthenticated visitor to
+        // `/portal/{tenant}/...` (Customer Portal, `customer` guard) was sent to the staff login
+        // page instead of their own, where their credentials would not even be checked against
+        // the right guard. Scoped to `/portal/*` so `/admin`/`/platform`'s own redirect is
+        // untouched.
+        $middleware->redirectGuestsTo(function (Request $request): string {
+            if ($request->is('portal/*')) {
+                return route('customer-portal.login', ['tenant' => $request->route('tenant')]);
+            }
+
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

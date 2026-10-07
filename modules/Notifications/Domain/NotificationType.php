@@ -24,6 +24,13 @@ enum NotificationType: string
     case ReviewRequest = 'review_request';
     case CustomerRetention = 'customer_retention';
 
+    /**
+     * Added by the Customer Portal (`D-043`) — not a §13 spec row, but the same catalogue is the
+     * honest place for it: one signed link, carried by `NotificationDispatcher` exactly like
+     * `cancel_url`/`review_url` already are, rather than a second send path outside this module.
+     */
+    case AccountClaimLink = 'account_claim_link';
+
     public function label(): string
     {
         return match ($this) {
@@ -37,6 +44,7 @@ enum NotificationType: string
             self::RebookingReminder => 'Rebooking reminder',
             self::ReviewRequest => 'Review request',
             self::CustomerRetention => 'Customer retention check-in',
+            self::AccountClaimLink => 'Portal account access',
         };
     }
 

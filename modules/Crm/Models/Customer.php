@@ -2,6 +2,8 @@
 
 namespace Modules\Crm\Models;
 
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,24 +19,32 @@ use Modules\Tenancy\Concerns\BelongsToTenant;
 /**
  * A person the business grooms pets for (spec §8, §26).
  *
+ * Also, as of the Customer Portal build, the thing that logs into it: `Authenticatable` is
+ * implemented directly on this record rather than through a second table, because every
+ * appointment/pet already keys off `customer_id` and a tenant's customer is already the right
+ * identity unit (one row per tenant, per D-007 — there is no cross-tenant customer account).
+ *
  * @property string $first_name
  * @property CustomerStatus $status
  * @property CustomerSource|null $source
  */
-final class Customer extends Model
+final class Customer extends Model implements AuthenticatableContract
 {
+    use Authenticatable;
+
     /** @use HasFactory<CustomerFactory> */
     use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected static string $factory = CustomerFactory::class;
 
     /**
-     * Note what is absent: every consent column.
+     * Note what is absent: every consent column, and the portal-login columns.
      *
      * Invariant #9 makes opt-out real, and a consent flag reachable by mass assignment is
      * one careless `$customer->update($request->all())` away from opting a customer back
      * into marketing they asked to leave. Consent moves only through RecordConsent, which
-     * audits every change.
+     * audits every change. `password` has the same shape of risk — it moves only through a
+     * dedicated action (setting it from a signed claim-account link), never mass assignment.
      *
      * @var list<string>
      */
@@ -52,6 +62,14 @@ final class Customer extends Model
         'status',
         'source',
         'notes',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     /**
@@ -203,6 +221,9 @@ final class Customer extends Model
             'accepts_marketing' => 'boolean',
             'opted_out_at' => 'immutable_datetime',
             'consent_recorded_at' => 'immutable_datetime',
+            'password' => 'hashed',
+            'email_verified_at' => 'immutable_datetime',
+            'password_set_at' => 'immutable_datetime',
         ];
     }
 }

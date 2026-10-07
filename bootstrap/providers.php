@@ -8,6 +8,7 @@ use Modules\Billing\BillingServiceProvider;
 use Modules\Booking\BookingServiceProvider;
 use Modules\Catalog\CatalogServiceProvider;
 use Modules\Crm\CrmServiceProvider;
+use Modules\CustomerPortal\CustomerPortalServiceProvider;
 use Modules\Entitlements\EntitlementsServiceProvider;
 use Modules\Identity\IdentityServiceProvider;
 use Modules\Insights\InsightsServiceProvider;
@@ -115,4 +116,9 @@ return [
     // SuperAdmin (§31, first slice: D-026) depends on nothing but the framework — no other
     // module's contract — so its position here is arbitrary; listed last as the newest module.
     SuperAdminServiceProvider::class,
+
+    // Customer Portal (D-043) — a deliberate product extension, not spec v1.0. Depends on Crm's
+    // CustomerDirectory, Scheduling's AppointmentScheduler, Pets' PetDirectory (all read-only)
+    // and Notifications' MessageSender (the account-claim email), so it boots after all four.
+    CustomerPortalServiceProvider::class,
 ];

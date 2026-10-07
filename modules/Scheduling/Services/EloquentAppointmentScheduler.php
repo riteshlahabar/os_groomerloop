@@ -89,6 +89,16 @@ final class EloquentAppointmentScheduler implements AppointmentScheduler
         return $this->summarise($this->statusUpdater->execute($appointment, $status, $note));
     }
 
+    public function appointmentsForCustomer(int $customerId): array
+    {
+        return Appointment::query()
+            ->where('customer_id', $customerId)
+            ->orderByDesc('starts_at')
+            ->get()
+            ->map(fn (Appointment $a): AppointmentSummary => $this->summarise($a))
+            ->all();
+    }
+
     private function summarise(Appointment $appointment): AppointmentSummary
     {
         return $appointment->toSummary();

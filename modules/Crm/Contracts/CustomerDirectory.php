@@ -101,4 +101,22 @@ interface CustomerDirectory
      * up the same tag.
      */
     public function tagCustomer(int $customerId, string $tagName): void;
+
+    /**
+     * Find this tenant's customer by email for the Customer Portal's login/claim-account flow
+     * (`D-043`) — read-only, unlike `findOrCreateForPublicBooking()`, because typing an email
+     * into a login or "set my password" form must never silently add a stranger to the book.
+     * Matches on the same `email_normalised` column every other lookup here relies on; the first
+     * match wins when a tenant genuinely has two customers sharing an email (a pre-existing,
+     * rare case §8's own merge tooling resolves — not this method's job to disambiguate).
+     */
+    public function findIdByEmail(string $email): ?int;
+
+    /**
+     * Sets or replaces this customer's Customer Portal password (`D-043`). The only way a
+     * password is ever written — `Customer::$fillable` deliberately excludes it, the same
+     * treatment as every consent column, so it can never move through mass assignment. Hashing
+     * is the model's own `hashed` cast; a caller passes the plain password exactly once.
+     */
+    public function setPassword(int $customerId, string $plainPassword): void;
 }

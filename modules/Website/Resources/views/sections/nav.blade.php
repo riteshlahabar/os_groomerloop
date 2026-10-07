@@ -27,6 +27,13 @@
                    @if ($item['is_current']) aria-current="page" @endif>{{ $item['label'] }}</a>
             @endforeach
 
+            {{-- Customer Portal (D-043) entry point — a customer who has booked here logs in
+                 from the business's own website, never from groomerloop.com's staff /login. --}}
+            <a href="{{ route('customer-portal.login', ['tenant' => $site->tenantId]) }}"
+               class="gl-nav-link text-decoration-none {{ $dark ? 'text-white' : 'text-dark' }}">
+                <i class="ti ti-user-circle"></i> My Account
+            </a>
+
             <a href="{{ $site->bookingUrl }}" class="gl-btn">
                 <i class="ti ti-calendar-plus"></i>{{ $site->text('cta_label', 'Book now') }}
             </a>
