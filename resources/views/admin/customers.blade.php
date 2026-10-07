@@ -116,6 +116,23 @@
                 <label class="form-label">Notes</label>
                 <textarea class="form-control" id="customerNotes" rows="3" maxlength="5000"></textarea>
               </div>
+
+              <div class="col-span-12" id="customerPasswordSection" style="display:none">
+                <hr class="my-2">
+                <label class="form-label">Portal password</label>
+                <div class="grid grid-cols-12 card-gap form-grid">
+                  <div class="col-span-6 sm:col-span-12">
+                    <input type="password" class="form-control" id="customerNewPassword" placeholder="New password" autocomplete="new-password">
+                  </div>
+                  <div class="col-span-6 sm:col-span-12">
+                    <input type="password" class="form-control" id="customerNewPasswordConfirm" placeholder="Confirm new password" autocomplete="new-password">
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-light btn-sm" id="customerUpdatePasswordBtn">Update password</button>
+                  <span id="customerPasswordStatus" class="small ms-2"></span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -222,6 +239,8 @@
         document.getElementById('customerId').value = '';
         document.getElementById('customerFormError').style.display = 'none';
         document.getElementById('customerModalTitle').textContent = 'Add Customer';
+        document.getElementById('customerPasswordSection').style.display = 'none';
+        document.getElementById('customerPasswordStatus').textContent = '';
       }
 
       async function openEdit(id) {
@@ -241,7 +260,38 @@
         document.getElementById('customerTags').value = (c.tags || []).map(function (t) { return t.name; }).join(', ');
         document.getElementById('customerNotes').value = c.notes || '';
         document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+        document.getElementById('customerPasswordSection').style.display = '';
         api.openModal('customerModal');
+      }
+
+      async function updateCustomerPassword() {
+        var status = document.getElementById('customerPasswordStatus');
+        status.className = 'small ms-2';
+        status.textContent = '';
+
+        var id = document.getElementById('customerId').value;
+        var password = document.getElementById('customerNewPassword').value;
+        var confirmation = document.getElementById('customerNewPasswordConfirm').value;
+
+        var result = await api.put('/api/v1/customers/' + id + '/portal-password', {
+          password: password,
+          password_confirmation: confirmation,
+        });
+
+        if (result.ok) {
+          status.classList.add('text-success');
+          status.textContent = 'Password updated.';
+          document.getElementById('customerNewPassword').value = '';
+          document.getElementById('customerNewPasswordConfirm').value = '';
+          return;
+        }
+
+        status.classList.add('text-danger');
+        if (result.status === 422 && result.body.errors) {
+          status.textContent = Object.values(result.body.errors).map(function (m) { return m[0]; }).join(' ');
+        } else {
+          status.textContent = result.body.message || 'Could not update the password.';
+        }
       }
 
       async function archiveCustomer(id) {
@@ -301,6 +351,8 @@
         }
         errorBox.style.display = 'block';
       });
+
+      document.getElementById('customerUpdatePasswordBtn').addEventListener('click', updateCustomerPassword);
 
       document.getElementById('customerSearch').addEventListener('input', api.debounce(function () { load(1); }, 400));
       document.getElementById('customerStatusFilter').addEventListener('change', function () { load(1); });

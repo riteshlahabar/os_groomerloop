@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\CustomerPortal\Http\Controllers\Api\V1\AdminCustomerPasswordController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\AppointmentController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\ClaimLinkRequestController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\LoginController;
@@ -44,3 +45,20 @@ Route::prefix('customer/{tenant}')
             Route::get('pets', PetController::class)->name('customer-portal.pets');
         });
     });
+
+/*
+|--------------------------------------------------------------------------
+| Admin-side Customer Portal management
+|--------------------------------------------------------------------------
+|
+| Staff setting/replacing a customer's portal password from `/admin/customers` — the `web` guard
+| (Identity), standard tenant resolution, and Crm's own `customers.manage` permission, the exact
+| same gate `PUT /api/v1/customers/{customer}` already carries. Not nested under
+| `customer/{tenant}/...` above: that prefix and its `ResolveCustomerTenant`/`auth:customer` are
+| for the `customer` guard only, and this is a `web`-guard staff action on an ordinary
+| `/api/v1/customers/...` resource path.
+*/
+Route::middleware(['auth:sanctum', 'tenant', 'permission:customers.manage'])->group(function (): void {
+    Route::put('customers/{customer}/portal-password', AdminCustomerPasswordController::class)
+        ->name('customers.portal-password');
+});
