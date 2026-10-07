@@ -93,6 +93,18 @@
         text-align: center;
       }
 
+      /*
+        The vendor's own dropdown-title rule pads itself (18px) but has no matching rule for
+        arbitrary body content — its `ul`/`li` padding (style.css, `.onhover-show-div li`) only
+        applies to the stock cart/profile dropdowns' <ul><li> markup. #hdrNotifList is a plain
+        <div> the JS below fills with text, so without this it (and the "Loading…"/"No messages
+        yet."/"Unavailable." states, which are the same element) sits flush against the popup's
+        left and right edges instead of matching the title's own inset.
+      */
+      #hdrNotifList {
+        padding: 4px 18px 14px;
+      }
+
       .notification-dropdown .hdr-notif-row {
         padding: 8px 0;
         border-bottom: 1px solid rgba(var(--light-semi-gray), 0.6);
@@ -100,6 +112,13 @@
 
       .notification-dropdown .hdr-notif-row:last-of-type {
         border-bottom: 0;
+      }
+
+      #hdrNotifAll {
+        display: block;
+        padding: 10px 18px;
+        border-top: 1px solid rgba(var(--light-semi-gray), 0.6);
+        text-align: center;
       }
     </style>
 
