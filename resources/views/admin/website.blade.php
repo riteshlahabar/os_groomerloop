@@ -6,7 +6,7 @@
 @push('styles')
   <style>
     /*
-      Tab strips on this screen are the theme's own **arrow tabs**, ported from
+      The one tab strip on this screen is the theme's own **arrow tabs**, ported from
       `cuba_4-8-26/.../template/tab-tailwind.html` ("Arrow Tabs" card) at the owner's request:
       `bg-navbar arrow-tabs` wrapping `ul.tab-links.flex` of `li.tab-link`, with `.active` on the
       current one. `admin-assets/css/style.css` already carries the whole look — the light bar
@@ -17,20 +17,23 @@
 
       * `tabs` — `admin-assets/js/script.js` (which the admin layout does load) wires every
         `.tabs` element's clicks, and it collects panes with
-        `navLink.closest('.tabs').parentElement.querySelectorAll('.tab-pan')`. That is a deep
-        query from the strip's *parent*, so on this screen's nested strips a top-level click would
-        strip `active` from the page editors and the group panes nested inside it, blanking the
-        Pages tab. It also only ever sees `.tabs` elements that existed at load, and two of the
-        three strips here are rendered later by fetch(). So switching stays this file's own
-        scoped handlers.
+        `navLink.closest('.tabs').parentElement.querySelectorAll('.tab-pan')`. That query only
+        ever sees `.tabs` elements that existed at page load, and three quarters of this strip's
+        tabs are rendered later by fetch(), so it would wire the three static tabs and silently
+        ignore the eighteen page ones. Switching stays this file's own handler.
       * `tab-pan` — the pane class that same handler looks for. Panes here are `.ws-pane` toggled
         with the `d-none` utility instead, so no theme JS can ever match them.
 
       What the theme's sheet does not give the `li` form of these tabs: a pointer cursor, and any
-      defence against a six-item strip overflowing a phone (`body` is `overflow-x: hidden`, so an
-      overflow is a silent clip — the trap the admin tables hit).
+      defence against a long strip overflowing (`body` is `overflow-x: hidden`, so an overflow is
+      a silent clip — the trap the admin tables hit). With all 21 tabs on one level the strip is
+      far wider than any viewport, so it **wraps** onto as many rows as it needs rather than
+      scrolling sideways: a tab you cannot see is a tab you will not find, and `overflow-x: auto`
+      stays only as a floor under a single tab too wide to wrap.
     */
     .ws-arrow-tabs .tab-links {
+      flex-wrap: wrap;
+      row-gap: 6px;
       overflow-x: auto;
       margin-bottom: 18px;
     }
@@ -45,22 +48,13 @@
     }
 
     /*
-      Levels two and three — the six page editors, and the groups within one page — wear the same
-      arrow strip a size down, so depth reads as size rather than as three identical bars.
+      The eighteen page tabs are a size down from the three site-wide ones. Nothing nests any
+      more, so this is not depth — it is so "Home: Content" reads as a leaf of the same strip
+      that "Choose a look" heads, and so eighteen of them cost fewer rows.
     */
-    .ws-arrow-sm .tab-link {
+    .ws-arrow-tabs .tab-link.ws-arrow-page {
       font-size: 13px;
       padding: 6px 24px 6px 14px;
-    }
-
-    .ws-arrow-xs .tab-link {
-      font-size: 12px;
-      padding: 4px 22px 4px 12px;
-    }
-
-    .ws-arrow-sm .tab-links,
-    .ws-arrow-xs .tab-links {
-      margin-bottom: 14px;
     }
   </style>
 @endpush
@@ -102,12 +96,19 @@
 
     {{--
       Everything below used to be four cards stacked one under another, so editing the site meant
-      scrolling the whole page to get from "choose a look" to "pages". One card now, with three
-      levels of the theme's arrow tabs: these four sections, then the six page editors inside the
-      Pages pane, then Content/Blocks/Search inside one page editor. See the style block at the top
-      of this file for which classes of the design's "Arrow Tabs" demo are ported and which two are
-      deliberately left out (the ones that would hand switching to the theme's own JS, which cannot
-      nest and only sees strips that existed at page load).
+      scrolling the whole page to get from "choose a look" to "pages". It became one card with
+      three nested levels of the theme's arrow tabs; on the owner's explicit instruction
+      (2026-10-08) those three levels are now **one flat strip** — every pane in the editor is a
+      top-level tab, so no tab is ever hidden behind another tab. Three site-wide tabs (Choose a
+      look, Branding & search, Social links) are written here; the other eighteen — each page's
+      Content, Blocks and Search groups, labelled "<Page>: <Group>" — are appended to this same
+      `<ul>` by renderPages() from the page list the API sends, so a new PageKey case gets its own
+      tabs with no change here.
+
+      See the style block at the top of this file for which classes of the design's "Arrow Tabs"
+      demo are ported and which two are deliberately left out (the ones that would hand switching
+      to the theme's own JS, which only sees strips that existed at page load — and three quarters
+      of this strip arrives later by fetch()).
     --}}
     <div class="col-span-12" data-ws-section>
       <div class="card">
@@ -117,7 +118,6 @@
               <li class="tab-link active" role="tab" data-ws-tab="look">Choose a look</li>
               <li class="tab-link" role="tab" data-ws-tab="branding">Branding &amp; search</li>
               <li class="tab-link" role="tab" data-ws-tab="social">Social links</li>
-              <li class="tab-link" role="tab" data-ws-tab="pages">Pages</li>
             </ul>
 
             <div class="tab-content" id="wsTabContent">
@@ -177,16 +177,10 @@
             </div>
 
             {{--
-              Pages. One page editor on screen at a time, picked from the sub-strip — both are
-              rendered by `renderPages()` from the page list the API sends, so a new PageKey case
-              gets its own tab with no change here.
+              The eighteen page panes land here, each a sibling of the three above and switched by
+              the same handler — `renderPages()` fills both this and the page half of the strip.
             --}}
-            <div class="ws-pane d-none" id="wsTabPane_pages">
-              <div class="bg-navbar arrow-tabs ws-arrow-tabs ws-arrow-sm">
-                <ul class="tab-links flex" id="wsPageTabs" role="tablist"></ul>
-              </div>
-              <div id="wsPages"></div>
-            </div>
+            <div id="wsPagePanes"></div>
 
             </div>
           </div>
@@ -518,35 +512,27 @@
           '</div></div>';
       }
 
-      // Which page editor the Pages pane is showing. Held outside renderPages() so a save or a
-      // settings change — both of which call renderAll() — leaves the owner on the page they were
-      // editing instead of snapping back to Home.
-      var activePageKey = null;
+      // The tab on screen, as one id across the whole flat strip: 'look', 'branding', 'social',
+      // or 'page_<key>_<group>'. Held outside renderPages() because a save or a settings change
+      // both call renderAll(), and the owner should stay where they were instead of being thrown
+      // back to the first tab each time.
+      var activeTab = 'look';
 
-      // Which group of a page editor is on screen, keyed by page. Held here for the same reason
-      // as activePageKey above: a save re-renders, and the owner should not be thrown back to the
-      // first group of the first page each time.
-      var activePageSection = {};
+      // The three tabs written in the Blade. A page tab that no longer exists (a PageKey removed)
+      // falls back to the first of these rather than leaving nothing selected.
+      var staticTabs = ['look', 'branding', 'social'];
 
       function renderPages() {
-        if (!site.pages.some(function (p) { return p.key === activePageKey; })) {
-          activePageKey = site.pages.length ? site.pages[0].key : null;
-        }
+        // The strip is one <ul>: the three site-wide <li>s are server-rendered and kept, and the
+        // page tabs are appended after them. Rebuilding only the appended half means a re-render
+        // never disturbs the static tabs or their listeners.
+        Array.prototype.forEach.call(document.querySelectorAll('#wsTabs [data-ws-page-of]'), function (tab) {
+          tab.remove();
+        });
 
-        document.getElementById('wsPageTabs').innerHTML = site.pages.map(function (page) {
-          // A page switched off still gets its tab — that is where it is switched back on. The
-          // badge is the state label, so the tab does not need words to say it.
-          var off = page.is_mandatory || page.is_enabled
-            ? ''
-            : ' <span class="badge badge-light-secondary">Off</span>';
+        var tabsHtml = '';
 
-          return '<li class="tab-link' + (page.key === activePageKey ? ' active' : '') + '"' +
-            ' role="tab" data-ws-page-tab="' + page.key + '">' +
-            api.escapeHtml(page.label) + off +
-            '</li>';
-        }).join('');
-
-        document.getElementById('wsPages').innerHTML = site.pages.map(function (page) {
+        var panesHtml = site.pages.map(function (page) {
           var content = page.content || {};
 
           var fields = page.fields.map(function (field) {
@@ -561,146 +547,126 @@
             return '<div class="col-span-12">' + listRowsHtml(page.key, listField, definition, rows) + '</div>';
           }).join('');
 
-          var toggle = page.is_mandatory
-            ? '<span class="badge badge-light-primary">Always on</span>'
-            : '<div class="form-check form-switch mb-0">' +
-              '<input class="form-check-input" type="checkbox" id="wsEnabled_' + page.key + '"' + (page.is_enabled ? ' checked' : '') + '>' +
-              '<label class="form-check-label" for="wsEnabled_' + page.key + '">Show this page</label>' +
-              '</div>';
+          // A page switched off still gets its tabs — that is where it is switched back on. The
+          // badge is the state label, so the tab does not need words to say it. It rides on the
+          // page's first tab only, not all three, so "off" is said once.
+          var off = page.is_mandatory || page.is_enabled
+            ? ''
+            : ' <span class="badge badge-light-secondary">Off</span>';
 
-          // One page's own fields were still a column tall enough to scroll — Home is five text
-          // fields, twelve list rows and two search fields — so each editor carries a third strip
-          // and shows one group at a time. Every input stays in the DOM either way (see below),
-          // so saving collects the whole page regardless of which group is on screen.
-          var sections = pageSectionsOf(page);
-          var activeSection = activeSectionOf(page.key);
+          // The switch repeats in each of this page's panes, so it cannot carry one page-keyed id
+          // the way the text inputs do: three elements sharing `wsEnabled_<key>` would mean
+          // savePage() reading whichever came first in the DOM, so flicking the switch on the
+          // Search tab would save the stale value from the Content tab — a silent wrong save, not
+          // an error. Each gets a pane-unique id (so its label stays clickable) and they are
+          // addressed collectively by `data-page-enabled`, kept in step by syncPageEnabled().
+          function toggleFor(groupId) {
+            if (page.is_mandatory) {
+              return '<span class="badge badge-light-primary">Always on</span>';
+            }
 
-          var sectionStrip = '<div class="bg-navbar arrow-tabs ws-arrow-tabs ws-arrow-xs">' +
-            '<ul class="tab-links flex" role="tablist">' +
-            sections.map(function (section) {
-              return '<li class="tab-link' + (section.id === activeSection ? ' active' : '') + '"' +
-                ' role="tab" data-ws-page-section="' + page.key + ':' + section.id + '">' +
-                api.escapeHtml(section.label) +
-                '</li>';
-            }).join('') +
-            '</ul></div>';
+            var id = 'wsEnabled_' + page.key + '_' + groupId;
 
-          function sectionPane(id, inner) {
-            return '<div data-page-section="' + page.key + ':' + id + '"' + (id === activeSection ? '' : ' class="d-none"') + '>' +
-              '<div class="grid grid-cols-12 card-gap form-grid">' + inner + '</div>' +
+            return '<div class="form-check form-switch mb-0">' +
+              '<input class="form-check-input" type="checkbox" id="' + id + '"' +
+              ' data-page-enabled="' + page.key + '"' + (page.is_enabled ? ' checked' : '') + '>' +
+              '<label class="form-check-label" for="' + id + '">Show this page</label>' +
               '</div>';
           }
 
-          var contentPane = sectionPane('content',
-            '<div class="col-span-12 md:col-span-6 mb-3">' +
-            '<label class="form-label" for="wsTitle_' + page.key + '">Menu title</label>' +
-            '<input type="text" class="form-control" id="wsTitle_' + page.key + '" value="' + api.escapeHtml(page.title || '') + '">' +
-            '</div>' +
-            fields);
+          // The groups one page is split across. Declared here rather than at module level because
+          // every body it builds closes over this page's own `fields` and `lists` strings above.
+          function pageGroupsOf() {
+            var groups = [{
+              id: 'content',
+              label: 'Content',
+              body: '<div class="col-span-12 md:col-span-6 mb-3">' +
+                '<label class="form-label" for="wsTitle_' + page.key + '">Menu title</label>' +
+                '<input type="text" class="form-control" id="wsTitle_' + page.key + '" value="' + api.escapeHtml(page.title || '') + '">' +
+                '</div>' +
+                fields
+            }];
 
-          var blocksPane = lists === '' ? '' : sectionPane('blocks', lists);
+            // A page with no repeatable lists gets no Blocks tab at all, rather than an empty one.
+            // The list's own name is already a heading inside the pane (listRowsHtml), so the tab
+            // can stay the short generic word and keep the strip readable at eighteen of them.
+            if (lists !== '') {
+              groups.push({ id: 'blocks', label: 'Blocks', body: lists });
+            }
 
-          var searchPane = sectionPane('search',
-            '<div class="col-span-12 md:col-span-6 mb-3">' +
-            '<label class="form-label" for="wsPageSeoTitle_' + page.key + '">Search title</label>' +
-            '<input type="text" class="form-control" id="wsPageSeoTitle_' + page.key + '" value="' + api.escapeHtml(page.seo_title || '') + '">' +
-            '</div>' +
-            '<div class="col-span-12 md:col-span-6 mb-3">' +
-            '<label class="form-label" for="wsPageSeoDesc_' + page.key + '">Search description</label>' +
-            '<input type="text" class="form-control" id="wsPageSeoDesc_' + page.key + '" value="' + api.escapeHtml(page.seo_description || '') + '">' +
-            '</div>');
+            groups.push({
+              id: 'search',
+              label: 'Search',
+              body: '<div class="col-span-12 md:col-span-6 mb-3">' +
+                '<label class="form-label" for="wsPageSeoTitle_' + page.key + '">Search title</label>' +
+                '<input type="text" class="form-control" id="wsPageSeoTitle_' + page.key + '" value="' + api.escapeHtml(page.seo_title || '') + '">' +
+                '</div>' +
+                '<div class="col-span-12 md:col-span-6 mb-3">' +
+                '<label class="form-label" for="wsPageSeoDesc_' + page.key + '">Search description</label>' +
+                '<input type="text" class="form-control" id="wsPageSeoDesc_' + page.key + '" value="' + api.escapeHtml(page.seo_description || '') + '">' +
+                '</div>'
+            });
 
-          // All six editors stay in the DOM and the inactive five are hidden, rather than only the
-          // active one being rendered: every id here is already page-keyed (`wsField_<key>_<field>`),
-          // so there is no collision to avoid, and hiding means switching tabs cannot throw away
-          // edits the owner has typed but not saved yet. The same holds one level down, for the
-          // groups within a page.
+            return groups;
+          }
+
+          var groups = pageGroupsOf();
+
+          // Each group of each page is its own top-level pane, so there is no nesting left — the
+          // page's own name has to be on screen, since the tab is the only other place it appears.
           //
-          // No nested card any more either: the page's name is the active sub-tab, and a card
-          // inside another card's body was both redundant and more of the vertical height this
-          // screen was already losing to scroll.
-          return '<div data-page="' + page.key + '"' + (page.key === activePageKey ? '' : ' class="d-none"') + '>' +
-            '<div class="flex flex-wrap items-center justify-between gap-2">' + sectionStrip + toggle + '</div>' +
-            '<div id="wsPageError_' + page.key + '" class="alert alert-danger" style="display:none"></div>' +
-            contentPane + blocksPane + searchPane +
-            '<button type="button" class="btn btn-primary" data-save-page="' + page.key + '">Save page</button> ' +
-            '<a class="btn btn-light" href="' + api.escapeHtml(site.preview_url.replace(/\/preview\/.*$/, '/preview/' + page.key)) + '" target="_blank" rel="noopener">Preview</a>' +
-            '</div>';
+          // Save, Preview, the on/off switch and the error line repeat in all three of a page's
+          // panes rather than sitting outside them: with the groups hoisted to the top level there
+          // is no longer an enclosing page editor to put them in once, and every one of them has
+          // to stay reachable from whichever group the owner happens to be on. Repeating them is
+          // safe because every page-scoped input keeps its single page-keyed id in whichever group
+          // owns it (`wsTitle_<key>` in Content, `wsPageSeoTitle_<key>` in Search), so savePage()
+          // still collects the whole page from the DOM no matter which pane is visible — the error
+          // line is the one that cannot be an id, and is addressed by data attribute instead.
+          return groups.map(function (group) {
+            var id = 'page_' + page.key + '_' + group.id;
+
+            tabsHtml += '<li class="tab-link ws-arrow-page" role="tab"' +
+              ' data-ws-tab="' + id + '" data-ws-page-of="' + page.key + '">' +
+              api.escapeHtml(page.label) + ': ' + api.escapeHtml(group.label) +
+              (group.id === groups[0].id ? off : '') +
+              '</li>';
+
+            return '<div class="ws-pane d-none" id="wsTabPane_' + id + '">' +
+              '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
+              '<h6 class="mb-0">' + api.escapeHtml(page.label) + ' — ' + api.escapeHtml(group.label) + '</h6>' +
+              toggleFor(group.id) +
+              '</div>' +
+              '<div class="alert alert-danger" data-page-error="' + page.key + '" style="display:none"></div>' +
+              '<div class="grid grid-cols-12 card-gap form-grid">' + group.body + '</div>' +
+              '<button type="button" class="btn btn-primary" data-save-page="' + page.key + '">Save page</button> ' +
+              '<a class="btn btn-light" href="' + api.escapeHtml(site.preview_url.replace(/\/preview\/.*$/, '/preview/' + page.key)) + '" target="_blank" rel="noopener">Preview</a>' +
+              '</div>';
+          }).join('');
         }).join('');
 
+        document.getElementById('wsTabs').insertAdjacentHTML('beforeend', tabsHtml);
+        document.getElementById('wsPagePanes').innerHTML = panesHtml;
+
         wirePageControls();
-        wirePageTabs();
-        wirePageSections();
+        wirePageEnabledSync();
+        wireTabs();
+        showActiveTab();
       }
 
-      // The groups one page's editor is split into. The Blocks group names itself from the page's
-      // own repeatable lists, so a new list in PageKey::contentLists() needs no change here; a
-      // page with no lists gets no Blocks group at all rather than an empty one.
-      function pageSectionsOf(page) {
-        var listFields = Object.keys(page.lists || {});
-        var sections = [{ id: 'content', label: 'Content' }];
+      // One page's "Show this page" switch exists once per pane of that page, so flicking it on
+      // any tab has to move the others — otherwise the owner sees it on in one tab and off in
+      // another, and savePage() reads whichever the DOM happens to hand it first.
+      function wirePageEnabledSync() {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-page-enabled]'), function (box) {
+          box.addEventListener('change', function () {
+            var pageKey = this.dataset.pageEnabled;
+            var checked = this.checked;
 
-        if (listFields.length) {
-          sections.push({
-            id: 'blocks',
-            label: sentenceCase(listFields.map(function (field) { return field.replace(/_/g, ' '); }).join(' & '))
+            Array.prototype.forEach.call(document.querySelectorAll('[data-page-enabled="' + pageKey + '"]'), function (other) {
+              other.checked = checked;
+            });
           });
-        }
-
-        sections.push({ id: 'search', label: 'Search' });
-
-        return sections;
-      }
-
-      function sentenceCase(text) {
-        return text.charAt(0).toUpperCase() + text.slice(1);
-      }
-
-      function activeSectionOf(pageKey) {
-        return activePageSection[pageKey] || 'content';
-      }
-
-      function wirePageSections() {
-        Array.prototype.forEach.call(document.querySelectorAll('[data-ws-page-section]'), function (tab) {
-          tab.addEventListener('click', function () {
-            var parts = this.dataset.wsPageSection.split(':');
-            activePageSection[parts[0]] = parts[1];
-            showActivePageSection(parts[0]);
-          });
-        });
-      }
-
-      // Show/hide only, exactly like showActivePage() — never a re-render, so unsaved input
-      // survives a group switch too.
-      function showActivePageSection(pageKey) {
-        var active = pageKey + ':' + activeSectionOf(pageKey);
-
-        Array.prototype.forEach.call(document.querySelectorAll('[data-ws-page-section^="' + pageKey + ':"]'), function (tab) {
-          tab.classList.toggle('active', tab.dataset.wsPageSection === active);
-        });
-
-        Array.prototype.forEach.call(document.querySelectorAll('[data-page-section^="' + pageKey + ':"]'), function (pane) {
-          pane.classList.toggle('d-none', pane.dataset.pageSection !== active);
-        });
-      }
-
-      function wirePageTabs() {
-        Array.prototype.forEach.call(document.querySelectorAll('[data-ws-page-tab]'), function (tab) {
-          tab.addEventListener('click', function () {
-            activePageKey = this.dataset.wsPageTab;
-            showActivePage();
-          });
-        });
-      }
-
-      // Show/hide only — never a re-render, so unsaved input survives a tab switch.
-      function showActivePage() {
-        Array.prototype.forEach.call(document.querySelectorAll('[data-ws-page-tab]'), function (tab) {
-          tab.classList.toggle('active', tab.dataset.wsPageTab === activePageKey);
-        });
-
-        Array.prototype.forEach.call(document.querySelectorAll('#wsPages [data-page]'), function (editor) {
-          editor.classList.toggle('d-none', editor.dataset.page !== activePageKey);
         });
       }
 
@@ -786,10 +752,19 @@
         return content;
       }
 
+      // A page's error line is repeated in each of its panes (see renderPages()), so it is
+      // addressed by data attribute rather than id — there is no single visible one to target,
+      // and three elements sharing an id would mean getElementById returning the hidden first.
+      function showPageError(pageKey, message) {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-page-error="' + pageKey + '"]'), function (el) {
+          el.textContent = message || '';
+          el.style.display = message ? 'block' : 'none';
+        });
+      }
+
       async function savePage(pageKey) {
         var page = site.pages.filter(function (p) { return p.key === pageKey; })[0];
-        var errorEl = document.getElementById('wsPageError_' + pageKey);
-        errorEl.style.display = 'none';
+        showPageError(pageKey, null);
 
         var payload = {
           title: document.getElementById('wsTitle_' + pageKey).value || null,
@@ -798,16 +773,16 @@
           content: collectContent(page)
         };
 
-        // Home has no off switch, and the API prohibits the key rather than ignoring it.
+        // Home has no off switch, and the API prohibits the key rather than ignoring it. Any one
+        // of this page's switches will do — syncPageEnabled() keeps them identical.
         if (!page.is_mandatory) {
-          payload.is_enabled = document.getElementById('wsEnabled_' + pageKey).checked;
+          payload.is_enabled = document.querySelector('[data-page-enabled="' + pageKey + '"]').checked;
         }
 
         var result = await api.put('/api/v1/website/pages/' + pageKey, payload);
 
         if (!result.ok) {
-          errorEl.textContent = firstErrorFrom(result, 'Could not save this page.');
-          errorEl.style.display = 'block';
+          showPageError(pageKey, firstErrorFrom(result, 'Could not save this page.'));
           return;
         }
 
@@ -870,24 +845,43 @@
       document.getElementById('wsSocialForm').addEventListener('submit', saveSocial);
 
       // ---- tabs ----------------------------------------------------------------------------------
-      // The strips wear the theme's arrow-tab CSS but not its tab JS: `admin-assets/js/script.js`
-      // collects panes with `closest('.tabs').parentElement.querySelectorAll('.tab-pan')`, a deep
-      // query from the strip's parent, so one top-level click would also clear the page editors and
-      // group panes nested inside this card. It also only binds `.tabs` elements present at load,
-      // and two of these three strips are rendered later by fetch(). Hence `.ws-pane` + the
-      // `d-none` utility this file already uses for its logo/hero previews, switched here.
-      Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (tab) {
-        tab.addEventListener('click', function () {
-          Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (other) {
-            other.classList.remove('active');
-          });
-          Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent > .ws-pane'), function (pane) {
-            pane.classList.add('d-none');
-          });
-          this.classList.add('active');
-          document.getElementById('wsTabPane_' + this.dataset.wsTab).classList.remove('d-none');
-        });
+      // One flat strip, one handler. It wears the theme's arrow-tab CSS but not its tab JS:
+      // `admin-assets/js/script.js` only binds `.tabs` elements present at page load, and eighteen
+      // of these twenty-one tabs are rendered later by fetch(), so it would wire the three static
+      // ones and silently ignore the rest. Hence `.ws-pane` + the `d-none` utility this file
+      // already uses for its logo/hero previews, switched here.
+      //
+      // Delegated from the strip rather than bound per tab, so the page tabs renderPages() appends
+      // need no rebinding — wireTabs() below only has to exist for the panes.
+      document.getElementById('wsTabs').addEventListener('click', function (event) {
+        var tab = event.target.closest('[data-ws-tab]');
+
+        if (tab) {
+          activeTab = tab.dataset.wsTab;
+          showActiveTab();
+        }
       });
+
+      // Called after renderPages() rebuilds the page half of the strip. Nothing to bind — the
+      // click handler above is delegated — but a tab that has gone (a PageKey removed, or the
+      // very first render, before any page tab exists) must not leave the editor blank.
+      function wireTabs() {
+        if (!document.querySelector('[data-ws-tab="' + activeTab + '"]')) {
+          activeTab = staticTabs[0];
+        }
+      }
+
+      // Show/hide only, never a re-render, so unsaved input survives a tab switch — the reason
+      // every pane stays in the DOM instead of only the active one being built.
+      function showActiveTab() {
+        Array.prototype.forEach.call(document.querySelectorAll('#wsTabs [data-ws-tab]'), function (tab) {
+          tab.classList.toggle('active', tab.dataset.wsTab === activeTab);
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent .ws-pane'), function (pane) {
+          pane.classList.toggle('d-none', pane.id !== 'wsTabPane_' + activeTab);
+        });
+      }
 
       load();
     })();
