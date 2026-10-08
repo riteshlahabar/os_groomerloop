@@ -150,6 +150,9 @@ final class SiteComposer
             // Never a second booking implementation: the §12 wizard is the only way to book
             // (invariant #2, D-023).
             bookingUrl: route('public-booking', ['tenant' => $tenant->slug]),
+            // Customer Portal (D-043) login, id-keyed like the site itself (D-036) since
+            // ResolveCustomerTenant resolves `{tenant}` by id, not slug.
+            portalLoginUrl: route('customer-portal.login', ['tenant' => $tenant->id]),
             isPreview: $isPreview,
             isPageDisabled: $isPageDisabled,
         );

@@ -62,6 +62,10 @@
                     </div>
                 @endif
 
+                <a href="{{ $site->portalLoginUrl }}" class="secondary-btn me-2">
+                    <i class="ti ti-login me-2"></i>Login
+                </a>
+
                 <a href="{{ $site->bookingUrl }}" class="primary-btn">
                     <i class="ti ti-calendar-event me-2"></i>Book Appointment
                 </a>

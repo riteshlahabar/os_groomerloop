@@ -45,6 +45,7 @@ final readonly class SiteView
         public array $staff,
         public ?BusinessProfileSummary $profile,
         public string $bookingUrl,
+        public string $portalLoginUrl,
         public bool $isPreview,
         public array $openingHours = [],
         public bool $isPageDisabled = false,
