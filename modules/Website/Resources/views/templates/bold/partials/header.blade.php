@@ -62,7 +62,7 @@
                     </div>
                 @endif
 
-                <a href="{{ $site->portalLoginUrl }}" class="secondary-btn me-2">
+                <a href="{{ $site->portalLoginUrl }}" class="dark-btn me-2">
                     <i class="ti ti-login me-2"></i>Login
                 </a>
 
