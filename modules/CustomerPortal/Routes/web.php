@@ -1,6 +1,8 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\CustomerPortal\Http\Controllers\AccountClaimController;
 use Modules\Tenancy\Http\Middleware\ResolveCustomerTenant;
 use Modules\Tenancy\Support\TenantContext;
@@ -47,17 +49,23 @@ Route::prefix('portal/{tenant}')
             'tenant' => $context->tenant(),
         ]))->name('customer-portal.login');
 
+        // Each closure resolves the signed-in customer's display name through CustomerDirectory
+        // (D-007) rather than calling a method on the Authenticatable model directly — the same
+        // boundary MeController already respects via `contactDetailsOf()`.
         Route::middleware('auth:customer')->group(function (): void {
-            Route::get('/', fn (TenantContext $context) => view('customer-portal.dashboard', [
+            Route::get('/', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.dashboard', [
                 'tenant' => $context->tenant(),
+                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
             ]))->name('customer-portal.dashboard');
 
-            Route::get('appointments', fn (TenantContext $context) => view('customer-portal.appointments', [
+            Route::get('appointments', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.appointments', [
                 'tenant' => $context->tenant(),
+                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
             ]))->name('customer-portal.appointments-page');
 
-            Route::get('pets', fn (TenantContext $context) => view('customer-portal.pets', [
+            Route::get('pets', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.pets', [
                 'tenant' => $context->tenant(),
+                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
             ]))->name('customer-portal.pets-page');
         });
     });
