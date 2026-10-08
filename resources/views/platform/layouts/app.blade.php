@@ -261,9 +261,9 @@
         `window.location.pathname.indexOf($(this).attr('href')) != -1`. That answer is wrong here
         for two independent reasons:
 
-          1. `route()` emits ABSOLUTE urls, so `href` is "http://host/platform/tenants" while
-             `pathname` is "/platform/tenants" — indexOf is -1 and nothing is ever matched.
-          2. Even with relative hrefs it would match the wrong item: Dashboard is "/platform", a
+          1. `route()` emits ABSOLUTE urls, so `href` is "http://host/superadmin/tenants" while
+             `pathname` is "/superadmin/tenants" — indexOf is -1 and nothing is ever matched.
+          2. Even with relative hrefs it would match the wrong item: Dashboard is "/superadmin", a
              prefix of every other path here, and the template takes the FIRST match, so Dashboard
              would light up on every screen.
 

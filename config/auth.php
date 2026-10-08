@@ -45,7 +45,7 @@ return [
         ],
 
         // Customer Portal. A deliberately separate guard, not a 7th Identity role on `web` —
-        // a customer session must be structurally unable to reach any /admin or /platform
+        // a customer session must be structurally unable to reach any /admin or /superadmin
         // route, not merely excluded from them by a permission check that could be missed.
         'customer' => [
             'driver' => 'session',

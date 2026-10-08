@@ -62,10 +62,7 @@
                                 </div>
                             </div>
                             <ul class="main-nav">
-                                <li><a href="{{ url('/') }}">Home</a></li>
-                                <li><a href="{{ url('/pricing') }}">Pricing</a></li>
-                                <li><a href="{{ url('/about-us') }}">About Us</a></li>
-                                <li><a href="{{ url('/contact-us') }}">Contact Us</a></li>
+                                <li><a href="{{ url('/register') }}">Register</a></li>
                             </ul>
                         </div>
                     </div>
@@ -303,7 +300,7 @@
                         // GroomerLoop staff, either tier (`D-035`), belong to no tenant and land
                         // in the platform console (§31), never the tenant admin panel.
                         var isPlatform = result.body && result.body.data ? result.body.data.is_platform : false;
-                        window.location.href = isPlatform ? '/platform' : '/admin';
+                        window.location.href = isPlatform ? '/superadmin' : '/admin';
                         return;
                     }
 

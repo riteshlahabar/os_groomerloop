@@ -4,8 +4,10 @@ use Illuminate\Support\Facades\Route;
 use Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Modules\Tenancy\Models\Tenant;
 
+// os.groomerloop.com has no marketing content of its own — groomerloop.com (WordPress) is the
+// real marketing site. A bare hit here has nothing useful to land on but the login screen.
 Route::get('/', function () {
-    return view('frontview.home');
+    return redirect('/login');
 });
 
 /*
@@ -34,28 +36,12 @@ Route::get('/book/{tenant}', function (string $tenant) {
     return view('frontview.booking', ['tenant' => $business]);
 })->name('public-booking');
 
-Route::get('/frontview', function () {
-    return view('frontview.home');
-});
-
 Route::get('/login', function () {
     return view('frontview.login');
 })->name('login');
 
 Route::get('/register', function () {
     return view('frontview.register');
-});
-
-Route::get('/pricing', function () {
-    return view('frontview.pricing');
-});
-
-Route::get('/about-us', function () {
-    return view('frontview.about-us');
-});
-
-Route::get('/contact-us', function () {
-    return view('frontview.contact-us');
 });
 
 /*
@@ -229,6 +215,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
 | Platform console (spec §31, GroomerLoop's own staff — the PlatformAdmin role of spec §5)
 |--------------------------------------------------------------------------
 |
+| URL is /superadmin; route names/views/permissions stay "platform.*"/"platform." internally —
+| only the owner-facing path changed, so nothing that links via route() needed editing.
+|
 | A separate tree from /admin on purpose: a GroomerLoop Admin belongs to no tenant, so the
 | tenant-business concepts /admin's layout and nav are built around (business name header, the
 | §6 nav) do not apply here. Every page follows the exact same client-side-fetch-against-/api/v1
@@ -241,7 +230,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
 | enforces this; the route-level gate here is what stops a refused user from even seeing the
 | page shell.
 */
-Route::middleware(['auth', 'permission:platform.administer'])->prefix('platform')->name('platform.')->group(function (): void {
+Route::middleware(['auth', 'permission:platform.administer'])->prefix('superadmin')->name('platform.')->group(function (): void {
     Route::get('/', fn () => view('platform.dashboard'))->name('dashboard');
     Route::get('tenants', fn () => view('platform.tenants'))->name('tenants');
     Route::get('audit-log', fn () => view('platform.audit-log'))->name('audit-log');

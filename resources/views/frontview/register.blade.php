@@ -62,10 +62,7 @@
                                 </div>
                             </div>
                             <ul class="main-nav">
-                                <li><a href="{{ url('/') }}">Home</a></li>
-                                <li><a href="{{ url('/pricing') }}">Pricing</a></li>
-                                <li><a href="{{ url('/about-us') }}">About Us</a></li>
-                                <li><a href="{{ url('/contact-us') }}">Contact Us</a></li>
+                                <li><a href="{{ url('/login') }}">Sign In</a></li>
                             </ul>
                         </div>
                     </div>
