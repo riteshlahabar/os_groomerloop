@@ -6,83 +6,61 @@
 @push('styles')
   <style>
     /*
-      This build of Cuba is the Tailwind edition: style.css ships NO Bootstrap `.nav`/`.nav-tabs`/
-      `.nav-link` base at all (grepped — the only flat `.nav-*` rules are `.nav-pills`, `.nav-item`
-      and `.nav-right`, none of them a flex row), and its own global `ul { list-style:none;
-      margin:0; padding:0 }` reset means a `nav nav-tabs` strip renders as a plain column of links.
-      The tab classes this theme actually styles are `.border-tab.tab-links` (display:flex) with
-      `.tab-link` children — that is what the markup below uses.
+      Tab strips on this screen are the theme's own **arrow tabs**, ported from
+      `cuba_4-8-26/.../template/tab-tailwind.html` ("Arrow Tabs" card) at the owner's request:
+      `bg-navbar arrow-tabs` wrapping `ul.tab-links.flex` of `li.tab-link`, with `.active` on the
+      current one. `admin-assets/css/style.css` already carries the whole look — the light bar
+      (`.bg-navbar .tab-links`), the chevron (`.arrow-tabs.bg-navbar .tab-links .tab-link`'s
+      `clip-path`) and the filled active state — so this file adds no colours of its own.
 
-      Two things that strip still needs, because the theme's own rules stop short of them:
-      `.tab-link.active` is given a colour (`--theme-default`) but its underline is declared as
-      the invalid `border-bottom-color: none`, so the active tab reads as a colour change only;
-      and `flex-wrap: nowrap` with no overflow rule means the 6-page sub-strip would be clipped on
-      a phone (`body` is `overflow-x: hidden`, the same trap the admin table fix hit).
+      Two classes from that demo are deliberately NOT copied, and both matter:
+
+      * `tabs` — `admin-assets/js/script.js` (which the admin layout does load) wires every
+        `.tabs` element's clicks, and it collects panes with
+        `navLink.closest('.tabs').parentElement.querySelectorAll('.tab-pan')`. That is a deep
+        query from the strip's *parent*, so on this screen's nested strips a top-level click would
+        strip `active` from the page editors and the group panes nested inside it, blanking the
+        Pages tab. It also only ever sees `.tabs` elements that existed at load, and two of the
+        three strips here are rendered later by fetch(). So switching stays this file's own
+        scoped handlers.
+      * `tab-pan` — the pane class that same handler looks for. Panes here are `.ws-pane` toggled
+        with the `d-none` utility instead, so no theme JS can ever match them.
+
+      What the theme's sheet does not give the `li` form of these tabs: a pointer cursor, and any
+      defence against a six-item strip overflowing a phone (`body` is `overflow-x: hidden`, so an
+      overflow is a silent clip — the trap the admin tables hit).
     */
-    .ws-tabs {
-      border-bottom: 1px solid rgba(var(--light-gray), 1);
+    .ws-arrow-tabs .tab-links {
       overflow-x: auto;
-      /* `.border-tab.tab-links` ships a 30px bottom margin; inside a `pb-0` card header that is a
-         gap on top of the card body's own padding. */
-      margin-bottom: 0;
+      margin-bottom: 18px;
     }
 
-    .ws-tabs .tab-link {
+    .ws-arrow-tabs .tab-link {
+      cursor: pointer;
       white-space: nowrap;
-      border-bottom: 2px solid transparent;
-    }
-
-    .ws-tabs .tab-link.active {
-      border-bottom-color: rgba(var(--theme-default), 1);
-    }
-
-    /*
-      The Pages strip sits inside a pane of the strip above it, so it is deliberately not a second
-      underlined tab row — it is pill-shaped and smaller, to read as one level down.
-    */
-    .ws-subtabs {
-      border-bottom: 0;
-      gap: 6px;
-      margin-bottom: 18px;
-    }
-
-    .ws-subtabs .tab-link {
-      padding: 6px 14px;
-      font-size: 14px;
-      border-bottom: 0;
-      border-radius: 6px;
-    }
-
-    .ws-subtabs .tab-link.active {
-      background-color: rgba(var(--theme-default), 0.12);
-      color: rgba(var(--theme-default), 1);
+      flex: 0 0 auto;
+      /* The chevron is cut out of the right 15% of the tab, so a label needs room not to run
+         into the point. */
+      padding-right: 28px;
     }
 
     /*
-      Third level: the groups inside one page editor. Pills again would be indistinguishable from
-      the page strip above them, so these are a bordered segmented control instead. The
-      `.ws-tabs` underline above is cancelled by the zero bottom border here (that rule only sets
-      a colour, so a zero width hides it).
+      Levels two and three — the six page editors, and the groups within one page — wear the same
+      arrow strip a size down, so depth reads as size rather than as three identical bars.
     */
-    .ws-sections {
-      border: 1px solid rgba(var(--light-gray), 1);
-      border-radius: 6px;
-      overflow: hidden;
-      width: fit-content;
-      max-width: 100%;
-      margin-bottom: 18px;
-    }
-
-    .ws-sections .tab-link {
-      border-bottom: 0;
-      border-radius: 0;
+    .ws-arrow-sm .tab-link {
       font-size: 13px;
-      padding: 5px 14px;
+      padding: 6px 24px 6px 14px;
     }
 
-    .ws-sections .tab-link.active {
-      background-color: rgba(var(--theme-default), 1);
-      color: rgba(var(--white), 1);
+    .ws-arrow-xs .tab-link {
+      font-size: 12px;
+      padding: 4px 22px 4px 12px;
+    }
+
+    .ws-arrow-sm .tab-links,
+    .ws-arrow-xs .tab-links {
+      margin-bottom: 14px;
     }
   </style>
 @endpush
@@ -124,43 +102,34 @@
 
     {{--
       Everything below used to be four cards stacked one under another, so editing the site meant
-      scrolling the whole page to get from "choose a look" to "pages". One card now, tabbed, with
-      the six page editors a second level of tabs inside the Pages pane (they were six more stacked
-      cards, which is where the remaining long scroll was). `border-tab tab-links`/`tab-link` are
-      this theme's own tab classes — see the style block at the top of this file for why the
-      Bootstrap-flavoured `nav-tabs`/`nav-link` names it used first are not styled in this build.
-      The admin layout loads none of the theme's tab JS, so switching panes is the small vanilla-JS
-      handler at the bottom of this file's script block, not `data-bs-toggle="tab"`.
+      scrolling the whole page to get from "choose a look" to "pages". One card now, with three
+      levels of the theme's arrow tabs: these four sections, then the six page editors inside the
+      Pages pane, then Content/Blocks/Search inside one page editor. See the style block at the top
+      of this file for which classes of the design's "Arrow Tabs" demo are ported and which two are
+      deliberately left out (the ones that would hand switching to the theme's own JS, which cannot
+      nest and only sees strips that existed at page load).
     --}}
     <div class="col-span-12" data-ws-section>
       <div class="card">
-        <div class="card-header card-no-border pb-0">
-          <ul class="nav border-tab tab-links ws-tabs" id="wsTabs" role="tablist">
-            <li class="nav-item">
-              <a class="tab-link active" href="javascript:void(0)" data-ws-tab="look">Choose a look</a>
-            </li>
-            <li class="nav-item">
-              <a class="tab-link" href="javascript:void(0)" data-ws-tab="branding">Branding &amp; search</a>
-            </li>
-            <li class="nav-item">
-              <a class="tab-link" href="javascript:void(0)" data-ws-tab="social">Social links</a>
-            </li>
-            <li class="nav-item">
-              <a class="tab-link" href="javascript:void(0)" data-ws-tab="pages">Pages</a>
-            </li>
-          </ul>
-        </div>
         <div class="card-body">
-          <div class="tab-content" id="wsTabContent">
+          <div class="bg-navbar arrow-tabs ws-arrow-tabs">
+            <ul class="tab-links flex" id="wsTabs" role="tablist">
+              <li class="tab-link active" role="tab" data-ws-tab="look">Choose a look</li>
+              <li class="tab-link" role="tab" data-ws-tab="branding">Branding &amp; search</li>
+              <li class="tab-link" role="tab" data-ws-tab="social">Social links</li>
+              <li class="tab-link" role="tab" data-ws-tab="pages">Pages</li>
+            </ul>
+
+            <div class="tab-content" id="wsTabContent">
 
             {{-- Template picker --}}
             {{-- Switching templates changes the design only; page content is untouched by it. --}}
-            <div class="tab-pane" id="wsTabPane_look">
+            <div class="ws-pane" id="wsTabPane_look">
               <div class="grid grid-cols-12 card-gap" id="wsTemplates"></div>
             </div>
 
             {{-- Site-wide settings --}}
-            <div class="tab-pane d-none" id="wsTabPane_branding">
+            <div class="ws-pane d-none" id="wsTabPane_branding">
               <div id="wsImageError" class="alert alert-danger" style="display:none"></div>
 
               <div class="mb-3">
@@ -200,7 +169,7 @@
 
             {{-- Social links --}}
             {{-- These render in every page's footer; a blank one is omitted from it. --}}
-            <div class="tab-pane d-none" id="wsTabPane_social">
+            <div class="ws-pane d-none" id="wsTabPane_social">
               <form id="wsSocialForm">
                 <div id="wsSocialFields"></div>
                 <button type="submit" class="btn btn-primary" id="wsSocialSubmit">Save</button>
@@ -212,11 +181,14 @@
               rendered by `renderPages()` from the page list the API sends, so a new PageKey case
               gets its own tab with no change here.
             --}}
-            <div class="tab-pane d-none" id="wsTabPane_pages">
-              <ul class="nav border-tab tab-links ws-tabs ws-subtabs" id="wsPageTabs" role="tablist"></ul>
+            <div class="ws-pane d-none" id="wsTabPane_pages">
+              <div class="bg-navbar arrow-tabs ws-arrow-tabs ws-arrow-sm">
+                <ul class="tab-links flex" id="wsPageTabs" role="tablist"></ul>
+              </div>
               <div id="wsPages"></div>
             </div>
 
+            </div>
           </div>
         </div>
       </div>
@@ -568,11 +540,10 @@
             ? ''
             : ' <span class="badge badge-light-secondary">Off</span>';
 
-          return '<li class="nav-item">' +
-            '<a class="tab-link' + (page.key === activePageKey ? ' active' : '') + '"' +
-            ' href="javascript:void(0)" data-ws-page-tab="' + page.key + '">' +
+          return '<li class="tab-link' + (page.key === activePageKey ? ' active' : '') + '"' +
+            ' role="tab" data-ws-page-tab="' + page.key + '">' +
             api.escapeHtml(page.label) + off +
-            '</a></li>';
+            '</li>';
         }).join('');
 
         document.getElementById('wsPages').innerHTML = site.pages.map(function (page) {
@@ -604,15 +575,15 @@
           var sections = pageSectionsOf(page);
           var activeSection = activeSectionOf(page.key);
 
-          var sectionStrip = '<ul class="nav border-tab tab-links ws-tabs ws-sections" role="tablist">' +
+          var sectionStrip = '<div class="bg-navbar arrow-tabs ws-arrow-tabs ws-arrow-xs">' +
+            '<ul class="tab-links flex" role="tablist">' +
             sections.map(function (section) {
-              return '<li class="nav-item">' +
-                '<a class="tab-link' + (section.id === activeSection ? ' active' : '') + '"' +
-                ' href="javascript:void(0)" data-ws-page-section="' + page.key + ':' + section.id + '">' +
+              return '<li class="tab-link' + (section.id === activeSection ? ' active' : '') + '"' +
+                ' role="tab" data-ws-page-section="' + page.key + ':' + section.id + '">' +
                 api.escapeHtml(section.label) +
-                '</a></li>';
+                '</li>';
             }).join('') +
-            '</ul>';
+            '</ul></div>';
 
           function sectionPane(id, inner) {
             return '<div data-page-section="' + page.key + ':' + id + '"' + (id === activeSection ? '' : ' class="d-none"') + '>' +
@@ -899,16 +870,18 @@
       document.getElementById('wsSocialForm').addEventListener('submit', saveSocial);
 
       // ---- tabs ----------------------------------------------------------------------------------
-      // No Bootstrap JS in the admin layout, only its CSS, and `.tab-pane`'s own show/hide rule
-      // isn't shipped in admin-assets/css/style.css either — so panes are hidden with the same
-      // `d-none` utility this file already uses for the logo/hero preview toggles, not a
-      // `data-bs-toggle="tab"` plugin or an assumed `.tab-pane.active{display:block}` rule.
+      // The strips wear the theme's arrow-tab CSS but not its tab JS: `admin-assets/js/script.js`
+      // collects panes with `closest('.tabs').parentElement.querySelectorAll('.tab-pan')`, a deep
+      // query from the strip's parent, so one top-level click would also clear the page editors and
+      // group panes nested inside this card. It also only binds `.tabs` elements present at load,
+      // and two of these three strips are rendered later by fetch(). Hence `.ws-pane` + the
+      // `d-none` utility this file already uses for its logo/hero previews, switched here.
       Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (tab) {
         tab.addEventListener('click', function () {
           Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (other) {
             other.classList.remove('active');
           });
-          Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent .tab-pane'), function (pane) {
+          Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent > .ws-pane'), function (pane) {
             pane.classList.add('d-none');
           });
           this.classList.add('active');
