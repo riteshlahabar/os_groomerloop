@@ -22,7 +22,8 @@
          for an offcanvas to sit over.
       4. Checkout        — `booking-checkout.html` entire: contact info on the left, the
          "Review Order Details" card on the right.
-      5. Confirmed       — that page's `#booking-success` modal, inline as a panel.
+      5. Confirmed       — that page's own `#booking-success` modal, `.modal-dialog-centered` and
+         all: a true centered popup over the checkout panel, not a fifth step panel.
 
     Deliberately not ported, each because nothing in the product is behind it: the payment-method
     tiles and "Time left to pay" countdown (no payment is taken at booking — Billing bills the
@@ -450,34 +451,6 @@
                                 </div>
 
                                 <!-- Step 5: confirmed -->
-                                <div class="d-none" id="panelDone">
-                                    <div class="booking-appointment-content-header">
-                                        <h2 class="mb-0">Booking Confirmed</h2>
-                                    </div>
-
-                                    <div class="d-flex align-items-center justify-content-center">
-                                        <span class="delete-icon bg-success text-white rounded-circle mb-3"><i class="ti ti-check fs-16"></i></span>
-                                    </div>
-
-                                    <div class="text-center">
-                                        <h3 class="mb-1" id="doneHeadline"></h3>
-                                        <p class="mb-3" id="doneDetail"></p>
-                                    </div>
-
-                                    <div class="card bg-light">
-                                        <div class="card-body text-center">
-                                            <p class="mb-0" id="doneRecap"></p>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex align-items-center justify-content-center flex-wrap flex-md-nowrap gap-2">
-                                        <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn btn-small light-btn w-100">Back to website</a>
-                                        <a href="#" id="doneManageLink" class="btn btn-small primary-btn w-100 d-none" target="_blank">Manage this booking</a>
-                                    </div>
-
-                                    <p class="text-center mt-3 mb-0" id="redirectCountdown"></p>
-                                </div>
-
                             </div>
                         </div>
 
@@ -487,6 +460,54 @@
             </div>
         </div>
 
+    </div>
+
+    {{--
+      The design's own `#booking-success` modal (`.modal-dialog-centered`) — a true centered
+      popup, not a panel in the step flow. `data-bs-backdrop="static"`/`data-bs-keyboard="false"`:
+      the appointment is already booked by the time this shows, so there is nothing a stray click
+      or Escape should be able to dismiss back into — only the explicit buttons below, or the
+      countdown, may leave it.
+    --}}
+    <div id="booking-success" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <span class="delete-icon bg-success text-white rounded-circle mb-3"><i class="ti ti-check fs-16"></i></span>
+                    </div>
+
+                    <div class="text-center">
+                        <h3 class="mb-1" id="doneHeadline"></h3>
+                        <p class="mb-3" id="doneDetail"></p>
+                    </div>
+
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <p class="mb-0" id="doneRecap"></p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-center flex-wrap flex-md-nowrap gap-2 mt-3">
+                        <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn btn-small light-btn w-100">Back to website</a>
+                        <a href="#" id="doneManageLink" class="btn btn-small primary-btn w-100 d-none" target="_blank">Manage this booking</a>
+                    </div>
+
+                    {{--
+                      Checkout's password field (D-043 Phase 1) creates a Customer Portal login
+                      right when this booking is submitted — `SubmitPublicBooking::execute()`
+                      calls `CustomerDirectory::setPassword()` before the appointment is even
+                      booked. Shown only when that happened this submission, since a returning
+                      customer who left the password fields blank already knows how to log in.
+                    --}}
+                    <p class="text-center mt-3 mb-0 d-none" id="donePortalNote">
+                        Account created &mdash; <a href="#" id="donePortalLink" target="_blank">log in to manage all your appointments</a>.
+                    </p>
+
+                    <p class="text-center mt-3 mb-0" id="redirectCountdown"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap Core JS -->
@@ -505,6 +526,7 @@
             var TENANT = @json($tenant->slug);
             var TENANT_NAME = @json($tenant->name);
             var SITE_URL = @json(route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]));
+            var PORTAL_LOGIN_URL = @json(route('customer-portal.login', ['tenant' => $tenant->id]));
             var API_BASE = '/api/v1/public/' + TENANT;
             var SLOT_SEARCH_DAYS = 14; // how far ahead to look for the next open day, and the width of the date strip
 
@@ -520,7 +542,7 @@
                 selectedSlot: null,    // trimmed naive "YYYY-MM-DDTHH:MM:SS"
             };
 
-            var panels = { 1: 'panelService', 2: 'panelStaff', 3: 'panelSchedule', 4: 'panelCheckout', 5: 'panelDone' };
+            var panels = { 1: 'panelService', 2: 'panelStaff', 3: 'panelSchedule', 4: 'panelCheckout' };
 
             function showStep(step) {
                 state.step = step;
@@ -529,8 +551,7 @@
                 });
 
                 // The rail is the bundle's `.booking-step`, whose own CSS defines `.active` and
-                // `.done`. On the confirmation panel there is no current step left, so every one
-                // of them is done.
+                // `.done`.
                 document.querySelectorAll('#stepIndicator .booking-step').forEach(function (el) {
                     var s = Number(el.getAttribute('data-step'));
                     el.classList.toggle('active', s === step);
@@ -1268,8 +1289,8 @@
                     var result = await apiPost('/appointments', payload);
 
                     if (result.ok) {
-                        renderDone(result.body.data);
-                        showStep(5);
+                        renderDone(result.body.data, !!password);
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('booking-success')).show();
                         startRedirectCountdown();
                         return;
                     }
@@ -1289,12 +1310,12 @@
                 }
             });
 
-            // ---- Step 5: confirmed ----
+            // ---- Confirmation modal ----
 
             // The design's success modal carries a "Please arrive 10 minutes early" line. That is
             // the template's policy, not this business's, and nothing in the product stores one —
             // so the card states what was actually booked instead of asserting a rule.
-            function renderDone(appointment) {
+            function renderDone(appointment, portalAccountCreated) {
                 var confirmed = appointment.status === 'confirmed';
 
                 document.getElementById('doneHeadline').textContent = confirmed ? 'Booking Confirmed!' : 'Booking Requested!';
@@ -1311,6 +1332,14 @@
                 if (appointment.manage_url) {
                     manageLink.href = appointment.manage_url;
                     manageLink.classList.remove('d-none');
+                }
+
+                var portalNote = document.getElementById('donePortalNote');
+                if (portalAccountCreated) {
+                    document.getElementById('donePortalLink').href = PORTAL_LOGIN_URL;
+                    portalNote.classList.remove('d-none');
+                } else {
+                    portalNote.classList.add('d-none');
                 }
             }
 
