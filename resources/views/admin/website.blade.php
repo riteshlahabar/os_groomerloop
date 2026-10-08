@@ -38,90 +38,96 @@
       </div>
     </div>
 
-    {{-- Template picker --}}
+    {{--
+      Everything below used to be four cards stacked one under another, so editing the site meant
+      scrolling the whole page to get from "choose a look" to "pages". One card now, tabbed —
+      `nav-tabs border-tab` is Cuba's own card-header tab styling (already shipped in
+      admin-assets/css/style.css, used nowhere else in this app yet). The admin layout never loads
+      Bootstrap's JS, only its CSS classes, so switching panes is the small vanilla-JS handler at
+      the bottom of this file's script block, not `data-bs-toggle="tab"`.
+    --}}
     <div class="col-span-12" data-ws-section>
       <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>Choose a look</h5>
-          <p class="f-light mb-0">Switching templates changes only the design — nothing you have written is lost.</p>
+        <div class="card-header card-no-border pb-0">
+          <ul class="nav nav-tabs border-tab" id="wsTabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" href="javascript:void(0)" data-ws-tab="look">Choose a look</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" data-ws-tab="branding">Branding &amp; search</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" data-ws-tab="social">Social links</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" data-ws-tab="pages">Pages</a>
+            </li>
+          </ul>
         </div>
-        <div class="card-body pt-0">
-          <div class="grid grid-cols-12 card-gap" id="wsTemplates"></div>
-        </div>
-      </div>
-    </div>
+        <div class="card-body">
+          <div class="tab-content" id="wsTabContent">
 
-    {{-- Site-wide settings --}}
-    <div class="col-span-12 xl:col-span-6" data-ws-section>
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>Branding &amp; search</h5>
-        </div>
-        <div class="card-body pt-0">
-          <div id="wsImageError" class="alert alert-danger" style="display:none"></div>
-
-          <div class="mb-3">
-            <label class="form-label">Logo</label>
-            <div class="flex items-center gap-2 mb-2 d-none" id="wsLogoPreviewWrap">
-              <img id="wsLogoPreview" alt="Logo" style="max-height:48px;max-width:160px;object-fit:contain">
-              <button type="button" class="btn btn-light btn-sm" id="wsLogoRemove">Remove</button>
+            {{-- Template picker --}}
+            <div class="tab-pane" id="wsTabPane_look">
+              <p class="f-light">Switching templates changes only the design — nothing you have written is lost.</p>
+              <div class="grid grid-cols-12 card-gap" id="wsTemplates"></div>
             </div>
-            <input type="file" class="form-control" id="wsLogoFile" accept="image/png,image/jpeg,image/webp,image/gif">
+
+            {{-- Site-wide settings --}}
+            <div class="tab-pane d-none" id="wsTabPane_branding">
+              <div id="wsImageError" class="alert alert-danger" style="display:none"></div>
+
+              <div class="mb-3">
+                <label class="form-label">Logo</label>
+                <div class="flex items-center gap-2 mb-2 d-none" id="wsLogoPreviewWrap">
+                  <img id="wsLogoPreview" alt="Logo" style="max-height:48px;max-width:160px;object-fit:contain">
+                  <button type="button" class="btn btn-light btn-sm" id="wsLogoRemove">Remove</button>
+                </div>
+                <input type="file" class="form-control" id="wsLogoFile" accept="image/png,image/jpeg,image/webp,image/gif">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Main photo</label>
+                <div class="flex items-center gap-2 mb-2 d-none" id="wsHeroPreviewWrap">
+                  <img id="wsHeroPreview" alt="Main photo" style="max-height:48px;max-width:160px;object-fit:contain">
+                  <button type="button" class="btn btn-light btn-sm" id="wsHeroRemove">Remove</button>
+                </div>
+                <input type="file" class="form-control" id="wsHeroFile" accept="image/png,image/jpeg,image/webp,image/gif">
+              </div>
+
+              <form id="wsSettingsForm">
+                <div class="mb-3">
+                  <label class="form-label" for="wsSeoTitle">Search title</label>
+                  <input type="text" class="form-control" id="wsSeoTitle" maxlength="255">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="wsSeoDescription">Search description</label>
+                  <textarea class="form-control" id="wsSeoDescription" rows="2" maxlength="320"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="wsColor">Accent colour</label>
+                  <input type="color" class="form-control" id="wsColor" style="max-width:120px">
+                </div>
+                <button type="submit" class="btn btn-primary" id="wsSettingsSubmit">Save</button>
+              </form>
+            </div>
+
+            {{-- Social links --}}
+            <div class="tab-pane d-none" id="wsTabPane_social">
+              <p class="f-light">Shown in the footer of every page. Leave blank to hide.</p>
+              <form id="wsSocialForm">
+                <div id="wsSocialFields"></div>
+                <button type="submit" class="btn btn-primary" id="wsSocialSubmit">Save</button>
+              </form>
+            </div>
+
+            {{-- Pages --}}
+            <div class="tab-pane d-none" id="wsTabPane_pages">
+              <p class="f-light">Your services and team are pulled in automatically and stay up to date — you never retype them here.</p>
+              <div id="wsPages"></div>
+            </div>
+
           </div>
-
-          <div class="mb-3">
-            <label class="form-label">Main photo</label>
-            <div class="flex items-center gap-2 mb-2 d-none" id="wsHeroPreviewWrap">
-              <img id="wsHeroPreview" alt="Main photo" style="max-height:48px;max-width:160px;object-fit:contain">
-              <button type="button" class="btn btn-light btn-sm" id="wsHeroRemove">Remove</button>
-            </div>
-            <input type="file" class="form-control" id="wsHeroFile" accept="image/png,image/jpeg,image/webp,image/gif">
-          </div>
-
-          <form id="wsSettingsForm">
-            <div class="mb-3">
-              <label class="form-label" for="wsSeoTitle">Search title</label>
-              <input type="text" class="form-control" id="wsSeoTitle" maxlength="255">
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="wsSeoDescription">Search description</label>
-              <textarea class="form-control" id="wsSeoDescription" rows="2" maxlength="320"></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="wsColor">Accent colour</label>
-              <input type="color" class="form-control" id="wsColor" style="max-width:120px">
-            </div>
-            <button type="submit" class="btn btn-primary" id="wsSettingsSubmit">Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {{-- Social links --}}
-    <div class="col-span-12 xl:col-span-6" data-ws-section>
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>Social links</h5>
-          <p class="f-light mb-0">Shown in the footer of every page. Leave blank to hide.</p>
-        </div>
-        <div class="card-body pt-0">
-          <form id="wsSocialForm">
-            <div id="wsSocialFields"></div>
-            <button type="submit" class="btn btn-primary" id="wsSocialSubmit">Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {{-- Pages --}}
-    <div class="col-span-12" data-ws-section>
-      <div class="card">
-        <div class="card-header card-no-border pb-2">
-          <h5>Pages</h5>
-          <p class="f-light mb-0">Your services and team are pulled in automatically and stay up to date — you never retype them here.</p>
-        </div>
-        <div class="card-body pt-0">
-          <div id="wsPages"></div>
         </div>
       </div>
     </div>
@@ -663,6 +669,24 @@
 
       document.getElementById('wsSettingsForm').addEventListener('submit', saveSettings);
       document.getElementById('wsSocialForm').addEventListener('submit', saveSocial);
+
+      // ---- tabs ----------------------------------------------------------------------------------
+      // No Bootstrap JS in the admin layout, only its CSS, and `.tab-pane`'s own show/hide rule
+      // isn't shipped in admin-assets/css/style.css either — so panes are hidden with the same
+      // `d-none` utility this file already uses for the logo/hero preview toggles, not a
+      // `data-bs-toggle="tab"` plugin or an assumed `.tab-pane.active{display:block}` rule.
+      Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (tab) {
+        tab.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-ws-tab]'), function (other) {
+            other.classList.remove('active');
+          });
+          Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent .tab-pane'), function (pane) {
+            pane.classList.add('d-none');
+          });
+          this.classList.add('active');
+          document.getElementById('wsTabPane_' + this.dataset.wsTab).classList.remove('d-none');
+        });
+      });
 
       load();
     })();
