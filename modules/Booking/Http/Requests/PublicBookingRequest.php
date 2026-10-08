@@ -4,6 +4,7 @@ namespace Modules\Booking\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Modules\Pets\Domain\PetSex;
 
 /**
@@ -33,6 +34,13 @@ final class PublicBookingRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
 
+            // Optional: lets a stranger booking for the first time set their Customer Portal
+            // password (D-043) in the same step, rather than waiting on a separate claim-link
+            // email. Omitted entirely, both rules are skipped — a returning customer who leaves
+            // these blank keeps whatever password they already set.
+            'password' => ['nullable', 'confirmed', Password::defaults()],
+            'password_confirmation' => ['nullable', 'string'],
+
             'pet_name' => ['required', 'string', 'max:255'],
             'pet_species_id' => ['required', 'integer', 'min:1'],
             'pet_breed' => ['nullable', 'string', 'max:255'],
@@ -49,6 +57,6 @@ final class PublicBookingRequest extends FormRequest
      */
     public function bookingAttributes(): array
     {
-        return $this->safe()->except('policies_accepted');
+        return $this->safe()->except(['policies_accepted', 'password_confirmation']);
     }
 }

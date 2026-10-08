@@ -340,6 +340,17 @@
                                                             <label class="form-label" for="phone">Phone Number</label>
                                                             <input type="tel" class="form-control" id="phone" maxlength="30">
                                                         </div>
+                                                        <div class="col-md-12">
+                                                            <p class="mb-2">Optional &mdash; set a password to log in later and check your appointment status.</p>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label" for="password">Password</label>
+                                                            <input type="password" class="form-control" id="password" minlength="12" maxlength="255" autocomplete="new-password">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label" for="password_confirmation">Confirm password</label>
+                                                            <input type="password" class="form-control" id="password_confirmation" minlength="12" maxlength="255" autocomplete="new-password">
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -1215,6 +1226,22 @@
                     return;
                 }
 
+                // Both optional, but only as a pair — half-filled can't become a password.
+                var password = fieldValue('password');
+                var passwordConfirmation = fieldValue('password_confirmation');
+
+                if (password || passwordConfirmation) {
+                    if (password.length < 12) {
+                        showAlert('Password must be at least 12 characters.');
+                        return;
+                    }
+
+                    if (password !== passwordConfirmation) {
+                        showAlert('Password and confirm password do not match.');
+                        return;
+                    }
+                }
+
                 var payload = {
                     service_id: state.selectedService.id,
                     staff_member_id: state.selectedStaffId,
@@ -1224,6 +1251,8 @@
                     last_name: fieldValue('last_name'),
                     email: fieldValue('email'),
                     phone: fieldValue('phone') || null,
+                    password: password || null,
+                    password_confirmation: password ? passwordConfirmation : null,
                     pet_name: fieldValue('pet_name'),
                     pet_species_id: parseInt(document.getElementById('pet_species').value, 10),
                     pet_breed: fieldValue('pet_breed') || null,

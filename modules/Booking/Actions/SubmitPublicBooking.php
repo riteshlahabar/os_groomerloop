@@ -31,8 +31,9 @@ final class SubmitPublicBooking
     ) {}
 
     /**
-     * @param  array<string, mixed>  $attributes  customer: first_name, last_name, email, phone;
-     *                                            pet: pet_name, pet_species_id, pet_breed (optional), pet_sex (optional); booking:
+     * @param  array<string, mixed>  $attributes  customer: first_name, last_name, email, phone,
+     *                                            password (optional, Customer Portal login); pet: pet_name,
+     *                                            pet_species_id, pet_breed (optional), pet_sex (optional); booking:
      *                                            service_id, staff_member_id (optional), starts_at, customer_notes (optional)
      */
     public function execute(array $attributes): AppointmentSummary
@@ -67,6 +68,16 @@ final class SubmitPublicBooking
                 'email' => $attributes['email'],
                 'phone' => $attributes['phone'] ?? null,
             ]);
+
+            // Self-service, same as a claim-link password set — not "reset by staff" (see
+            // `AdminResetCustomerPassword`'s docblock on keeping those audit events distinct).
+            if (! empty($attributes['password'])) {
+                $this->customers->setPassword($customerId, $attributes['password']);
+
+                $this->audit->record('customer.password_set_at_booking', null, [
+                    'customer_id' => $customerId,
+                ]);
+            }
 
             $petAttributes = [
                 'name' => $attributes['pet_name'],
