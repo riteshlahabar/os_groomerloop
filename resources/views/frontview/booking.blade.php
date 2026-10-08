@@ -78,6 +78,11 @@
         @media (max-width: 991.98px) {
             .booking-appointment .booking-appointment-content { height: auto; min-height: 100vh; overflow-y: visible; }
         }
+
+        /* style.min.css sets one `gap: 12px` for the slot grid, which is both the row-gap and
+           column-gap. When a day's slots wrap to a second row, 12px reads as the rows touching —
+           widen the vertical gap only, leaving the chip-to-chip spacing on each row unchanged. */
+        .booking-appointment-time-slot { row-gap: 16px !important; }
     </style>
 
 </head>
