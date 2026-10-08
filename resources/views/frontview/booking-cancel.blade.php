@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 
+{{--
+    The page behind a signed cancellation link (`D-037`), wearing the same design-bundle chrome as
+    the booking wizard beside it: `booking-appointment.html`'s banner + content split, and
+    `booking-checkout.html`'s "Review Order Details" card for the appointment itself and its
+    `#booking-success` modal's green check for the cancelled state.
+
+    It replaces a hand-built `.booking-review-row` rule and two Cuba classes (`f-light`) that this
+    stylesheet does not define at all, so the rows had been rendering unstyled. No CSS is added:
+    every class here is in `style.min.css` already.
+--}}
+
 <head>
 
     <!-- Meta Tags -->
@@ -28,77 +39,135 @@
     <link rel="stylesheet" href="{{ asset('frontview-assets/css/groomerloop-overrides.css') }}">
 
     <style>
-        .booking-cancel-page .main-wrapper { min-height: 100vh; }
-        .booking-review-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
-        .booking-review-row:last-child { border-bottom: none; }
+        /* Below the banner's breakpoint the content column is the whole page, so the design's own
+           `height: 100vh; overflow-y: scroll` would trap this short panel in a tall scroller. */
+        @media (max-width: 991.98px) {
+            .booking-appointment .booking-appointment-content { height: auto; min-height: 100vh; overflow-y: visible; }
+        }
     </style>
 
 </head>
 
 <body class="booking-cancel-page">
 
-    <div class="main-wrapper bg-light">
+    @php
+        $siteUrl = route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]);
+        $isCancelled = $justCancelled || $appointment->status->value === 'cancelled';
+    @endphp
 
-        <!-- Header Start -->
-        <header class="header header-one">
-            <div class="container">
-                <nav class="navbar navbar-expand-lg header-nav" aria-label="header navigation">
-                    <div class="header-logo">
-                        <a href="{{ url('/') }}" class="navbar-brand logo">
-                            <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
-                        </a>
-                    </div>
-                    <div class="nav header-items">
-                        <span class="fw-semibold">{{ $tenant->name }}</span>
-                    </div>
-                </nav>
-            </div>
-        </header>
-        <!-- Header End -->
+    <div class="main-wrapper">
 
-        <div class="container py-5">
-            <div class="row justify-content-center">
-                <div class="col-lg-6">
+        <div class="container-fuild position-relative z-1">
+            <div class="w-100 overflow-hidden position-relative flex-wrap d-block">
 
-                    <div class="card">
-                        <div class="card-body">
+                <div class="booking-appointment">
+                    <div class="row">
 
-                            @if ($justCancelled || $appointment->status->value === 'cancelled')
-                                <div class="text-center py-3">
-                                    <i class="ti ti-circle-check" style="font-size:40px;color:#2fb380"></i>
-                                    <h4 class="mt-3 mb-1">Appointment cancelled</h4>
-                                    <p class="f-light mb-0">Your {{ $serviceName }} appointment has been cancelled.</p>
+                        <div class="col-lg-5 d-none d-lg-flex p-0">
+                            <div class="booking-appointment-banner">
+                                <div class="booking-appointment-banner-content mx-auto">
+                                    <div class="mb-4">
+                                        <a href="{{ $siteUrl }}" class="logo">
+                                            <img src="{{ asset('frontview-assets/img/logo-white.svg') }}" class="img-fluid" alt="Logo">
+                                        </a>
+                                    </div>
+                                    <div class="booking-appointment-banner-title">
+                                        MANAGE <br> YOUR <span>BOOKING</span>
+                                    </div>
                                 </div>
-                            @else
-                                <h4 class="mb-3">Your appointment</h4>
-
-                                <div class="booking-review-row">
-                                    <span class="f-light">Service</span>
-                                    <span>{{ $serviceName }}</span>
-                                </div>
-                                <div class="booking-review-row">
-                                    <span class="f-light">Date &amp; time</span>
-                                    <span>{{ $appointment->startsAt->format('D, M j \a\t g:i A') }}</span>
-                                </div>
-                                <div class="booking-review-row">
-                                    <span class="f-light">Status</span>
-                                    <span>{{ $appointment->status->label() }}</span>
-                                </div>
-
-                                @if ($eligible)
-                                    <form method="POST" action="{{ request()->fullUrl() }}" class="mt-4">
-                                        @csrf
-                                        <button type="submit" class="btn btn-danger w-100">Cancel this booking</button>
-                                    </form>
-                                @else
-                                    <div class="alert alert-light mt-4 mb-0">{{ $reason }}</div>
-                                @endif
-                            @endif
-
+                            </div>
                         </div>
-                    </div>
 
+                        <div class="col-lg-7 p-0">
+                            <div class="booking-appointment-content">
+
+                                <div class="d-lg-none mb-4">
+                                    <a href="{{ $siteUrl }}" class="logo">
+                                        <img src="{{ asset('frontview-assets/img/logo.svg') }}" class="img-fluid" alt="Logo" style="max-height:40px">
+                                    </a>
+                                </div>
+
+                                <div class="booking-appointment-content-header">
+                                    <h2 class="mb-0">{{ $isCancelled ? 'Booking Cancelled' : 'Your Appointment' }}</h2>
+                                </div>
+
+                                @if ($isCancelled)
+
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <span class="delete-icon bg-success text-white rounded-circle mb-3"><i class="ti ti-check fs-16"></i></span>
+                                    </div>
+
+                                    <div class="text-center">
+                                        <h3 class="mb-1">Appointment cancelled</h3>
+                                        <p class="mb-3">Your {{ $serviceName }} appointment with {{ $tenant->name }} has been cancelled.</p>
+                                    </div>
+
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <p class="mb-0">{{ $appointment->startsAt->format('D, M j \a\t g:i A') }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <a href="{{ $siteUrl }}" class="btn btn-small primary-btn">Back to website</a>
+                                    </div>
+
+                                @else
+
+                                    <div class="row row-gap-4">
+                                        <div class="col-lg-9">
+                                            <div class="card mb-0">
+                                                <div class="card-body">
+                                                    <h2 class="title mb-4">Booking Details</h2>
+
+                                                    <div class="mb-3 pb-3 border-bottom">
+                                                        <div class="d-flex align-items-center justify-content-between">
+                                                            <div>
+                                                                <div class="Checkout-card-title mb-1">{{ $serviceName }}</div>
+                                                                <span>{{ $tenant->name }}</span>
+                                                            </div>
+                                                            <span class="badge bg-light text-dark border">{{ $appointment->status->label() }}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-4 pb-3 border-bottom">
+                                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                                            <span>Date</span>
+                                                            <div class="Checkout-card-title">{{ $appointment->startsAt->format('D, M j, Y') }}</div>
+                                                        </div>
+                                                        <div class="d-flex align-items-center justify-content-between">
+                                                            <span>Time</span>
+                                                            <div class="Checkout-card-title">{{ $appointment->startsAt->format('g:i A') }}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    @if ($eligible)
+                                                        <form method="POST" action="{{ request()->fullUrl() }}">
+                                                            @csrf
+                                                            <button type="submit" class="btn danger-btn w-100">Cancel this booking</button>
+                                                        </form>
+                                                    @else
+                                                        <div class="card bg-light mb-3">
+                                                            <div class="card-body text-center">
+                                                                <p class="mb-0">{{ $reason }}</p>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+
+                                                    <a href="{{ $siteUrl }}" class="btn light-btn w-100 mt-3">Back to website</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                @endif
+
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
+
             </div>
         </div>
 
