@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 
+{{--
+    The public booking wizard (spec §12), wearing the owner's design bundle's multi-step booking
+    design (`booking-multi-step.html` / `-two` / `-three`).
+
+    Structure is the bundle's: `.booking-appointment.multi-step` splits into a fixed photo banner
+    (`col-lg-5`) carrying the step rail and a scrolling content column (`col-lg-7`). The bundle's
+    design is three screens; §12 fixes the flow at seven steps and invariant #2 puts availability
+    truth on the server, so the seven steps are kept and dressed in the bundle's chrome rather than
+    compressed into three — the step rail just lists five configuration steps instead of three.
+
+    Every class used here is already in `style.min.css`, including the rail's `.booking-step.active`
+    / `.booking-step.done` states and `input:checked + .booking-appointment-badge` for a chosen
+    slot, so no new stylesheet is needed. The one inline rule set below is the selected state for
+    the full-width option rows: the bundle's only selectable-card pattern
+    (`.booking-payment-method-item`) is a fixed 112×106 tile, which a service row is not.
+--}}
+
 <head>
 
     <!-- Meta Tags -->
@@ -23,222 +40,303 @@
     <!-- Tabler Icon CSS -->
     <link rel="stylesheet" href="{{ asset('frontview-assets/plugins/tabler-icons/tabler-icons.min.css') }}">
 
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="{{ asset('frontview-assets/plugins/swiper/swiper-bundle.min.css') }}">
+
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ asset('frontview-assets/css/style.min.css') }}">
     <link rel="stylesheet" href="{{ asset('frontview-assets/css/groomerloop-overrides.css') }}">
 
     <style>
-        .booking-page .main-wrapper { min-height: 100vh; }
-        .booking-steps-indicator { list-style: none; padding: 0; margin: 0 0 24px; display: flex; gap: 4px; }
-        .booking-steps-indicator li { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: #9aa1ab; padding-bottom: 10px; border-bottom: 3px solid #e9ecef; }
-        .booking-steps-indicator li.active { color: #1a1a1a; border-bottom-color: #ff6f61; }
-        .booking-steps-indicator li.done { color: #1a1a1a; border-bottom-color: #c9e7c4; }
-        @media (max-width: 575px) {
-            .booking-steps-indicator { gap: 2px; }
-            .booking-steps-indicator li { font-size: 10px; padding-bottom: 6px; }
+        /* The selected state for a full-width choice row. Uses the theme's own --primary so it
+           follows the tenant's accent like every other accented element on the page. */
+        .booking-choice {
+            display: block;
+            border: 1px solid var(--border-color, #e9ecef);
+            border-radius: 4px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: .3s;
         }
-        .booking-option { display: block; border: 1px solid #e9ecef; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
-        .booking-option:hover { border-color: #ff6f61; }
-        .booking-option input { margin-right: 10px; }
-        .booking-option.selected { border-color: #ff6f61; background: #fff6f4; }
-        .slot-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-        .slot-btn { border: 1px solid #e9ecef; border-radius: 8px; padding: 8px 14px; background: #fff; font-size: 13px; cursor: pointer; }
-        .slot-btn.selected { border-color: #ff6f61; background: #ff6f61; color: #fff; }
-        .slot-btn:disabled { opacity: .4; cursor: not-allowed; }
-        .booking-review-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
-        .booking-review-row:last-child { border-bottom: none; }
+
+        .booking-choice:hover { border-color: var(--primary); }
+        .booking-choice input { display: none; }
+
+        .booking-choice:has(input:checked) {
+            border-color: var(--primary);
+            box-shadow: inset 0 0 0 1px var(--primary);
+        }
+
+        /* The step rail is `position: sticky` so it stays beside a long panel on desktop; the
+           bundle's own banner is a full-height photo, which this keeps. */
+        .booking-appointment.multi-step .booking-steps { position: relative; }
+
+        @media (max-width: 991.98px) {
+            /* Below the banner's breakpoint the content column is the whole page, so the design's
+               own 100vh + internal scroll would trap short panels in a tall scroller. */
+            .booking-appointment-content { height: auto; min-height: 100vh; overflow-y: visible; }
+        }
     </style>
 
 </head>
 
 <body class="booking-page">
 
-    <div class="main-wrapper bg-light">
+    <div class="main-wrapper">
 
-        <!-- Header Start -->
-        <header class="header header-one">
-            <div class="container">
-                <nav class="navbar navbar-expand-lg header-nav" aria-label="header navigation">
-                    <div class="header-logo">
-                        <a href="{{ url('/') }}" class="navbar-brand logo">
-                            <img src="{{ asset('frontview-assets/img/logo.png') }}" class="img-fluid" alt="Logo">
-                        </a>
-                    </div>
-                    <div class="nav header-items">
-                        <span class="fw-semibold">{{ $tenant->name }}</span>
-                    </div>
-                </nav>
-            </div>
-        </header>
-        <!-- Header End -->
+        <div class="container-fuild position-relative z-1">
+            <div class="w-100 overflow-hidden position-relative flex-wrap d-block">
 
-        <div class="container py-5">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
+                <div class="booking-appointment multi-step">
+                    <div class="row">
 
-                    <div class="text-center mb-4">
-                        <h1 class="h3 fw-bold mb-1">Book an appointment with {{ $tenant->name }}</h1>
-                        <p class="f-light mb-0">Select a service, pick a time, and we'll take care of the rest.</p>
-                    </div>
+                        <!-- Step rail -->
+                        <div class="col-lg-5 d-none d-lg-flex p-0">
+                            <div class="booking-appointment-banner">
+                                <div class="booking-appointment-banner-content mx-auto">
+                                    <div class="mx-auto mb-4">
+                                        <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="logo">
+                                            <img src="{{ asset('frontview-assets/img/logo-white.svg') }}" class="img-fluid" alt="Logo">
+                                        </a>
+                                    </div>
 
-                    <ol class="booking-steps-indicator" id="stepIndicator">
-                        <li data-step="1">1. Service</li>
-                        <li data-step="2">2. Groomer</li>
-                        <li data-step="3">3. Date &amp; time</li>
-                        <li data-step="4">4. Your details</li>
-                        <li data-step="5">5. Review</li>
-                    </ol>
+                                    <div class="booking-appointment-banner-title">
+                                        BOOK YOUR <br> <span>APPOINTMENT</span>
+                                    </div>
 
-                    <div id="bookingAlert" class="alert alert-danger d-none" role="alert"></div>
+                                    <div class="booking-steps" id="stepIndicator">
+                                        <div class="booking-step" data-step="1">
+                                            <div class="step-number">01</div>
+                                            <div class="step-content">
+                                                <h2>Select Your Service</h2>
+                                                <p>Choose from the services this salon offers online.</p>
+                                            </div>
+                                        </div>
 
-                    <!-- Step 1: Service -->
-                    <div class="card" id="panelService">
-                        <div class="card-body">
-                            <h5 class="mb-3">Choose a service</h5>
-                            <div id="serviceList"><p class="f-light">Loading services…</p></div>
-                            <div class="text-end mt-3">
-                                <button type="button" class="btn primary-btn" id="btnServiceNext" disabled>Continue <i class="ti ti-arrow-right ms-1"></i></button>
+                                        <div class="booking-step" data-step="2">
+                                            <div class="step-number">02</div>
+                                            <div class="step-content">
+                                                <h2>Choose Your Groomer</h2>
+                                                <p>Pick someone in particular, or let us assign whoever is free.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="booking-step" data-step="3">
+                                            <div class="step-number">03</div>
+                                            <div class="step-content">
+                                                <h2>Pick a Date &amp; Time</h2>
+                                                <p>Only times that are genuinely open are shown.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="booking-step" data-step="4">
+                                            <div class="step-number">04</div>
+                                            <div class="step-content">
+                                                <h2>Your Details</h2>
+                                                <p>Tell us about you and your pet.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="booking-step" data-step="5">
+                                            <div class="step-number">05</div>
+                                            <div class="step-content">
+                                                <h2>Review &amp; Confirm</h2>
+                                                <p>Check everything over, then secure the slot.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Step 2: Staff -->
-                    <div class="card d-none" id="panelStaff">
-                        <div class="card-body">
-                            <h5 class="mb-3">Choose a groomer</h5>
-                            <div id="staffList"></div>
-                            <div class="d-flex justify-content-between mt-3">
-                                <button type="button" class="btn light-btn" data-back="1"><i class="ti ti-arrow-left me-1"></i> Back</button>
-                                <button type="button" class="btn primary-btn" id="btnStaffNext">Continue <i class="ti ti-arrow-right ms-1"></i></button>
-                            </div>
-                        </div>
-                    </div>
+                        <!-- Panels -->
+                        <div class="col-lg-7 p-0">
+                            <div class="booking-appointment-content">
 
-                    <!-- Step 3: Date & time -->
-                    <div class="card d-none" id="panelSchedule">
-                        <div class="card-body">
-                            <h5 class="mb-3">Choose a date &amp; time</h5>
-                            <label class="form-label" for="bookingDate">Date</label>
-                            <input type="date" class="form-control" id="bookingDate" style="max-width:220px">
-                            <div id="slotStatus" class="f-light mt-3" style="font-size:13px"></div>
-                            {{--
-                              The way out of a dead end, rather than "contact us directly": when the
-                              groomer the customer picked has nothing in the whole search window,
-                              one button drops the preference and searches again. Empty and hidden
-                              unless `loadSlots()` has something to offer here.
-                            --}}
-                            <div id="slotRecovery" class="mt-2" style="display:none"></div>
-                            <div class="slot-grid" id="slotGrid"></div>
-                            <div class="d-flex justify-content-between mt-3">
-                                <button type="button" class="btn light-btn" data-back="2"><i class="ti ti-arrow-left me-1"></i> Back</button>
-                                <button type="button" class="btn primary-btn" id="btnScheduleNext" disabled>Continue <i class="ti ti-arrow-right ms-1"></i></button>
-                            </div>
-                        </div>
-                    </div>
+                                <div class="d-lg-none mb-4">
+                                    <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="logo">
+                                        <img src="{{ asset('frontview-assets/img/logo.svg') }}" class="img-fluid" alt="Logo" style="max-height:40px">
+                                    </a>
+                                    <p class="mb-0 mt-2">Book an appointment with {{ $tenant->name }}</p>
+                                </div>
 
-                    <!-- Step 4: Customer & pet details -->
-                    <div class="card d-none" id="panelDetails">
-                        <div class="card-body">
-                            <h5 class="mb-3">Your details</h5>
-                            <form id="detailsForm" novalidate>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="first_name">First name</label>
-                                        <input type="text" class="form-control" id="first_name" required maxlength="255">
+                                <div id="bookingAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                                <!-- Step 1: Service -->
+                                <div id="panelService">
+                                    <div class="booking-appointment-content-header">
+                                        <h2 class="mb-0">Choose Services</h2>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="last_name">Last name</label>
-                                        <input type="text" class="form-control" id="last_name" required maxlength="255">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="email">Email</label>
-                                        <input type="email" class="form-control" id="email" required maxlength="255">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="phone">Phone (optional)</label>
-                                        <input type="tel" class="form-control" id="phone" maxlength="30">
+
+                                    <div id="serviceList"><p>Loading services&hellip;</p></div>
+
+                                    <div class="booking-wizard">
+                                        <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn light-btn">Back To Website</a>
+                                        <button type="button" class="btn dark-btn" id="btnServiceNext" disabled>Choose Groomer</button>
                                     </div>
                                 </div>
 
-                                <h6 class="mt-4 mb-3">Your pet</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="pet_name">Pet's name</label>
-                                        <input type="text" class="form-control" id="pet_name" required maxlength="255">
+                                <!-- Step 2: Staff -->
+                                <div class="d-none" id="panelStaff">
+                                    <div class="booking-appointment-content-header">
+                                        <h2 class="mb-0">Choose Groomer</h2>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label" for="pet_species">Species</label>
-                                        <select class="form-control" id="pet_species" required>
-                                            <option value="">Loading…</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label" for="pet_sex">Sex (optional)</label>
-                                        <select class="form-control" id="pet_sex">
-                                            <option value="">Not sure</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="unknown">Unknown</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="pet_breed">Breed (optional)</label>
-                                        <input type="text" class="form-control" id="pet_breed" maxlength="255">
+
+                                    <div id="staffList"></div>
+
+                                    <div class="booking-wizard">
+                                        <button type="button" class="btn light-btn" data-back="1">Back</button>
+                                        <button type="button" class="btn dark-btn" id="btnStaffNext">Select Date &amp; Time</button>
                                     </div>
                                 </div>
 
-                                <div class="mt-3">
-                                    <label class="form-label" for="customer_notes">Anything we should know for this visit? (optional)</label>
-                                    <textarea class="form-control" id="customer_notes" rows="3" maxlength="2000"></textarea>
+                                <!-- Step 3: Date & time -->
+                                <div class="d-none" id="panelSchedule">
+                                    <div class="booking-appointment-content-header">
+                                        <h2 class="mb-0">Time &amp; Date</h2>
+                                    </div>
+
+                                    <div class="booking-appointment-date-content">
+                                        <div class="booking-appointment-date-item mb-4 pb-4 border-bottom">
+                                            <h2 class="title">Choose Date</h2>
+                                            <input type="date" class="form-control" id="bookingDate" style="max-width:220px">
+                                        </div>
+
+                                        <div class="booking-appointment-date-item">
+                                            <h2 class="title">Choose Time</h2>
+
+                                            <div id="slotStatus" class="mb-2" style="font-size:13px"></div>
+
+                                            {{--
+                                              The way out of a dead end, rather than "contact us directly": when the
+                                              groomer the customer picked has nothing in the whole search window,
+                                              one button drops the preference and searches again. Empty and hidden
+                                              unless `loadSlots()` has something to offer here.
+                                            --}}
+                                            <div id="slotRecovery" class="mb-2" style="display:none"></div>
+
+                                            <div class="booking-appointment-time-slot flex-wrap gap-2" id="slotGrid"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="booking-wizard">
+                                        <button type="button" class="btn light-btn" data-back="2">Back</button>
+                                        <button type="button" class="btn dark-btn" id="btnScheduleNext" disabled>Enter Your Details</button>
+                                    </div>
                                 </div>
-                            </form>
-                            <div class="d-flex justify-content-between mt-3">
-                                <button type="button" class="btn light-btn" data-back="3"><i class="ti ti-arrow-left me-1"></i> Back</button>
-                                <button type="button" class="btn primary-btn" id="btnDetailsNext">Continue <i class="ti ti-arrow-right ms-1"></i></button>
+
+                                <!-- Step 4: Customer & pet details -->
+                                <div class="d-none" id="panelDetails">
+                                    <div class="booking-appointment-content-header">
+                                        <h2 class="mb-0">Your Details</h2>
+                                    </div>
+
+                                    <form id="detailsForm" novalidate>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="first_name">First name</label>
+                                                <input type="text" class="form-control" id="first_name" required maxlength="255">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="last_name">Last name</label>
+                                                <input type="text" class="form-control" id="last_name" required maxlength="255">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="email">Email</label>
+                                                <input type="email" class="form-control" id="email" required maxlength="255">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="phone">Phone (optional)</label>
+                                                <input type="tel" class="form-control" id="phone" maxlength="30">
+                                            </div>
+                                        </div>
+
+                                        <h2 class="title mt-4">Your Pet</h2>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="pet_name">Pet's name</label>
+                                                <input type="text" class="form-control" id="pet_name" required maxlength="255">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label" for="pet_species">Species</label>
+                                                <select class="form-control" id="pet_species" required>
+                                                    <option value="">Loading&hellip;</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label" for="pet_sex">Sex (optional)</label>
+                                                <select class="form-control" id="pet_sex">
+                                                    <option value="">Not sure</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="unknown">Unknown</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="pet_breed">Breed (optional)</label>
+                                                <input type="text" class="form-control" id="pet_breed" maxlength="255">
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <label class="form-label" for="customer_notes">Anything we should know for this visit? (optional)</label>
+                                            <textarea class="form-control" id="customer_notes" rows="3" maxlength="2000"></textarea>
+                                        </div>
+                                    </form>
+
+                                    <div class="booking-wizard">
+                                        <button type="button" class="btn light-btn" data-back="3">Back</button>
+                                        <button type="button" class="btn dark-btn" id="btnDetailsNext">Review Booking</button>
+                                    </div>
+                                </div>
+
+                                <!-- Step 5: Review & confirm -->
+                                <div class="d-none" id="panelReview">
+                                    <div class="booking-appointment-content-header">
+                                        <h2 class="mb-0">Review &amp; Confirm</h2>
+                                    </div>
+
+                                    <div id="reviewSummary"></div>
+
+                                    <div class="alert alert-info mt-3" style="font-size:13px">
+                                        By confirming, you agree to show up for your scheduled appointment. To reschedule
+                                        or cancel, please contact {{ $tenant->name }} directly.
+                                    </div>
+
+                                    <div class="form-check mt-2 mb-3">
+                                        <input class="form-check-input" type="checkbox" id="policies_accepted">
+                                        <label class="form-check-label" for="policies_accepted">
+                                            I agree to the booking policy above.
+                                        </label>
+                                    </div>
+
+                                    <div class="booking-wizard">
+                                        <button type="button" class="btn light-btn" data-back="4">Back</button>
+                                        <button type="button" class="btn dark-btn" id="btnConfirm">Confirm Booking</button>
+                                    </div>
+                                </div>
+
+                                <!-- Step 6: Done -->
+                                <div class="d-none" id="panelDone">
+                                    <div class="text-center py-5">
+                                        <i class="ti ti-circle-check" style="font-size:48px;color:#27ae60"></i>
+                                        <h2 class="title mt-3 mb-1" id="doneHeadline"></h2>
+                                        <p id="doneDetail"></p>
+                                        <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                                            <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn dark-btn">Back to website</a>
+                                            <a href="#" id="doneManageLink" class="btn light-btn d-none" target="_blank">Manage this booking</a>
+                                        </div>
+                                        <p class="mt-3" id="redirectCountdown" style="font-size:13px"></p>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
+
                     </div>
-
-                    <!-- Step 5: Review & confirm -->
-                    <div class="card d-none" id="panelReview">
-                        <div class="card-body">
-                            <h5 class="mb-3">Review &amp; confirm</h5>
-                            <div id="reviewSummary"></div>
-
-                            <div class="alert alert-info mt-3" style="font-size:13px">
-                                By confirming, you agree to show up for your scheduled appointment. To reschedule
-                                or cancel, please contact {{ $tenant->name }} directly.
-                            </div>
-
-                            <div class="form-check mt-2 mb-3">
-                                <input class="form-check-input" type="checkbox" id="policies_accepted">
-                                <label class="form-check-label" for="policies_accepted">
-                                    I agree to the booking policy above.
-                                </label>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <button type="button" class="btn light-btn" data-back="4"><i class="ti ti-arrow-left me-1"></i> Back</button>
-                                <button type="button" class="btn dark-btn" id="btnConfirm">Confirm booking <i class="ti ti-check ms-1"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 6: Done -->
-                    <div class="card d-none" id="panelDone">
-                        <div class="card-body text-center py-5">
-                            <i class="ti ti-circle-check" style="font-size:48px;color:#2fb380"></i>
-                            <h4 class="mt-3 mb-1" id="doneHeadline"></h4>
-                            <p class="f-light" id="doneDetail"></p>
-                            <div>
-                                <a href="{{ route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]) }}" class="btn dark-btn mt-2">Back to website</a>
-                                <a href="#" id="doneManageLink" class="btn light-btn mt-2 d-none" target="_blank">Manage this booking</a>
-                            </div>
-                            <p class="f-light mt-2" id="redirectCountdown"></p>
-                        </div>
-                    </div>
-
                 </div>
+
             </div>
         </div>
 
@@ -272,12 +370,21 @@
                 Object.keys(panels).forEach(function (key) {
                     document.getElementById(panels[key]).classList.toggle('d-none', Number(key) !== step);
                 });
-                document.querySelectorAll('#stepIndicator li').forEach(function (li) {
-                    var s = Number(li.getAttribute('data-step'));
-                    li.classList.toggle('active', s === step);
-                    li.classList.toggle('done', s < step);
+
+                // The rail is the bundle's `.booking-step`, whose own CSS already defines `.active`
+                // and `.done` — the same two classes this has always toggled, so only the selector
+                // changed from the previous hand-built `<li>` indicator.
+                document.querySelectorAll('#stepIndicator .booking-step').forEach(function (el) {
+                    var s = Number(el.getAttribute('data-step'));
+                    el.classList.toggle('active', s === step);
+                    el.classList.toggle('done', s < step);
                 });
+
                 hideAlert();
+
+                // The design scrolls the right column, not the window, above the lg breakpoint.
+                var content = document.querySelector('.booking-appointment-content');
+                if (content) { content.scrollTo({ top: 0, behavior: 'smooth' }); }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
@@ -317,29 +424,50 @@
 
             function money(amount) { return '$' + amount; }
 
+            // The bundle's service photography, cycled. A service has no image field in this
+            // product (§28's upload path is unbuilt), so the photo is decoration — which is why
+            // the name, price and duration beside it all come from Catalog.
+            var SERVICE_IMAGES = [
+                @json(asset('frontview-assets/img/booking/booking-services-img-01.jpg')),
+                @json(asset('frontview-assets/img/booking/booking-services-img-02.jpg')),
+                @json(asset('frontview-assets/img/booking/booking-services-img-03.jpg')),
+                @json(asset('frontview-assets/img/booking/booking-services-img-04.jpg')),
+                @json(asset('frontview-assets/img/booking/booking-services-img-05.jpg')),
+                @json(asset('frontview-assets/img/booking/booking-services-img-06.jpg'))
+            ];
+
             // ---- Step 1: services ----
             function renderServices() {
                 var list = document.getElementById('serviceList');
 
                 if (state.services.length === 0) {
-                    list.innerHTML = '<p class="f-light mb-0">This business has not published any services online yet. Please check back soon.</p>';
+                    list.innerHTML = '<p class="mb-0">This business has not published any services online yet. Please check back soon.</p>';
                     return;
                 }
 
                 list.innerHTML = '';
                 state.services.forEach(function (service, index) {
                     var label = document.createElement('label');
-                    label.className = 'booking-option';
+                    label.className = 'booking-choice';
                     label.innerHTML =
                         '<input type="radio" name="service" value="' + service.id + '">' +
-                        '<strong>' + escapeHtml(service.name) + '</strong>' +
-                        (service.category_name ? ' <span class="f-light">(' + escapeHtml(service.category_name) + ')</span>' : '') +
-                        '<div class="f-light" style="font-size:13px">' + money(service.price) + ' &middot; ' + service.duration_minutes + ' min' +
-                        (service.description ? '<br>' + escapeHtml(service.description) : '') + '</div>';
+                        '<div class="services-items mb-0">' +
+                            '<div class="item">' +
+                                '<div class="d-flex align-items-center gap-3">' +
+                                    '<img src="' + SERVICE_IMAGES[index % SERVICE_IMAGES.length] + '" alt="" class="img-fluid">' +
+                                    '<div>' +
+                                        '<span class="service-item-tile d-block">' + escapeHtml(service.name) + '</span>' +
+                                        '<p class="mb-0">' + escapeHtml(service.description || (service.category_name || '')) + '</p>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="item text-end">' +
+                                '<p class="service-item-tile mb-0 text-dark">' + money(service.price) + '</p>' +
+                                '<p class="mb-0">' + service.duration_minutes + ' Mins</p>' +
+                            '</div>' +
+                        '</div>';
 
                     label.addEventListener('click', function () {
-                        document.querySelectorAll('#serviceList .booking-option').forEach(function (el) { el.classList.remove('selected'); });
-                        label.classList.add('selected');
                         state.selectedService = service;
                         document.getElementById('btnServiceNext').disabled = false;
                     });
@@ -368,9 +496,10 @@
                 list.innerHTML = '';
 
                 var noPreference = document.createElement('label');
-                noPreference.className = 'booking-option selected';
-                noPreference.innerHTML = '<input type="radio" name="staff" value="" checked><strong>No preference</strong>' +
-                    '<div class="f-light" style="font-size:13px">We will assign whoever is available.</div>';
+                noPreference.className = 'booking-choice';
+                noPreference.innerHTML = '<input type="radio" name="staff" value="" checked>' +
+                    '<span class="service-item-tile d-block">No preference</span>' +
+                    '<p class="mb-0">We will assign whoever is available.</p>';
                 noPreference.addEventListener('click', function () { selectStaff(null, noPreference); });
                 list.appendChild(noPreference);
                 noPreferenceOption = noPreference;
@@ -378,22 +507,22 @@
 
                 state.staff.forEach(function (member) {
                     var label = document.createElement('label');
-                    label.className = 'booking-option';
-                    label.innerHTML = '<input type="radio" name="staff" value="' + member.id + '"><strong>' + escapeHtml(member.display_name) + '</strong>' +
-                        (member.job_title ? ' <span class="f-light">(' + escapeHtml(member.job_title) + ')</span>' : '') +
-                        (member.bio ? '<div class="f-light" style="font-size:13px">' + escapeHtml(member.bio) + '</div>' : '');
+                    label.className = 'booking-choice';
+                    label.innerHTML = '<input type="radio" name="staff" value="' + member.id + '">' +
+                        '<span class="service-item-tile d-block">' + escapeHtml(member.display_name) +
+                        (member.job_title ? ' <span class="fw-normal">(' + escapeHtml(member.job_title) + ')</span>' : '') + '</span>' +
+                        (member.bio ? '<p class="mb-0">' + escapeHtml(member.bio) + '</p>' : '');
                     label.addEventListener('click', function () { selectStaff(member.id, label); });
                     list.appendChild(label);
                 });
             }
 
             function selectStaff(id, selectedLabel) {
-                document.querySelectorAll('#staffList .booking-option').forEach(function (el) { el.classList.remove('selected'); });
-                selectedLabel.classList.add('selected');
-
                 // Ticked explicitly rather than relying on the label's native click behaviour: step
                 // 3's recovery button calls this directly, and a radio left unchecked there would
-                // show the customer a selection they no longer have if they stepped back.
+                // show the customer a selection they no longer have if they stepped back. The
+                // visible selected state is now CSS (`.booking-choice:has(input:checked)`), so the
+                // checked radio is the single source of truth for both.
                 var radio = selectedLabel.querySelector('input[type="radio"]');
                 if (radio) {
                     radio.checked = true;
@@ -448,22 +577,26 @@
                 return { throttled: false, slots: result.ok ? (result.body.data || []) : [] };
             }
 
+            // The bundle's slot chip: a hidden radio plus `.booking-appointment-badge`, whose
+            // selected state is the stylesheet's own `input:checked + .booking-appointment-badge`.
             function renderSlotButtons(slots) {
                 var grid = document.getElementById('slotGrid');
                 grid.innerHTML = '';
                 slots.forEach(function (iso) {
                     var naive = iso.slice(0, 19); // trims any offset the API stamps on — see CLAUDE.md "wall-clock trap"
-                    var btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'slot-btn';
-                    btn.textContent = formatTime(naive);
-                    btn.addEventListener('click', function () {
-                        document.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('selected'); });
-                        btn.classList.add('selected');
+
+                    var wrapper = document.createElement('div');
+                    var label = document.createElement('label');
+                    label.innerHTML = '<input type="radio" name="appointment-time" hidden>' +
+                        '<span class="booking-appointment-badge"><span>' + escapeHtml(formatTime(naive)) + '</span></span>';
+
+                    label.addEventListener('click', function () {
                         state.selectedSlot = naive;
                         document.getElementById('btnScheduleNext').disabled = false;
                     });
-                    grid.appendChild(btn);
+
+                    wrapper.appendChild(label);
+                    grid.appendChild(wrapper);
                 });
             }
 
@@ -603,7 +736,8 @@
                 ];
 
                 document.getElementById('reviewSummary').innerHTML = rows.map(function (row) {
-                    return '<div class="booking-review-row"><span class="f-light">' + row[0] + '</span><span>' + row[1] + '</span></div>';
+                    return '<div class="d-flex justify-content-between py-2 border-bottom">'
+                        + '<span>' + row[0] + '</span><span class="fw-semibold text-dark">' + row[1] + '</span></div>';
                 }).join('');
             }
 

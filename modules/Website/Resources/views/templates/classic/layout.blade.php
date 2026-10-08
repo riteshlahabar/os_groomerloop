@@ -6,23 +6,29 @@
 </head>
 
 {{--
-    Classic (spec §14) — the warm, traditional look, ported from the owner's template bundle's
-    `index.html`: light header, photo-led hero on the left, service list straight underneath.
+    Classic (spec §14) — the owner's design bundle `index.html`, "Luxury Salon": light header over a
+    photo banner with its own tab strip, signature-service cards, scrolling ambience marquees, a
+    four-icon about block, a lightbox experience strip, counters, a priced service list, the expert
+    grid and a swiper testimonial rail.
+
+    Structure follows the bundle exactly: one `.main-wrapper` holding the page and then the footer,
+    with the offcanvas panels and `.sidebar-overlay` outside it — `script.min.js` binds the mobile
+    menu and the overlay by those selectors, so moving them inside breaks the mobile nav silently.
 --}}
-<body class="gl-site">
+<body>
     @if ($site->isPreview)
         @include('website::sections.preview-bar')
     @endif
 
-    @include('website::sections.nav', ['dark' => false])
-
-    <main>
+    <div class="main-wrapper" role="main">
         @yield('site-body')
-    </main>
 
-    @include('website::sections.footer')
+        @include('website::templates.classic.partials.footer')
+    </div>
 
-    <script src="{{ asset('frontview-assets/js/bootstrap.bundle.min.js') }}"></script>
+    <div class="sidebar-overlay"></div>
+
+    @include('website::sections.scripts')
 </body>
 
 </html>

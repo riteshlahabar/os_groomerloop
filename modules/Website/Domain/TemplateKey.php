@@ -5,13 +5,16 @@ namespace Modules\Website\Domain;
 /**
  * Which look a tenant's site wears (spec §14).
  *
- * The three values map to the three homepage variants of the owner-supplied frontend template
- * (`index.html`, `index-2.html`, `index-3.html`), ported as three Blade layouts over one shared
- * set of section partials. A template is presentation only: it changes no content, no field and no
- * route, so a tenant can switch between them at any time without losing anything they typed.
+ * The three values are the three homepage designs of the owner-supplied frontend bundle —
+ * `index.html` ("Luxury Salon"), `index-2.html` ("Hair Studio & Barber") and `index-3.html`
+ * ("Spa & Wellness") — each ported with its own header, footer and home layout, over the one
+ * shared set of inner pages the bundle itself shares behind all three.
  *
- * Adding a fourth look is a new case here plus a new layout file — never a new page, model or
- * endpoint. This is deliberately not a CMS theme system (§37).
+ * A template is presentation only: it changes no content, no field and no route, so a tenant can
+ * switch between them at any time without losing anything they typed.
+ *
+ * Adding a fourth look is a new case here plus a new `templates/<key>/` folder — never a new page,
+ * model or endpoint. This is deliberately not a CMS theme system (§37).
  */
 enum TemplateKey: string
 {
@@ -34,9 +37,9 @@ enum TemplateKey: string
     public function description(): string
     {
         return match ($this) {
-            self::Classic => 'Warm and traditional — a photo-led hero with the service list straight underneath.',
-            self::Modern => 'Clean and airy — large type, generous spacing, strong call to action.',
-            self::Bold => 'High contrast — dark header, accent colour throughout, gallery first.',
+            self::Classic => 'Warm and traditional — a photo banner with a tab strip, signature-service cards and a priced service list.',
+            self::Modern => 'Clean and airy — a centred full-bleed banner, numbered how-it-works steps and a dark service list.',
+            self::Bold => 'High contrast — a dark split banner over a photo slider, a category slider and a two-column price grid.',
         };
     }
 

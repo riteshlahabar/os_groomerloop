@@ -4,6 +4,7 @@ namespace Modules\Website\Services;
 
 use Modules\Catalog\Contracts\ServiceCatalog;
 use Modules\Onboarding\Contracts\BusinessProfileDirectory;
+use Modules\Scheduling\Contracts\OpeningHours;
 use Modules\Team\Contracts\StaffDirectory;
 use Modules\Tenancy\Models\Tenant;
 use Modules\Website\Domain\PageKey;
@@ -33,6 +34,7 @@ final class SiteComposer
         private readonly ServiceCatalog $services,
         private readonly StaffDirectory $staff,
         private readonly BusinessProfileDirectory $profiles,
+        private readonly OpeningHours $hours,
     ) {}
 
     /**
@@ -139,6 +141,12 @@ final class SiteComposer
             services: $this->services->bookableOnline(),
             staff: $this->staff->bookableOnline(),
             profile: $this->profiles->summary(),
+            // Real opening hours, or none at all. The three templates all have an hours block in
+            // their chrome, and the design bundle fills it with stock times — printing those on a
+            // real business's public site would state a fact nobody entered, which is the same
+            // thing invariant #7 forbids of a dashboard number. An unconfigured week answers `[]`
+            // so a template renders nothing rather than seven "Closed" rows.
+            openingHours: $this->hours->isUnset() ? [] : $this->hours->weekly(),
             // Never a second booking implementation: the §12 wizard is the only way to book
             // (invariant #2, D-023).
             bookingUrl: route('public-booking', ['tenant' => $tenant->slug]),

@@ -3,38 +3,31 @@
 
 <head>
     @include('website::sections.head')
-
-    {{-- Bold's own chrome: dark header, accent rules, heavier headings. --}}
-    <style>
-        .gl-site.gl-bold h1,
-        .gl-site.gl-bold h2 { letter-spacing: -.02em; }
-        .gl-site.gl-bold .gl-card {
-            border: 0;
-            border-top: 4px solid var(--gl-accent);
-            box-shadow: 0 10px 30px rgba(17, 24, 39, .08);
-        }
-        .gl-site.gl-bold main > section + section { border-top: 1px solid rgba(0, 0, 0, .06); }
-    </style>
 </head>
 
 {{--
-    Bold (spec §14) — the high-contrast look from the bundle's `index-3.html`: dark header, accent
-    colour carried through the cards, hero split against its photo.
+    Bold (spec §14) — the owner's design bundle `index-3.html`, "Spa & Wellness": the high-contrast
+    look, with a split banner over a photo swiper, the "What We Offer" price grid, the icon-led
+    "Revitalize Your Senses" row, a flip-in team grid, a gallery rail and the oversized "Let's Talk"
+    booking band in the footer.
+
+    `main-wrapper home-five` is the bundle's own wrapper class on this design and carries its dark
+    palette — dropping the `home-five` half renders every section in Classic's light colours.
 --}}
-<body class="gl-site gl-bold">
+<body>
     @if ($site->isPreview)
         @include('website::sections.preview-bar')
     @endif
 
-    @include('website::sections.nav', ['dark' => true])
-
-    <main>
+    <div class="main-wrapper home-five" role="main">
         @yield('site-body')
-    </main>
 
-    @include('website::sections.footer')
+        @include('website::templates.bold.partials.footer')
+    </div>
 
-    <script src="{{ asset('frontview-assets/js/bootstrap.bundle.min.js') }}"></script>
+    <div class="sidebar-overlay"></div>
+
+    @include('website::sections.scripts')
 </body>
 
 </html>

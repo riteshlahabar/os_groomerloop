@@ -3,36 +3,28 @@
 
 <head>
     @include('website::sections.head')
-
-    {{-- Modern's own chrome: a tinted band behind the hero and a narrower measure for long copy. --}}
-    <style>
-        .gl-site.gl-modern .gl-header { border-bottom: 1px solid rgba(0, 0, 0, .06); }
-        .gl-site.gl-modern main > section:first-of-type {
-            background: linear-gradient(180deg, rgba(0, 0, 0, .03), transparent);
-        }
-        .gl-site.gl-modern .gl-section { padding: 88px 0; }
-        .gl-site.gl-modern .gl-card { border-radius: 20px; }
-    </style>
 </head>
 
 {{--
-    Modern (spec §14) — the clean, airy look from the bundle's `index-2.html`: centred hero, large
-    type, generous spacing, one strong call to action.
+    Modern (spec §14) — the owner's design bundle `index-2.html`, "Hair Studio & Barber": a dark
+    contact topbar, a centred full-bleed banner, a numbered three-step article row, the dark
+    "What We Offer" list, the stacked-photo about block, a photo-and-price services split, the
+    expert grid, a tilted testimonial swiper and the "Ready for a fresh look?" closing band.
 --}}
-<body class="gl-site gl-modern">
+<body>
     @if ($site->isPreview)
         @include('website::sections.preview-bar')
     @endif
 
-    @include('website::sections.nav', ['dark' => false])
-
-    <main>
+    <div class="main-wrapper" role="main">
         @yield('site-body')
-    </main>
 
-    @include('website::sections.footer')
+        @include('website::templates.modern.partials.footer')
+    </div>
 
-    <script src="{{ asset('frontview-assets/js/bootstrap.bundle.min.js') }}"></script>
+    <div class="sidebar-overlay"></div>
+
+    @include('website::sections.scripts')
 </body>
 
 </html>

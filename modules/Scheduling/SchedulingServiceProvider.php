@@ -7,11 +7,13 @@ use Illuminate\Support\Facades\Gate;
 use Modules\Onboarding\Services\StepVerifiers;
 use Modules\Scheduling\Contracts\AppointmentMetrics;
 use Modules\Scheduling\Contracts\AppointmentScheduler;
+use Modules\Scheduling\Contracts\OpeningHours;
 use Modules\Scheduling\Models\Appointment;
 use Modules\Scheduling\Policies\AppointmentPolicy;
 use Modules\Scheduling\Services\BusinessHoursVerifier;
 use Modules\Scheduling\Services\EloquentAppointmentMetrics;
 use Modules\Scheduling\Services\EloquentAppointmentScheduler;
+use Modules\Scheduling\Services\EloquentOpeningHours;
 
 /**
  * Scheduling owns the appointment engine (spec §11), the core data-model link between Pets,
@@ -32,6 +34,11 @@ final class SchedulingServiceProvider extends ModuleServiceProvider
 
         $this->app->singleton(EloquentAppointmentMetrics::class);
         $this->app->alias(EloquentAppointmentMetrics::class, AppointmentMetrics::class);
+
+        // Deliberately not a singleton: EloquentOpeningHours caches the week it read, and a
+        // singleton would carry one tenant's hours across a `TenantContext::runFor()` switch
+        // inside a queued job. A fresh instance per resolution keeps the cache request-shaped.
+        $this->app->bind(OpeningHours::class, EloquentOpeningHours::class);
     }
 
     public function boot(): void
