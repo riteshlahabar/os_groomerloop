@@ -14,16 +14,14 @@
   <div class="grid grid-cols-12 card-gap">
     <div class="col-span-12">
       <div class="card" style="max-width:720px">
-        <div class="card-header card-no-border pb-2">
-          {{--
-            What the switch below decides: with it on, booking confirmations, reschedules and
-            reminders reach customers from this business's own address; with it off,
-            MailProviderResolver falls back to the platform's account and then to LogMailProvider
-            (D-032). Not said on screen, per the owner's no-prose rule.
-          --}}
-          <h5>Where your emails come from</h5>
-        </div>
-        <div class="card-body pt-0">
+        {{--
+          No card heading by the owner's instruction (2026-10-09). What the switch below decides:
+          with it on, booking confirmations, reschedules and reminders reach customers from this
+          business's own address; with it off, MailProviderResolver falls back to the platform's
+          account and then to LogMailProvider (D-032). The card-header div went with the heading,
+          so this body carries its own top padding rather than the pt-0 that assumed one.
+        --}}
+        <div class="card-body">
           <div id="emStatus" class="alert" style="display:none"></div>
 
           <form id="emForm">
@@ -48,13 +46,13 @@
             </div>
 
             {{--
-              These are the tenant's SMTP credentials, issued by whoever hosts its email, stored
-              in tenant_mail_settings with the password under Eloquent's encrypted cast (D-032).
+              The tenant's SMTP credentials, issued by whoever hosts its email, stored in
+              tenant_mail_settings with the password under Eloquent's encrypted cast (D-032).
               Without them the switch above must stay off, since SmtpMailProvider cannot resolve.
+              Heading removed on the owner's instruction (2026-10-09); its mt-4 moved onto the
+              grid so the break between the from-address fields and these stays.
             --}}
-            <h6 class="mt-4">Your mail server</h6>
-
-            <div class="grid grid-cols-12 card-gap form-grid">
+            <div class="grid grid-cols-12 card-gap form-grid mt-4">
               <div class="col-span-8 sm:col-span-12">
                 <label class="form-label" for="em_host">Server (host)</label>
                 <input type="text" class="form-control" id="em_host" placeholder="smtp.yourprovider.com">
@@ -97,7 +95,7 @@
             row — not what is currently typed in the form above — so unsaved edits are not what
             gets tested.
           --}}
-          <h5>Send a Mail</h5>
+          <h5>Send a Test Mail</h5>
         </div>
         <div class="card-body pt-0">
           <div id="emTestStatus" class="alert" style="display:none"></div>
