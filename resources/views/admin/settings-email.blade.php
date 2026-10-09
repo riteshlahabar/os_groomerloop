@@ -15,12 +15,13 @@
     <div class="col-span-12">
       <div class="card" style="max-width:720px">
         <div class="card-header card-no-border pb-2">
+          {{--
+            What the switch below decides: with it on, booking confirmations, reschedules and
+            reminders reach customers from this business's own address; with it off,
+            MailProviderResolver falls back to the platform's account and then to LogMailProvider
+            (D-032). Not said on screen, per the owner's no-prose rule.
+          --}}
           <h5>Where your emails come from</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            Booking confirmations, reschedules and reminders go to your customers from this
-            address. Leave it switched off and they are sent through GroomerLoop's own mail
-            account instead.
-          </p>
         </div>
         <div class="card-body pt-0">
           <div id="emStatus" class="alert" style="display:none"></div>
@@ -46,11 +47,12 @@
               </div>
             </div>
 
+            {{--
+              These are the tenant's SMTP credentials, issued by whoever hosts its email, stored
+              in tenant_mail_settings with the password under Eloquent's encrypted cast (D-032).
+              Without them the switch above must stay off, since SmtpMailProvider cannot resolve.
+            --}}
             <h6 class="mt-4">Your mail server</h6>
-            <p class="f-light" style="font-size:13px">
-              These come from whoever hosts your email — your provider's help pages call them
-              SMTP settings. If you do not have them, leave this switched off.
-            </p>
 
             <div class="grid grid-cols-12 card-gap form-grid">
               <div class="col-span-8 sm:col-span-12">
@@ -90,11 +92,12 @@
     <div class="col-span-12">
       <div class="card" style="max-width:720px">
         <div class="card-header card-no-border pb-2">
-          <h5>Send yourself a test</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            Uses the settings above exactly as a real booking confirmation would — so save first,
-            then test.
-          </p>
+          {{--
+            Sends through the same resolver a real booking confirmation uses, reading the SAVED
+            row — not what is currently typed in the form above — so unsaved edits are not what
+            gets tested.
+          --}}
+          <h5>Send a Mail</h5>
         </div>
         <div class="card-body pt-0">
           <div id="emTestStatus" class="alert" style="display:none"></div>
