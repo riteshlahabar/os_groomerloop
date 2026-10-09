@@ -1363,11 +1363,22 @@
                     });
                 });
 
-                // Their first pet, pre-selected: the common case is booking for the same animal
-                // again, and that is the whole point of the picker.
-                var first = document.getElementById('pet_choice_' + state.pets[0].id);
-                first.checked = true;
-                selectPet(state.pets[0].id);
+                // `?pet_id=` lets the portal's Pets page deep-link "Book Appointment" straight from
+                // one pet's card. Honoured only when that id is in the list the server just sent —
+                // i.e. the customer's own current pets — so the query string is a convenience and
+                // never the authority; a stale or hand-edited one falls back to the first pet
+                // rather than failing. The server checks again on submit regardless (`D-047`).
+                var requested = new URLSearchParams(window.location.search).get('pet_id');
+                var wanted = state.pets.filter(function (pet) {
+                    return String(pet.id) === String(requested);
+                })[0];
+
+                // Their first pet otherwise: the common case is booking for the same animal again,
+                // and that is the whole point of the picker.
+                var chosen = wanted || state.pets[0];
+
+                document.getElementById('pet_choice_' + chosen.id).checked = true;
+                selectPet(chosen.id);
             }
 
             function selectPet(petId) {

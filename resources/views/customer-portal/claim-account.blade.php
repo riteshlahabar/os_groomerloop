@@ -66,7 +66,7 @@
                                     <i class="ti ti-circle-check" style="font-size:40px;color:#2fb380"></i>
                                     <h4 class="mt-3 mb-1">Your account is ready</h4>
                                     <p class="f-light mb-3">You're signed in{{ $customerName ? ', '.$customerName : '' }}.</p>
-                                    <a href="{{ route('customer-portal.dashboard', ['tenant' => $tenant->getKey()]) }}" class="btn btn-primary">
+                                    <a href="{{ route('customer-portal.profile-page', ['tenant' => $tenant->getKey()]) }}" class="btn btn-primary">
                                         Go to your account
                                     </a>
                                 </div>

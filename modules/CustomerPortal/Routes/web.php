@@ -52,29 +52,57 @@ Route::prefix('portal/{tenant}')
     ->group(function (): void {
         Route::get('login', function (TenantContext $context) {
             if (auth()->guard('customer')->check()) {
-                return redirect()->route('customer-portal.dashboard', ['tenant' => $context->tenant()->getKey()]);
+                return redirect()->route('customer-portal.profile-page', ['tenant' => $context->tenant()->getKey()]);
             }
 
             return view('customer-portal.login', ['tenant' => $context->tenant()]);
         })->name('customer-portal.login');
 
-        // Each closure resolves the signed-in customer's display name through CustomerDirectory
-        // (D-007) rather than calling a method on the Authenticatable model directly — the same
-        // boundary MeController already respects via `contactDetailsOf()`.
+        /*
+         * The portal's index is **Profile**, not a Dashboard (owner, 2026-10-09). The old
+         * dashboard was a landing page with nothing on it the two other pages did not already
+         * show, so it became the one screen a customer actually needs that did not exist: their
+         * own editable record. The URL is unchanged — `/portal/{tenant}` is still the index — but
+         * the route *name* moved from `customer-portal.dashboard` to `customer-portal.profile-page`
+         * (`-page` matching its two siblings, so it cannot be confused with the API's
+         * `customer-portal.profile`).
+         *
+         * Each closure reads the signed-in customer through `CustomerDirectory` (`D-007`), never a
+         * method on the `Authenticatable` model — now `selfProfileOf()` rather than
+         * `contactDetailsOf()`, because the shell's profile box also wants "customer since".
+         */
         Route::middleware('auth:customer')->group(function (): void {
-            Route::get('/', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.dashboard', [
-                'tenant' => $context->tenant(),
-                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
-            ]))->name('customer-portal.dashboard');
+            // Initials for the profile box, because §28 has no customer photo upload — see the
+            // layout's note on why the bundle's avatar-and-upload control is not reproduced.
+            $initials = static function (string $name): string {
+                $parts = preg_split('/\s+/', trim($name)) ?: [];
 
-            Route::get('appointments', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.appointments', [
-                'tenant' => $context->tenant(),
-                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
-            ]))->name('customer-portal.appointments-page');
+                $letters = implode('', array_map(
+                    static fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)),
+                    array_slice(array_filter($parts), 0, 2),
+                ));
 
-            Route::get('pets', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => view('customer-portal.pets', [
-                'tenant' => $context->tenant(),
-                'customerName' => $customers->contactDetailsOf((int) $request->user('customer')->getAuthIdentifier())?->fullName,
-            ]))->name('customer-portal.pets-page');
+                return $letters === '' ? '?' : $letters;
+            };
+
+            $shell = static function (TenantContext $context, Request $request, CustomerDirectory $customers, string $view) use ($initials) {
+                $profile = $customers->selfProfileOf((int) $request->user('customer')->getAuthIdentifier());
+
+                return view($view, [
+                    'tenant' => $context->tenant(),
+                    'customerName' => $profile?->fullName(),
+                    'customerInitials' => $profile === null ? '?' : $initials($profile->fullName()),
+                    'customerSince' => $profile?->customerSince,
+                ]);
+            };
+
+            Route::get('/', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => $shell($context, $request, $customers, 'customer-portal.profile'))
+                ->name('customer-portal.profile-page');
+
+            Route::get('appointments', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => $shell($context, $request, $customers, 'customer-portal.appointments'))
+                ->name('customer-portal.appointments-page');
+
+            Route::get('pets', fn (TenantContext $context, Request $request, CustomerDirectory $customers) => $shell($context, $request, $customers, 'customer-portal.pets'))
+                ->name('customer-portal.pets-page');
         });
     });

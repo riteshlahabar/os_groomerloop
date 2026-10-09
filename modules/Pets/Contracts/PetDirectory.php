@@ -105,4 +105,40 @@ interface PetDirectory
      * @return list<PetSummary>
      */
     public function summariesForCustomer(int $customerId): array;
+
+    /**
+     * A customer adding one of their own pets from the Customer Portal (`D-043`).
+     *
+     * Distinct from `createForPublicBooking()` above, which exists for a stranger mid-booking and
+     * takes only the three fields that flow asks for. This takes the §9 field set a pet profile
+     * actually has — minus the two a customer may never write, which is the whole reason it is its
+     * own method rather than a wider signature on that one:
+     *
+     *   * `internal_notes` — §9 gives staff-only notes their own permission, and `PetSummary` does
+     *     not even carry the field, so a customer cannot read one either.
+     *   * `status` — archiving a pet or recording it as deceased is the business's record-keeping
+     *     decision, and `UpdatePet` raises a distinct audit event for the latter.
+     *
+     * `photo_path` is absent for a different reason: nothing writes it yet (§28 has no upload path
+     * for pets — see `D-016`'s scope).
+     *
+     * @param  array<string, mixed>  $attributes  name, species_id (required); breed, sex,
+     *                                            date_of_birth, approximate_age_years, weight_lb,
+     *                                            coat_type, coat_notes, customer_notes,
+     *                                            temperament_notes, special_instructions,
+     *                                            medical_notes all optional
+     */
+    public function createForCustomer(int $customerId, array $attributes): int;
+
+    /**
+     * A customer editing one of their own pets from the portal (`D-043`).
+     *
+     * Takes the customer id as well as the pet id and **returns false rather than throwing** when
+     * the pet is not theirs, so the caller cannot forget the ownership question: there is no way
+     * to invoke this without naming whose pet it is meant to be. Same field set, and the same two
+     * exclusions, as `createForCustomer()`.
+     *
+     * @param  array<string, mixed>  $attributes  any of the fields listed on `createForCustomer()`
+     */
+    public function updateForCustomer(int $petId, int $customerId, array $attributes): bool;
 }

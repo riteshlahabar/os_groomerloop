@@ -2,12 +2,14 @@
 
 namespace Modules\Crm\Services;
 
+use Modules\Audit\Contracts\AuditRecorder;
 use Modules\Crm\Actions\CreateCustomer;
 use Modules\Crm\Actions\UpsertCustomerTag;
 use Modules\Crm\Contracts\CustomerDirectory;
 use Modules\Crm\Domain\CommunicationChannel;
 use Modules\Crm\Domain\ContactNormaliser;
 use Modules\Crm\Domain\CustomerContactDetails;
+use Modules\Crm\Domain\CustomerSelfProfile;
 use Modules\Crm\Models\Customer;
 use Modules\Tenancy\Support\TenantContext;
 
@@ -17,6 +19,7 @@ final class EloquentCustomerDirectory implements CustomerDirectory
         private readonly CreateCustomer $create,
         private readonly UpsertCustomerTag $upsertTag,
         private readonly TenantContext $tenants,
+        private readonly AuditRecorder $audit,
     ) {}
 
     /**
@@ -164,6 +167,82 @@ final class EloquentCustomerDirectory implements CustomerDirectory
         $customer->save();
 
         unset($this->resolved[$customerId]);
+    }
+
+    public function selfProfileOf(int $customerId): ?CustomerSelfProfile
+    {
+        $customer = $this->find($customerId);
+
+        if ($customer === null) {
+            return null;
+        }
+
+        return new CustomerSelfProfile(
+            id: (int) $customer->getKey(),
+            firstName: $customer->first_name,
+            lastName: $customer->last_name,
+            email: $customer->email,
+            phone: $customer->phone,
+            addressLine1: $customer->address_line_1,
+            addressLine2: $customer->address_line_2,
+            city: $customer->city,
+            state: $customer->state,
+            postalCode: $customer->postal_code,
+            country: $customer->country,
+            customerSince: $customer->created_at?->toDateString(),
+        );
+    }
+
+    public function updateSelfProfile(int $customerId, array $attributes): bool
+    {
+        $customer = $this->find($customerId);
+
+        if ($customer === null) {
+            return false;
+        }
+
+        // An allow-list, not the caller's array. `Customer::$fillable` is the staff-side surface
+        // and includes `email`, `status`, `source` and `notes`; a customer editing their own
+        // profile may touch none of those, so the keys are filtered here rather than trusted to
+        // be filtered by whichever request happens to call this.
+        $permitted = array_intersect_key($attributes, array_flip([
+            'first_name',
+            'last_name',
+            'phone',
+            'address_line_1',
+            'address_line_2',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+        ]));
+
+        $customer->fill($permitted);
+
+        // `phone_normalised` is what every lookup matches on, so it has to move with `phone` —
+        // the staff-side action does this too. Recomputed only when the phone actually changed,
+        // so an address-only save does not touch it.
+        if ($customer->isDirty('phone')) {
+            $customer->phone_normalised = ContactNormaliser::phone($customer->phone);
+        }
+
+        $changed = array_keys($customer->getDirty());
+
+        if ($changed === []) {
+            return true;
+        }
+
+        $customer->save();
+
+        unset($this->resolved[$customerId]);
+
+        // Its own event, deliberately not `customer.updated`: "the customer changed this
+        // themselves" and "a staff member changed it" are different facts, and the audit trail is
+        // where that difference has to survive — the same reasoning that keeps
+        // `customer.portal_password_reset_by_staff` separate from `customer.account_claimed`.
+        $this->audit->record('customer.self_profile_updated', $customer, ['changed' => $changed]);
+
+        return true;
     }
 
     /**

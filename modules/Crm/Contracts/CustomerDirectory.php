@@ -4,6 +4,7 @@ namespace Modules\Crm\Contracts;
 
 use Modules\Crm\Domain\CommunicationChannel;
 use Modules\Crm\Domain\CustomerContactDetails;
+use Modules\Crm\Domain\CustomerSelfProfile;
 
 /**
  * How other modules look a customer up (D-007).
@@ -119,4 +120,33 @@ interface CustomerDirectory
      * is the model's own `hashed` cast; a caller passes the plain password exactly once.
      */
     public function setPassword(int $customerId, string $plainPassword): void;
+
+    /**
+     * This customer's own profile, for the Customer Portal's Profile page (`D-043`).
+     *
+     * Wider than `contactDetailsOf()` because the audience is different — that one answers "where
+     * do I send this" for Notifications; this is the editable half of a person's own record. See
+     * `CustomerSelfProfile` for what it deliberately leaves out and why.
+     */
+    public function selfProfileOf(int $customerId): ?CustomerSelfProfile;
+
+    /**
+     * A customer editing their own name, phone and address from the portal (`D-043`).
+     *
+     * Narrow on purpose, and narrower than the staff-side update: this writes **only** the keys
+     * listed below, so no caller can widen it into a general-purpose customer update. `email` is
+     * not among them by the owner's decision (2026-10-09) — it is the `customer` guard's login
+     * identity, so a typo or a collision with another customer sharing that address would lock
+     * someone out of their own account; staff change it from `/admin/customers`. Neither are
+     * `status`, `source`, the staff `notes` column, or any consent flag (invariant #9: consent
+     * changes through a consent flow, never as a side effect of saving an address).
+     *
+     * Audited under its own event, distinct from a staff edit of the same columns, so "the
+     * customer changed this themselves" stays answerable later.
+     *
+     * @param  array<string, mixed>  $attributes  any of first_name, last_name, phone,
+     *                                            address_line_1, address_line_2, city, state,
+     *                                            postal_code, country
+     */
+    public function updateSelfProfile(int $customerId, array $attributes): bool;
 }

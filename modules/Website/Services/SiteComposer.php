@@ -153,7 +153,7 @@ final class SiteComposer
             // Customer Portal (D-043) login, id-keyed like the site itself (D-036) since
             // ResolveCustomerTenant resolves `{tenant}` by id, not slug.
             portalLoginUrl: route('customer-portal.login', ['tenant' => $tenant->id]),
-            portalDashboardUrl: route('customer-portal.dashboard', ['tenant' => $tenant->id]),
+            portalDashboardUrl: route('customer-portal.profile-page', ['tenant' => $tenant->id]),
             customerIsSignedIn: $this->customerIsSignedIn(),
             isPreview: $isPreview,
             isPageDisabled: $isPageDisabled,

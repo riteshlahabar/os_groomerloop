@@ -4,6 +4,7 @@ namespace Modules\Pets\Services;
 
 use Modules\Pets\Actions\CreatePet;
 use Modules\Pets\Actions\EnsureDefaultSpecies;
+use Modules\Pets\Actions\UpdatePet;
 use Modules\Pets\Contracts\PetDirectory;
 use Modules\Pets\Domain\PetSummary;
 use Modules\Pets\Models\Pet;
@@ -13,8 +14,35 @@ final class EloquentPetDirectory implements PetDirectory
 {
     public function __construct(
         private readonly CreatePet $create,
+        private readonly UpdatePet $update,
         private readonly EnsureDefaultSpecies $ensureDefaultSpecies,
     ) {}
+
+    /**
+     * The §9 fields a customer may write about their own pet, in one place because both
+     * `createForCustomer()` and `updateForCustomer()` must agree exactly.
+     *
+     * `internal_notes` and `status` are absent deliberately — see the contract's docblocks. Keeping
+     * the list here rather than trusting each caller's request class means a future endpoint
+     * cannot widen it by forgetting to exclude something.
+     *
+     * @var list<string>
+     */
+    private const CUSTOMER_WRITABLE = [
+        'name',
+        'species_id',
+        'breed',
+        'sex',
+        'date_of_birth',
+        'approximate_age_years',
+        'weight_lb',
+        'coat_type',
+        'coat_notes',
+        'customer_notes',
+        'temperament_notes',
+        'special_instructions',
+        'medical_notes',
+    ];
 
     /**
      * Memoised per request. Scheduling asks about the same pet more than once while validating a
@@ -137,14 +165,17 @@ final class EloquentPetDirectory implements PetDirectory
             ->map(static fn (Pet $pet): PetSummary => new PetSummary(
                 id: (int) $pet->getKey(),
                 name: $pet->name,
+                speciesId: $pet->species_id === null ? null : (int) $pet->species_id,
                 speciesName: $pet->species?->name,
                 breed: $pet->breed,
                 sex: $pet->sex->value,
                 dateOfBirth: $pet->date_of_birth?->toDateString(),
+                approximateAgeYears: $pet->approximate_age_years === null ? null : (int) $pet->approximate_age_years,
                 ageYears: $pet->ageYears(),
                 ageIsApproximate: $pet->isAgeApproximate(),
                 ageBreakdown: $pet->ageBreakdown(),
                 weightLb: $pet->weight_lb === null ? null : (string) $pet->weight_lb,
+                coatType: $pet->coat_type?->value,
                 coatTypeLabel: $pet->coat_type?->label(),
                 coatNotes: $pet->coat_notes,
                 customerNotes: $pet->customer_notes,
@@ -155,6 +186,38 @@ final class EloquentPetDirectory implements PetDirectory
                 statusLabel: $pet->status->label(),
             ))
             ->all();
+    }
+
+    public function createForCustomer(int $customerId, array $attributes): int
+    {
+        return (int) $this->create->execute($customerId, $this->customerWritable($attributes))->getKey();
+    }
+
+    public function updateForCustomer(int $petId, int $customerId, array $attributes): bool
+    {
+        $pet = $this->find($petId);
+
+        // Both halves of the question, and in this order. Tenant isolation is already handled by
+        // the global scope on `find()`, so this is the within-tenant half the scope cannot answer:
+        // one family editing another family's dog in the same business.
+        if ($pet === null || (int) $pet->customer_id !== $customerId) {
+            return false;
+        }
+
+        $this->update->execute($pet, $this->customerWritable($attributes));
+
+        unset($this->resolved[$petId]);
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function customerWritable(array $attributes): array
+    {
+        return array_intersect_key($attributes, array_flip(self::CUSTOMER_WRITABLE));
     }
 
     /**

@@ -8,6 +8,9 @@ use Modules\CustomerPortal\Http\Controllers\Api\V1\LoginController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\LogoutController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\MeController;
 use Modules\CustomerPortal\Http\Controllers\Api\V1\PetController;
+use Modules\CustomerPortal\Http\Controllers\Api\V1\PetFormOptionsController;
+use Modules\CustomerPortal\Http\Controllers\Api\V1\PetWriteController;
+use Modules\CustomerPortal\Http\Controllers\Api\V1\ProfileController;
 use Modules\Tenancy\Http\Middleware\ResolveCustomerTenant;
 
 /*
@@ -38,11 +41,26 @@ Route::prefix('customer/{tenant}')
         });
 
         // --- Authenticated routes ------------------------------------------------------------
+        //
+        // No `permission:` middleware anywhere in this group, and that is not an omission: this
+        // guard has exactly one kind of actor and every route below is scoped to *their own*
+        // records by the session alone. The §5 role matrix is staff's.
         Route::middleware('auth:customer')->group(function (): void {
             Route::post('logout', LogoutController::class)->name('customer-portal.logout');
             Route::get('me', MeController::class)->name('customer-portal.me');
             Route::get('appointments', AppointmentController::class)->name('customer-portal.appointments');
+
+            // The Profile screen (2026-10-09), which replaced the portal's Dashboard. `me` above
+            // stays as it was: it is the cheap "who am I" every page and §12's booking wizard ask.
+            Route::get('profile', [ProfileController::class, 'show'])->name('customer-portal.profile');
+            Route::put('profile', [ProfileController::class, 'update'])->name('customer-portal.profile.update');
+
             Route::get('pets', PetController::class)->name('customer-portal.pets');
+            Route::get('pet-form-options', PetFormOptionsController::class)->name('customer-portal.pet-form-options');
+            Route::post('pets', [PetWriteController::class, 'store'])->name('customer-portal.pets.store');
+            Route::put('pets/{pet}', [PetWriteController::class, 'update'])
+                ->where('pet', '[0-9]+')
+                ->name('customer-portal.pets.update');
         });
     });
 

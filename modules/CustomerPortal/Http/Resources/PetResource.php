@@ -23,14 +23,19 @@ final class PetResource extends JsonResource
         return [
             'id' => $this->resource->id,
             'name' => $this->resource->name,
+            // Raw stored values beside the display ones: the portal's edit form has to pre-select
+            // what is already there, and a label cannot do that (see `PetSummary`'s own note).
+            'species_id' => $this->resource->speciesId,
             'species_name' => $this->resource->speciesName,
             'breed' => $this->resource->breed,
             'sex' => $this->resource->sex,
             'date_of_birth' => $this->resource->dateOfBirth,
+            'approximate_age_years' => $this->resource->approximateAgeYears,
             'age_years' => $this->resource->ageYears,
             'age_is_approximate' => $this->resource->ageIsApproximate,
             'age_breakdown' => $this->resource->ageBreakdown,
             'weight_lb' => $this->resource->weightLb,
+            'coat_type' => $this->resource->coatType,
             'coat_type_label' => $this->resource->coatTypeLabel,
             'coat_notes' => $this->resource->coatNotes,
             'customer_notes' => $this->resource->customerNotes,
