@@ -21,18 +21,17 @@
   <div class="grid grid-cols-12 card-gap">
     <div class="col-span-12">
       <div class="card" style="max-width:860px">
-        <div class="card-header card-no-border pb-2">
-          {{--
-            What these rows decide: AvailabilityEngine::businessIsOpen() fails any day with no
-            window row, so these hours are the outer bound on every booking. A groomer's rota
-            and a service's own availability windows only ever narrow them further — nothing
-            widens them, which is why an empty table reads downstream as "no availability"
-            rather than "unconfigured" (the §12 report that prompted this screen; see CLAUDE.md's
-            known traps). Not said on screen, per the owner's no-prose rule.
-          --}}
-          <h5>When you are open</h5>
-        </div>
-        <div class="card-body pt-0">
+        {{--
+          No card heading by the owner's instruction (2026-10-09) — the page heading already says
+          Business Hours. What these rows decide: AvailabilityEngine::businessIsOpen() fails any
+          day with no window row, so these hours are the outer bound on every booking. A groomer's
+          rota and a service's own availability windows only ever narrow them further — nothing
+          widens them, which is why an empty table reads downstream as "no availability" rather
+          than "unconfigured" (the §12 report that prompted this screen; see CLAUDE.md's known
+          traps). The card-header div went with the heading, so this body carries its own top
+          padding rather than the pt-0 that assumed one.
+        --}}
+        <div class="card-body">
           <div id="bhEmptyWarning" class="alert alert-warning" style="display:none">
             <strong>Your business is closed every day.</strong> Until at least one day is open,
             your booking page tells customers there is no availability and no appointment can be
