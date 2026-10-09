@@ -16,11 +16,14 @@
     <div class="col-span-12">
       <div class="card" style="max-width:720px">
         <div class="card-header card-no-border pb-2">
+          {{--
+            Where this list surfaces: /admin/pets' species select and filter, /admin/appointments'
+            pet picker, and §12's booking wizard (all three read GET /api/v1/pet-species or its
+            public twin). Unlike a service's category, a pet's species is never optional, which is
+            why deleting one still in use is refused outright rather than nulled. Not said on
+            screen, per the owner's no-prose rule.
+          --}}
           <h5>Add a species</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            Shown on every pet form and on your booking page — "Dog", "Rabbit", that kind of
-            thing.
-          </p>
         </div>
         <div class="card-body pt-0">
           <div id="psFormStatus" class="alert" style="display:none"></div>

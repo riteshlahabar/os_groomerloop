@@ -16,11 +16,15 @@
     <div class="col-span-12">
       <div class="card" style="max-width:720px">
         <div class="card-header card-no-border pb-2">
+          {{--
+            What a category is for: it groups services on the menu and in §12's booking wizard
+            (whose step 1 renders one accordion per category, uncategorised services collecting
+            under a single heading, D-046). A service's category is optional — unlike a pet's
+            species, which is why deleting a category in use nulls it out rather than being
+            refused, the opposite of /admin/settings/species. Not said on screen, per the owner's
+            no-prose rule.
+          --}}
           <h5>Add a category</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            Groups your services on the menu and in the booking page — "Grooming", "Nail Care",
-            that kind of thing. A service does not need one.
-          </p>
         </div>
         <div class="card-body pt-0">
           <div id="scFormStatus" class="alert" style="display:none"></div>
