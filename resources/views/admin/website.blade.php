@@ -46,7 +46,20 @@
       flex-wrap: wrap;
       row-gap: 6px;
       overflow-x: auto;
-      margin-bottom: 18px;
+    }
+
+    /*
+      The gap between the tab bar and the pane below it goes on `.tab-content`, **not** as a
+      `margin-bottom` on the `ul.tab-links` — the sheet resets `ul { margin-bottom: 0 !important }`
+      (`style.css:8229`), and a plain `!important` on an element selector beats any non-important
+      rule here however specific, so a margin declared on the strip is silently dropped and the
+      pane renders flush against the bar (reported 2026-10-09 as "it is tightly touch the tab bar").
+      `.tab-content` is a `div` with no reset against it, so padding there simply holds — and it
+      keeps holding when the 21-tab strip wraps onto extra rows, which a margin on one of those
+      rows would not. 24px is the sheet's own desktop card rhythm (`.card-gap` tops out at 24px).
+    */
+    .ws-arrow-tabs .tab-content {
+      padding-top: 24px;
     }
 
     .ws-arrow-tabs .tab-link {
