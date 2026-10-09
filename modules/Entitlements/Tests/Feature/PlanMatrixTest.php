@@ -48,65 +48,64 @@ final class PlanMatrixTest extends TestCase
     }
 
     /**
+     * Every feature a plan grants, and the grade it must carry.
+     *
+     * Since `D-051` a grade is the granting tier's own name, so each plan's expectation is its
+     * key list at one grade — Starter `basic`, Business `standard`, Growth `advanced`, Growth
+     * Partner `enterprise`. Which keys sit in which tier is unchanged by that: 7 / 13 / 18 / 21.
+     *
      * @return array<string, array{0: string, 1: array<string, FeatureGrade>}>
      */
     public static function planMatrix(): array
     {
         $core = [
-            'core_os' => FeatureGrade::Standard,
-            'online_booking' => FeatureGrade::Standard,
-            'crm_pets' => FeatureGrade::Standard,
-            'appointments_calendar' => FeatureGrade::Standard,
-            'mobile_access' => FeatureGrade::Standard,
-            'basic_website' => FeatureGrade::Standard,
+            'core_os',
+            'online_booking',
+            'crm_pets',
+            'appointments_calendar',
+            'mobile_access',
+            'basic_website',
         ];
+
+        $growthKeys = [
+            ...$core,
+            'google_business_optimization',
+            'review_support',
+            'social_management',
+            'customer_follow_up',
+            'customer_retention',
+            'local_seo',
+            'content_marketing',
+            'booking_conversion_optimization',
+            'ai_business_tools',
+            'automation',
+            'business_insights',
+            'growth_reporting',
+        ];
+
+        $at = static fn (array $keys, FeatureGrade $grade): array => array_fill_keys($keys, $grade);
 
         return [
             // No 'automation' row on either of the two lowest tiers: it left both on 2026-10-06,
             // because the price list only sells automation from Growth up.
-            'starter' => ['starter', $core + [
-                'business_insights' => FeatureGrade::Basic,
-            ]],
-            'business' => ['business', $core + [
-                'google_business_optimization' => FeatureGrade::Standard,
-                'review_support' => FeatureGrade::Standard,
-                'social_management' => FeatureGrade::Standard,
-                'customer_follow_up' => FeatureGrade::Standard,
-                'customer_retention' => FeatureGrade::Basic,
-                'business_insights' => FeatureGrade::Standard,
-                'growth_reporting' => FeatureGrade::Basic,
-            ]],
-            'growth' => ['growth', $core + [
-                'google_business_optimization' => FeatureGrade::Standard,
-                'review_support' => FeatureGrade::Standard,
-                'social_management' => FeatureGrade::Standard,
-                'customer_follow_up' => FeatureGrade::Standard,
-                'customer_retention' => FeatureGrade::Strategy,
-                'local_seo' => FeatureGrade::Standard,
-                'content_marketing' => FeatureGrade::Standard,
-                'booking_conversion_optimization' => FeatureGrade::Standard,
-                'ai_business_tools' => FeatureGrade::Standard,
-                'automation' => FeatureGrade::Standard,
-                'business_insights' => FeatureGrade::Advanced,
-                'growth_reporting' => FeatureGrade::Standard,
-            ]],
-            'growth partner' => ['growth_partner', $core + [
-                'google_business_optimization' => FeatureGrade::Advanced,
-                'review_support' => FeatureGrade::Managed,
-                'social_management' => FeatureGrade::Managed,
-                'customer_follow_up' => FeatureGrade::Advanced,
-                'customer_retention' => FeatureGrade::Managed,
-                'local_seo' => FeatureGrade::Advanced,
-                'content_marketing' => FeatureGrade::Managed,
-                'booking_conversion_optimization' => FeatureGrade::Standard,
-                'ai_business_tools' => FeatureGrade::Standard,
-                'ai_voice_agent' => FeatureGrade::Standard,
-                'automation' => FeatureGrade::Advanced,
-                'business_insights' => FeatureGrade::Advanced,
-                'growth_reporting' => FeatureGrade::Advanced,
-                'monthly_growth_review' => FeatureGrade::Standard,
-                'dedicated_growth_support' => FeatureGrade::Standard,
-            ]],
+            'starter' => ['starter', $at([...$core, 'business_insights'], FeatureGrade::Basic)],
+            'business' => ['business', $at([
+                ...$core,
+                'google_business_optimization',
+                'review_support',
+                'social_management',
+                'customer_follow_up',
+                'customer_retention',
+                'business_insights',
+                'growth_reporting',
+            ], FeatureGrade::Standard)],
+            'growth' => ['growth', $at($growthKeys, FeatureGrade::Advanced)],
+            'growth partner' => ['growth_partner', $at([
+                ...$growthKeys,
+                'ai_voice_agent',
+                'monthly_growth_review',
+                'dedicated_growth_support',
+            ], FeatureGrade::Enterprise)],
         ];
     }
 
@@ -183,13 +182,23 @@ final class PlanMatrixTest extends TestCase
         // container singleton, so two local variables are the same object — holding a
         // "starter" handle and a "partner" handle at once would give two names to one service
         // that answers for whichever tenant was set last.
+        // BusinessInsights is the one graded feature every tier holds, so the whole ladder is
+        // visible through it. Automation is the opposite case: absent below Growth (`D-042`),
+        // so no minimum at all is satisfied there — `atLeast` on a feature a plan does not
+        // grant must be false, never "at least the lowest grade".
         $starter = $this->entitlementsFor('starter');
-        $this->assertTrue($starter->atLeast(Feature::Automation, FeatureGrade::Basic));
-        $this->assertFalse($starter->atLeast(Feature::Automation, FeatureGrade::Advanced));
+        $this->assertTrue($starter->atLeast(Feature::BusinessInsights, FeatureGrade::Basic));
+        $this->assertFalse($starter->atLeast(Feature::BusinessInsights, FeatureGrade::Standard));
+        $this->assertFalse($starter->atLeast(Feature::Automation, FeatureGrade::Basic));
+
+        $growth = $this->entitlementsFor('growth');
+        $this->assertTrue($growth->atLeast(Feature::Automation, FeatureGrade::Advanced));
+        $this->assertTrue($growth->atLeast(Feature::Automation, FeatureGrade::Basic));
+        $this->assertFalse($growth->atLeast(Feature::Automation, FeatureGrade::Enterprise));
 
         $partner = $this->entitlementsFor('growth_partner');
+        $this->assertTrue($partner->atLeast(Feature::Automation, FeatureGrade::Enterprise));
         $this->assertTrue($partner->atLeast(Feature::Automation, FeatureGrade::Advanced));
-        $this->assertTrue($partner->atLeast(Feature::Automation, FeatureGrade::Basic));
     }
 
     private function tenantOn(string $planKey): Tenant

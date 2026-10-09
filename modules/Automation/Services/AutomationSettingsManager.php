@@ -76,10 +76,17 @@ final class AutomationSettingsManager
     }
 
     /**
-     * How many of the five keys this tenant's `business_insights`-style `automation` grade may
-     * have enabled at once — a quantity cap rather than per-key gating, because every key here is
-     * equally "automation", unlike Insights' metrics which differ in sophistication. The owner
-     * picks which ones matter to their business; the plan only caps how many.
+     * How many of the five keys this tenant's `automation` grade may have enabled at once — a
+     * quantity cap rather than per-key gating, because every key here is equally "automation",
+     * unlike Insights' metrics which differ in sophistication. The owner picks which ones matter
+     * to their business; the plan only caps how many.
+     *
+     * The grade is now the granting tier's own name (`D-051`), so only the top two rungs are
+     * reachable: §18 is Growth-and-above (`D-042`), which makes `advanced` Growth and
+     * `enterprise` Growth Partner. Those two keep exactly the caps they had under the old
+     * five-word vocabulary — 3 of 5, then all 5. `basic` and `standard` cannot occur while no
+     * tier below Growth grants automation; they are mapped rather than thrown on, so granting
+     * it to a lower tier one day is a seeder edit and not a crash.
      */
     public function maxEnabled(): int
     {
@@ -87,10 +94,10 @@ final class AutomationSettingsManager
 
         return match ($grade) {
             null => 0,
-            FeatureGrade::Basic => 2,
-            FeatureGrade::Standard => 3,
-            FeatureGrade::Strategy, FeatureGrade::Advanced => count(AutomationKey::all()),
-            FeatureGrade::Managed => count(AutomationKey::all()),
+            FeatureGrade::Basic => 1,
+            FeatureGrade::Standard => 2,
+            FeatureGrade::Advanced => 3,
+            FeatureGrade::Enterprise => count(AutomationKey::all()),
         };
     }
 

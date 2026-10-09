@@ -3,40 +3,43 @@
 namespace Modules\Entitlements\Domain;
 
 /**
- * How much of a feature a plan includes (spec §25).
+ * Which tier of the price list granted a feature (spec §2, §25; `D-051`).
  *
- * The §25 matrix is not a grid of ticks. Several rows are graded — Automation is plain on Growth
- * and "Advanced" on Growth Partner, and absent below those two since `D-042`; Customer retention
- * runs Basic → Strategy → Managed. Modelling entitlement as a boolean would flatten that and
- * force the difference to be re-invented, plan name in hand, wherever it mattered.
+ * One grade per plan, and every feature a plan grants carries that plan's grade:
+ * Starter `basic`, Business `standard`, Growth `advanced`, Growth Partner `enterprise`.
+ * The owner chose these four words on 2026-10-09 and had the others removed outright, so the
+ * vocabulary is now exactly as long as the price list.
  *
- * `Standard` is the unlabelled tick in the matrix: included, with no qualifier.
+ * **This is a deliberate divergence from §25's own wording** (`D-051`). The spec labels
+ * individual cells — Customer retention reads Basic → Strategy → Managed, several Growth
+ * Partner rows read "Managed" — which made grade a per-feature judgement five words wide.
+ * It is now a tier name, so a grade answers "which plan is this from", not "how much of this
+ * feature do they get". The two places that actually read a grade only ever compared tiers
+ * anyway (§18's automation cap and §16's metric ladder), which is why collapsing it costs
+ * nothing today. What it does cost: "Business gets a lighter version of X" can no longer be
+ * said in a grade — it needs its own `Feature` key.
  */
 enum FeatureGrade: string
 {
     case Basic = 'basic';
     case Standard = 'standard';
-    case Strategy = 'strategy';
     case Advanced = 'advanced';
-    case Managed = 'managed';
+    case Enterprise = 'enterprise';
 
     /**
-     * Rank used by Entitlements::atLeast(), so a route can demand "automation, at least
-     * advanced" without naming a plan.
+     * Rank used by Entitlements::atLeast(), so a route or a metric can demand "automation, at
+     * least advanced" without naming a plan.
      *
-     * Strategy and Advanced deliberately share a rank. They are the same tier of the ladder
-     * expressed in different words by the spec — §25 uses "Strategy" for the Growth cell of
-     * Customer retention and "Advanced" for the Growth-and-above cell of other rows. Ranking
-     * one above the other would invent a distinction the spec does not make.
+     * Strictly increasing, one step per tier — unlike the old five-grade ladder, where
+     * Strategy and Advanced shared a rank because the spec used two words for one tier.
      */
     public function rank(): int
     {
         return match ($this) {
             self::Basic => 10,
             self::Standard => 20,
-            self::Strategy => 30,
             self::Advanced => 30,
-            self::Managed => 40,
+            self::Enterprise => 40,
         };
     }
 

@@ -14,9 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Gates a route on a plan feature: `->middleware('entitlement:ai_voice_agent')`.
  *
- * A minimum grade may follow the feature: `entitlement:automation,advanced` passes only for a
- * plan whose Automation cell is Advanced or better. The route says what it needs; it never
- * says which plan provides it, which is invariant #3 in practice.
+ * A minimum grade may follow the feature: `entitlement:automation,enterprise` passes only for a
+ * plan whose Automation cell is `enterprise` or better. The route says what it needs; it never
+ * says which plan provides it, which is invariant #3 in practice — and since `D-051` a grade is
+ * the granting tier's own name (`basic`/`standard`/`advanced`/`enterprise`), so a minimum reads
+ * as "this tier or higher" without the route naming a plan.
  *
  * Sits beside `permission:` deliberately, and the two are not interchangeable. A permission
  * asks "is this person allowed"; an entitlement asks "has this business paid for it". A route

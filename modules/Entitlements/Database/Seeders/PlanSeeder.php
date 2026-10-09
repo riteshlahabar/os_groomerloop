@@ -16,6 +16,13 @@ use Modules\Entitlements\Models\Plan;
  * appears anywhere else. Re-packaging the product — moving a feature between tiers, renaming
  * a plan, changing a price — is an edit to this file and nothing else.
  *
+ * **Shape changed 2026-10-09 (`D-051`).** A plan used to grade each of its features
+ * individually, from a five-word vocabulary. It now declares **one grade**, and every feature
+ * it grants carries it: Starter `basic`, Business `standard`, Growth `advanced`, Growth Partner
+ * `enterprise`. So `features` is a plain list of keys, and the grade column is a restatement of
+ * which tier granted the row. Which features sit in which tier did not change with that edit —
+ * the counts are still 7 / 13 / 18 / 21 of the 21 §25 keys.
+ *
  * Idempotent: re-running it updates the catalog in place rather than duplicating it, so it is
  * safe to run against an existing database after a packaging change.
  */
@@ -39,24 +46,28 @@ final class PlanSeeder extends Seeder
                     ]
                 );
 
-                $this->syncFeatures($plan, $definition['features']);
+                $this->syncFeatures($plan, $definition['features'], $definition['grade']);
             });
         }
     }
 
     /**
-     * Replace this plan's slice of the matrix with the definition above.
+     * Replace this plan's slice of the matrix with the definition above, every row at the
+     * plan's own grade.
      *
      * Rows are deleted rather than left behind, because a feature removed from a tier must
-     * actually stop being granted — an orphan row would keep entitling it forever.
+     * actually stop being granted — an orphan row would keep entitling it forever. The same
+     * applies to a grade that is no longer the plan's: `updateOrCreate` rewrites it, which is
+     * how a re-run migrates a database off the old five-word vocabulary with no migration of
+     * its own (the column is a plain varchar).
      *
-     * @param  array<string, FeatureGrade>  $features
+     * @param  list<string>  $features
      */
-    private function syncFeatures(Plan $plan, array $features): void
+    private function syncFeatures(Plan $plan, array $features, FeatureGrade $grade): void
     {
-        $plan->features()->whereNotIn('feature', array_keys($features))->delete();
+        $plan->features()->whereNotIn('feature', $features)->delete();
 
-        foreach ($features as $feature => $grade) {
+        foreach ($features as $feature) {
             $plan->features()->updateOrCreate(
                 ['feature' => $feature],
                 ['grade' => $grade->value],
@@ -67,10 +78,10 @@ final class PlanSeeder extends Seeder
     /**
      * Spec §2 pricing and the spec §25 matrix.
      *
-     * A cell the matrix marks "--" is simply absent from the features array; an unlabelled
-     * tick is FeatureGrade::Standard; a labelled cell carries its label.
+     * A cell the matrix marks "--" is simply absent from the features list. Every cell a plan
+     * does tick is granted at that plan's own grade — see the class docblock and `D-051`.
      *
-     * @return list<array{key: string, name: string, tagline: string, price_cents: int, is_default: bool, features: array<string, FeatureGrade>}>
+     * @return list<array{key: string, name: string, tagline: string, price_cents: int, is_default: bool, grade: FeatureGrade, features: list<string>}>
      */
     private function catalog(): array
     {
@@ -85,16 +96,21 @@ final class PlanSeeder extends Seeder
                 // cancelled subscription falls back to (invariant #4: they keep their data).
                 'is_default' => true,
 
+                'grade' => FeatureGrade::Basic,
+
+                // 7 of the 21 §25 keys.
+                //
                 // Automation is deliberately absent, 2026-10-06: the price list sells it from
                 // Growth up only ("Automation Support" / "Business Automation"), so Starter and
-                // Business both go without. Granting it here at Basic had let a $79 business run
-                // two of the five §18 automations for free.
+                // Business both go without. Granting it here had let a $79 business run two of
+                // the five §18 automations for free.
                 //
-                // BusinessInsights stays: Starter's five Basic metrics plus eight locked rows
+                // BusinessInsights stays: Starter's five basic metrics plus eight locked rows
                 // linking to Billing is a better upsell than an absent screen, and the price
                 // list's "Basic Business Dashboard" fairly covers it.
-                'features' => $this->core() + [
-                    Feature::BusinessInsights->value => FeatureGrade::Basic,
+                'features' => [
+                    ...$this->core(),
+                    Feature::BusinessInsights->value,
                 ],
             ],
             [
@@ -103,17 +119,21 @@ final class PlanSeeder extends Seeder
                 'tagline' => 'Run your business',
                 'price_cents' => 14_900,
                 'is_default' => false,
-                'features' => $this->core() + [
-                    Feature::GoogleBusinessOptimization->value => FeatureGrade::Standard,
-                    Feature::ReviewSupport->value => FeatureGrade::Standard,
-                    Feature::SocialManagement->value => FeatureGrade::Standard,
-                    Feature::CustomerFollowUp->value => FeatureGrade::Standard,
-                    Feature::CustomerRetention->value => FeatureGrade::Basic,
 
-                    // No Automation row, 2026-10-06 — see the Starter block above. §18 automation
-                    // is a Growth-tier-and-up capability, so this is the highest plan without it.
-                    Feature::BusinessInsights->value => FeatureGrade::Standard,
-                    Feature::GrowthReporting->value => FeatureGrade::Basic,
+                'grade' => FeatureGrade::Standard,
+
+                // 13 of 21. No Automation row, 2026-10-06 — see the Starter block above. §18
+                // automation is a Growth-tier-and-up capability, so this is the highest plan
+                // without it.
+                'features' => [
+                    ...$this->core(),
+                    Feature::GoogleBusinessOptimization->value,
+                    Feature::ReviewSupport->value,
+                    Feature::SocialManagement->value,
+                    Feature::CustomerFollowUp->value,
+                    Feature::CustomerRetention->value,
+                    Feature::BusinessInsights->value,
+                    Feature::GrowthReporting->value,
                 ],
             ],
             [
@@ -122,19 +142,25 @@ final class PlanSeeder extends Seeder
                 'tagline' => 'Grow your business — most popular',
                 'price_cents' => 24_900,
                 'is_default' => false,
-                'features' => $this->core() + [
-                    Feature::GoogleBusinessOptimization->value => FeatureGrade::Standard,
-                    Feature::ReviewSupport->value => FeatureGrade::Standard,
-                    Feature::SocialManagement->value => FeatureGrade::Standard,
-                    Feature::CustomerFollowUp->value => FeatureGrade::Standard,
-                    Feature::CustomerRetention->value => FeatureGrade::Strategy,
-                    Feature::LocalSeo->value => FeatureGrade::Standard,
-                    Feature::ContentMarketing->value => FeatureGrade::Standard,
-                    Feature::BookingConversionOptimization->value => FeatureGrade::Standard,
-                    Feature::AiBusinessTools->value => FeatureGrade::Standard,
-                    Feature::Automation->value => FeatureGrade::Standard,
-                    Feature::BusinessInsights->value => FeatureGrade::Advanced,
-                    Feature::GrowthReporting->value => FeatureGrade::Standard,
+
+                'grade' => FeatureGrade::Advanced,
+
+                // 18 of 21, and the lowest tier holding Automation — which is what makes
+                // `advanced` the grade §18's cap is read against (3 of the 5 automations).
+                'features' => [
+                    ...$this->core(),
+                    Feature::GoogleBusinessOptimization->value,
+                    Feature::ReviewSupport->value,
+                    Feature::SocialManagement->value,
+                    Feature::CustomerFollowUp->value,
+                    Feature::CustomerRetention->value,
+                    Feature::LocalSeo->value,
+                    Feature::ContentMarketing->value,
+                    Feature::BookingConversionOptimization->value,
+                    Feature::AiBusinessTools->value,
+                    Feature::Automation->value,
+                    Feature::BusinessInsights->value,
+                    Feature::GrowthReporting->value,
                 ],
             ],
             [
@@ -143,22 +169,27 @@ final class PlanSeeder extends Seeder
                 'tagline' => 'Premium, high-touch digital growth partner',
                 'price_cents' => 39_900,
                 'is_default' => false,
-                'features' => $this->core() + [
-                    Feature::GoogleBusinessOptimization->value => FeatureGrade::Advanced,
-                    Feature::ReviewSupport->value => FeatureGrade::Managed,
-                    Feature::SocialManagement->value => FeatureGrade::Managed,
-                    Feature::CustomerFollowUp->value => FeatureGrade::Advanced,
-                    Feature::CustomerRetention->value => FeatureGrade::Managed,
-                    Feature::LocalSeo->value => FeatureGrade::Advanced,
-                    Feature::ContentMarketing->value => FeatureGrade::Managed,
-                    Feature::BookingConversionOptimization->value => FeatureGrade::Standard,
-                    Feature::AiBusinessTools->value => FeatureGrade::Standard,
-                    Feature::AiVoiceAgent->value => FeatureGrade::Standard,
-                    Feature::Automation->value => FeatureGrade::Advanced,
-                    Feature::BusinessInsights->value => FeatureGrade::Advanced,
-                    Feature::GrowthReporting->value => FeatureGrade::Advanced,
-                    Feature::MonthlyGrowthReview->value => FeatureGrade::Standard,
-                    Feature::DedicatedGrowthSupport->value => FeatureGrade::Standard,
+
+                'grade' => FeatureGrade::Enterprise,
+
+                // All 21.
+                'features' => [
+                    ...$this->core(),
+                    Feature::GoogleBusinessOptimization->value,
+                    Feature::ReviewSupport->value,
+                    Feature::SocialManagement->value,
+                    Feature::CustomerFollowUp->value,
+                    Feature::CustomerRetention->value,
+                    Feature::LocalSeo->value,
+                    Feature::ContentMarketing->value,
+                    Feature::BookingConversionOptimization->value,
+                    Feature::AiBusinessTools->value,
+                    Feature::AiVoiceAgent->value,
+                    Feature::Automation->value,
+                    Feature::BusinessInsights->value,
+                    Feature::GrowthReporting->value,
+                    Feature::MonthlyGrowthReview->value,
+                    Feature::DedicatedGrowthSupport->value,
                 ],
             ],
         ];
@@ -168,19 +199,22 @@ final class PlanSeeder extends Seeder
      * The six rows spec §25 ticks for every plan.
      *
      * These are the operating system itself. No plan may omit them — a business that cannot
-     * reach its own customers, pets or appointments is not a tenant of this product.
+     * reach its own customers, pets or appointments is not a tenant of this product. They are
+     * graded at each plan's own tier like everything else, so the same key reads `basic` on
+     * Starter and `enterprise` on Growth Partner; nothing reads those grades, and a core
+     * feature is all-or-nothing by definition.
      *
-     * @return array<string, FeatureGrade>
+     * @return list<string>
      */
     private function core(): array
     {
         return [
-            Feature::CoreOs->value => FeatureGrade::Standard,
-            Feature::OnlineBooking->value => FeatureGrade::Standard,
-            Feature::CrmPets->value => FeatureGrade::Standard,
-            Feature::AppointmentsCalendar->value => FeatureGrade::Standard,
-            Feature::MobileAccess->value => FeatureGrade::Standard,
-            Feature::BasicWebsite->value => FeatureGrade::Standard,
+            Feature::CoreOs->value,
+            Feature::OnlineBooking->value,
+            Feature::CrmPets->value,
+            Feature::AppointmentsCalendar->value,
+            Feature::MobileAccess->value,
+            Feature::BasicWebsite->value,
         ];
     }
 }

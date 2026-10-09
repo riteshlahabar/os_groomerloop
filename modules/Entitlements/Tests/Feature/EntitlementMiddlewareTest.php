@@ -37,8 +37,11 @@ final class EntitlementMiddlewareTest extends TestCase
             Route::get('automation', fn () => response()->json(['ok' => true]))
                 ->middleware('entitlement:automation');
 
-            Route::get('advanced-automation', fn () => response()->json(['ok' => true]))
-                ->middleware('entitlement:automation,advanced');
+            // The demanded grade is the top tier's (`D-051`: a grade is now the granting
+            // tier's name), so Growth — the lowest tier holding automation at all — is the
+            // below-minimum case and Growth Partner the satisfying one.
+            Route::get('enterprise-automation', fn () => response()->json(['ok' => true]))
+                ->middleware('entitlement:automation,enterprise');
 
             // A §25 core row, included in every tier. Gives the default-tier test below a
             // positive case that survives any repackaging of the optional features.
@@ -96,9 +99,9 @@ final class EntitlementMiddlewareTest extends TestCase
 
     public function test_a_grade_below_the_minimum_is_refused(): void
     {
-        // Growth has automation, but only at Standard. It is the lowest tier that has the feature
-        // at all since 2026-10-06 — on Starter or Business this would demonstrate "feature
-        // absent", a different refusal already covered above, rather than "grade below minimum".
+        // Growth has automation, at `advanced`. It is the lowest tier that has the feature at
+        // all since 2026-10-06 — on Starter or Business this would demonstrate "feature absent",
+        // a different refusal already covered above, rather than "grade below minimum".
         $growthUser = $this->userOn('growth');
 
         $this->actingAs($growthUser)
@@ -106,15 +109,15 @@ final class EntitlementMiddlewareTest extends TestCase
             ->assertOk();
 
         $this->actingAs($growthUser)
-            ->getJson('/api/v1/testing/advanced-automation')
+            ->getJson('/api/v1/testing/enterprise-automation')
             ->assertStatus(402)
-            ->assertJsonPath('required_grade', 'advanced');
+            ->assertJsonPath('required_grade', 'enterprise');
     }
 
     public function test_a_grade_at_or_above_the_minimum_is_allowed(): void
     {
         $this->actingAs($this->userOn('growth_partner'))
-            ->getJson('/api/v1/testing/advanced-automation')
+            ->getJson('/api/v1/testing/enterprise-automation')
             ->assertOk();
     }
 

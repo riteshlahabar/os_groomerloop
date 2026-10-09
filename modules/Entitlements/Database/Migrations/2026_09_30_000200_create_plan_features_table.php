@@ -25,7 +25,9 @@ return new class extends Migration
             // than a native enum so adding a capability is a seeder change, not a table lock.
             $table->string('feature', 64);
 
-            // basic | standard | strategy | advanced | managed — see FeatureGrade.
+            // basic | standard | advanced | enterprise — see FeatureGrade. (Four values
+            // since D-051, one per price-list tier; a plain varchar, so narrowing the
+            // vocabulary needed no migration — PlanSeeder rewrites every row.)
             $table->string('grade', 32);
 
             $table->timestamps();
