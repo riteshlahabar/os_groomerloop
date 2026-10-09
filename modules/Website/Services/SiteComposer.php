@@ -153,9 +153,38 @@ final class SiteComposer
             // Customer Portal (D-043) login, id-keyed like the site itself (D-036) since
             // ResolveCustomerTenant resolves `{tenant}` by id, not slug.
             portalLoginUrl: route('customer-portal.login', ['tenant' => $tenant->id]),
+            portalDashboardUrl: route('customer-portal.dashboard', ['tenant' => $tenant->id]),
+            customerIsSignedIn: $this->customerIsSignedIn(),
             isPreview: $isPreview,
             isPageDisabled: $isPageDisabled,
         );
+    }
+
+    /**
+     * Is this visitor signed in to *this* business's Customer Portal (`D-043`)?
+     *
+     * Deliberately only ever a boolean. The `customer` guard's provider is Crm's `Customer`, which
+     * Website may not reach into (`D-007`) — so this asks the guard whether it has a user and never
+     * touches the model, its columns or its relations. Nothing on this page needs the customer's
+     * name: the header swaps one button's label and target, which a yes/no answers completely.
+     *
+     * Tenant correctness comes for free from ordering, the same way it does for `D-047`'s
+     * signed-in booking, and it is worth naming because it is invisible: `Customer` carries the
+     * `BelongsToTenant` global scope and the guard resolves its user lazily — here, inside the
+     * composer — which is *after* this route's `ResolvePublicTenantById` has established the
+     * tenant. A customer signed in to business A browsing business B's site is therefore looked up
+     * under B's scope, is not found, and correctly sees the anonymous header.
+     *
+     * On the owner's draft preview this is normally false, because that page is authenticated on
+     * the staff `web` guard and a staff login says nothing about the `customer` one — so a preview
+     * shows the visitor's header, which is what a preview is for. The exception is a browser
+     * holding both sessions at once, which then previews with "My Account"; left alone rather than
+     * forced, since that browser genuinely is signed in as a customer and the preview is of
+     * chrome, not of content.
+     */
+    private function customerIsSignedIn(): bool
+    {
+        return auth()->guard('customer')->check();
     }
 
     /**

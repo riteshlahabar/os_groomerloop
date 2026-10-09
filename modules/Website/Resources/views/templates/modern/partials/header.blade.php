@@ -94,9 +94,16 @@
             @endif
 
             <div class="nav header-items">
-                <a href="{{ $site->portalLoginUrl }}" class="dark-btn me-2">
-                    <i class="ti ti-login me-2"></i>Login
-                </a>
+                {{-- Two states, one slot — see the note in Classic's header. --}}
+                @if ($site->customerIsSignedIn)
+                    <a href="{{ $site->portalDashboardUrl }}" class="dark-btn me-2">
+                        <i class="ti ti-user me-2"></i>My Account
+                    </a>
+                @else
+                    <a href="{{ $site->portalLoginUrl }}" class="dark-btn me-2">
+                        <i class="ti ti-login me-2"></i>Login
+                    </a>
+                @endif
                 <a href="{{ $site->bookingUrl }}" class="primary-btn">
                     <i class="ti ti-calendar-event me-2"></i>Book Appointment
                 </a>

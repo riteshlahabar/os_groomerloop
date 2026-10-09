@@ -46,6 +46,22 @@ final readonly class SiteView
         public ?BusinessProfileSummary $profile,
         public string $bookingUrl,
         public string $portalLoginUrl,
+        public string $portalDashboardUrl,
+        /*
+         * Is the person looking at this page signed in to this business's Customer Portal
+         * (`D-043`)? The three headers swap their "Login" button for "My Account" on it — before
+         * this, an already-signed-in customer was shown "Login", clicked it, and was asked for
+         * credentials they had already given.
+         *
+         * This makes a page that is otherwise identical for every visitor vary by session, which
+         * was checked rather than assumed: the response already carries `Cache-Control: no-cache,
+         * private` (the session middleware's own doing), so there is nothing in front of it that
+         * could serve one customer's header to another. Crawlability — the whole reason §14 is
+         * server-rendered (`D-030`) — is untouched: a crawler has no session, so it sees exactly
+         * the anonymous page it saw before, and no *content* depends on this flag, only which of
+         * two buttons the header draws.
+         */
+        public bool $customerIsSignedIn,
         public bool $isPreview,
         public array $openingHours = [],
         public bool $isPageDisabled = false,

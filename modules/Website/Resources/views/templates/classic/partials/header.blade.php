@@ -67,9 +67,21 @@
             @endif
 
             <div class="nav header-items">
-                <a href="{{ $site->portalLoginUrl }}" class="dark-btn me-2">
-                    <i class="ti ti-login me-2"></i>Login
-                </a>
+                {{--
+                  One button, two states. A customer already signed in to this business's portal
+                  (`D-043`) used to be shown "Login", click it, and be asked for credentials they
+                  had just given; now the same slot takes them to their account. Same classes
+                  either way, so the header's layout does not change with the viewer.
+                --}}
+                @if ($site->customerIsSignedIn)
+                    <a href="{{ $site->portalDashboardUrl }}" class="dark-btn me-2">
+                        <i class="ti ti-user me-2"></i>My Account
+                    </a>
+                @else
+                    <a href="{{ $site->portalLoginUrl }}" class="dark-btn me-2">
+                        <i class="ti ti-login me-2"></i>Login
+                    </a>
+                @endif
                 <a href="{{ $site->bookingUrl }}" class="primary-btn">
                     <i class="ti ti-calendar-event me-2"></i>Book Appointment
                 </a>

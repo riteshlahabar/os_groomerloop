@@ -39,15 +39,24 @@ Route::prefix('portal/{tenant}/claim/{customer}')
 | handing the already-resolved `Tenant` to the view for building those API/page URLs and showing
 | the business name — the same thing `AccountClaimController::show()` already does.
 |
-| No `guest:customer` guard on the login page: `routes/web.php`'s own staff `/login` route
-| carries none either, and an already-authenticated visitor landing there is harmless.
+| The login page sends an already-signed-in customer to their dashboard instead of rendering the
+| form. An earlier version of this comment called that case "harmless"; it is not. The owner hit
+| exactly it (2026-10-09): the tenant's own website showed a "Login" button to a customer who was
+| already signed in, they clicked it, and were asked for credentials they had just given. The
+| button itself is fixed in Website's three headers, which now read `$site->customerIsSignedIn`
+| and offer "My Account" — this redirect closes the same hole for a bookmark, a Back button or any
+| other way of arriving here with a live session.
 */
 Route::prefix('portal/{tenant}')
     ->middleware(ResolveCustomerTenant::class)
     ->group(function (): void {
-        Route::get('login', fn (TenantContext $context) => view('customer-portal.login', [
-            'tenant' => $context->tenant(),
-        ]))->name('customer-portal.login');
+        Route::get('login', function (TenantContext $context) {
+            if (auth()->guard('customer')->check()) {
+                return redirect()->route('customer-portal.dashboard', ['tenant' => $context->tenant()->getKey()]);
+            }
+
+            return view('customer-portal.login', ['tenant' => $context->tenant()]);
+        })->name('customer-portal.login');
 
         // Each closure resolves the signed-in customer's display name through CustomerDirectory
         // (D-007) rather than calling a method on the Authenticatable model directly — the same
