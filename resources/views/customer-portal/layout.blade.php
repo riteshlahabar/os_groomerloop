@@ -134,9 +134,9 @@
                                                 <li class="submenu-open">
                                                     <ul>
                                                         @foreach ([
-                                                            ['route' => 'customer-portal.profile-page', 'icon' => 'user', 'label' => 'Profile'],
                                                             ['route' => 'customer-portal.appointments-page', 'icon' => 'calendar-bolt', 'label' => 'My Appointments'],
                                                             ['route' => 'customer-portal.pets-page', 'icon' => 'paw', 'label' => 'My Pets'],
+                                                            ['route' => 'customer-portal.profile-page', 'icon' => 'user', 'label' => 'Profile'],
                                                         ] as $item)
                                                             <li class="{{ request()->routeIs($item['route']) ? 'active' : '' }}">
                                                                 <a href="{{ route($item['route'], ['tenant' => $tenant->getKey()]) }}"
