@@ -62,7 +62,7 @@
                                 </div>
                             </div>
                             <ul class="main-nav">
-                                <li><a href="{{ url('/login') }}">Sign In</a></li>
+                                <li class="login-link"><a href="{{ url('/login') }}">Sign In</a></li>
                             </ul>
                         </div>
                     </div>

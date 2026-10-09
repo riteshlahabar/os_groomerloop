@@ -37,6 +37,10 @@ header.fixed .navbar-header .navbar-brand.logo-white {
  * Without it, the nav links inherit header-one's default white text (meant for Home's dark
  * hero image) and become nearly invisible. Force the same dark color the fixed/mobile states
  * already use.
+ *
+ * Kept for any future nav item: the only link in that list is now marked li.login-link, which
+ * the template itself hides above 991.98px, so on desktop the cross-link is carried solely by
+ * the Sign In / Get Started buttons on the right of the header.
  */
 .auth-page header.header-one .header-nav .main-menu-wrapper .main-nav > li > a {
     color: var(--gray-900) !important;
