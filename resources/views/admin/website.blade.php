@@ -22,7 +22,18 @@
         tabs are rendered later by fetch(), so it would wire the three static tabs and silently
         ignore the eighteen page ones. Switching stays this file's own handler.
       * `tab-pan` — the pane class that same handler looks for. Panes here are `.ws-pane` toggled
-        with the `d-none` utility instead, so no theme JS can ever match them.
+        with the `hidden` utility instead, so no theme JS can ever match them.
+
+      The hiding utility is Tailwind's `hidden`, **not Bootstrap's `d-none`**, and that is not
+      interchangeable here: this edition of Cuba is the Tailwind one, and neither
+      `admin-assets/css/style.css` nor any vendor sheet the admin layout loads defines a `.d-none`
+      rule at all. Writing `d-none` therefore hides nothing — it is a class name with no CSS behind
+      it, so every pane renders at once and the strip looks like it does not switch (the bug this
+      screen shipped with on 2026-10-08, reported the next day). `d-none` works on
+      `/book/{tenant}`, the customer-portal login and the §14 templates only because those pages
+      load `frontview-assets/css/bootstrap.min.css`, which does define it; nothing under `/admin`
+      does. `.hidden { display: none }` sits after `.flex`/`.grid` in the sheet, so it also wins on
+      an element that carries one of those (the logo and hero preview wraps below).
 
       What the theme's sheet does not give the `li` form of these tabs: a pointer cursor, and any
       defence against a long strip overflowing (`body` is `overflow-x: hidden`, so an overflow is
@@ -129,12 +140,12 @@
             </div>
 
             {{-- Site-wide settings --}}
-            <div class="ws-pane d-none" id="wsTabPane_branding">
+            <div class="ws-pane hidden" id="wsTabPane_branding">
               <div id="wsImageError" class="alert alert-danger" style="display:none"></div>
 
               <div class="mb-3">
                 <label class="form-label">Logo</label>
-                <div class="flex items-center gap-2 mb-2 d-none" id="wsLogoPreviewWrap">
+                <div class="flex items-center gap-2 mb-2 hidden" id="wsLogoPreviewWrap">
                   <img id="wsLogoPreview" alt="Logo" style="max-height:48px;max-width:160px;object-fit:contain">
                   <button type="button" class="btn btn-light btn-sm" id="wsLogoRemove">Remove</button>
                 </div>
@@ -143,7 +154,7 @@
 
               <div class="mb-3">
                 <label class="form-label">Main photo</label>
-                <div class="flex items-center gap-2 mb-2 d-none" id="wsHeroPreviewWrap">
+                <div class="flex items-center gap-2 mb-2 hidden" id="wsHeroPreviewWrap">
                   <img id="wsHeroPreview" alt="Main photo" style="max-height:48px;max-width:160px;object-fit:contain">
                   <button type="button" class="btn btn-light btn-sm" id="wsHeroRemove">Remove</button>
                 </div>
@@ -169,7 +180,7 @@
 
             {{-- Social links --}}
             {{-- These render in every page's footer; a blank one is omitted from it. --}}
-            <div class="ws-pane d-none" id="wsTabPane_social">
+            <div class="ws-pane hidden" id="wsTabPane_social">
               <form id="wsSocialForm">
                 <div id="wsSocialFields"></div>
                 <button type="submit" class="btn btn-primary" id="wsSocialSubmit">Save</button>
@@ -409,9 +420,9 @@
 
           if (url) {
             img.src = url;
-            wrap.classList.remove('d-none');
+            wrap.classList.remove('hidden');
           } else {
-            wrap.classList.add('d-none');
+            wrap.classList.add('hidden');
           }
         });
       }
@@ -632,7 +643,7 @@
               (group.id === groups[0].id ? off : '') +
               '</li>';
 
-            return '<div class="ws-pane d-none" id="wsTabPane_' + id + '">' +
+            return '<div class="ws-pane hidden" id="wsTabPane_' + id + '">' +
               '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
               '<h6 class="mb-0">' + api.escapeHtml(page.label) + ' — ' + api.escapeHtml(group.label) + '</h6>' +
               toggleFor(group.id) +
@@ -848,8 +859,9 @@
       // One flat strip, one handler. It wears the theme's arrow-tab CSS but not its tab JS:
       // `admin-assets/js/script.js` only binds `.tabs` elements present at page load, and eighteen
       // of these twenty-one tabs are rendered later by fetch(), so it would wire the three static
-      // ones and silently ignore the rest. Hence `.ws-pane` + the `d-none` utility this file
-      // already uses for its logo/hero previews, switched here.
+      // ones and silently ignore the rest. Hence `.ws-pane` + Tailwind's `hidden` utility, the one
+      // this file also uses for its logo/hero previews, switched here. Never Bootstrap's `d-none`:
+      // no sheet `/admin` loads defines it, so it hides nothing — see the top of this file.
       //
       // Delegated from the strip rather than bound per tab, so the page tabs renderPages() appends
       // need no rebinding — wireTabs() below only has to exist for the panes.
@@ -879,7 +891,7 @@
         });
 
         Array.prototype.forEach.call(document.querySelectorAll('#wsTabContent .ws-pane'), function (pane) {
-          pane.classList.toggle('d-none', pane.id !== 'wsTabPane_' + activeTab);
+          pane.classList.toggle('hidden', pane.id !== 'wsTabPane_' + activeTab);
         });
       }
 
