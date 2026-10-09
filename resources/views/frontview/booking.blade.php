@@ -322,7 +322,26 @@
                                     <div class="row row-gap-4">
                                         <div class="col-lg-6">
                                             <form id="detailsForm" novalidate>
-                                                <div class="mb-4 pb-4 border-bottom">
+                                                {{--
+                                                  Two states, one screen (the owner's explicit ask). A signed-in
+                                                  Customer Portal customer (`D-043`) sees who they are booking as
+                                                  instead of re-typing it; a stranger sees the form below exactly as
+                                                  before. The server decides which applies — it reads the `customer`
+                                                  session, never these fields — so this markup only has to agree with
+                                                  it, never enforce it.
+                                                --}}
+                                                <div class="mb-4 pb-4 border-bottom d-none" id="signedInBlock">
+                                                    <h2 class="title mb-4">Contact Info</h2>
+                                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                        <div>
+                                                            <div class="Checkout-card-title mb-1" id="signedInName"></div>
+                                                            <span id="signedInEmail"></span>
+                                                        </div>
+                                                        <a href="#" id="signedInSwitch">Not you?</a>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-4 pb-4 border-bottom" id="contactBlock">
                                                     <h2 class="title mb-4">Contact Info</h2>
                                                     <div class="row row-gap-3">
                                                         <div class="col-md-6">
@@ -352,12 +371,28 @@
                                                             <label class="form-label" for="password_confirmation">Confirm password</label>
                                                             <input type="password" class="form-control" id="password_confirmation" minlength="12" maxlength="255" autocomplete="new-password">
                                                         </div>
+                                                        <div class="col-md-12">
+                                                            <span>Already have an account?</span>
+                                                            <a href="#" id="checkoutLoginLink">Log in</a>
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 <div class="mb-4 pb-4 border-bottom">
                                                     <h2 class="title mb-4">Your Pet</h2>
-                                                    <div class="row row-gap-3">
+
+                                                    {{--
+                                                      Only ever filled for a signed-in customer, because only then is
+                                                      the list of pets theirs to show — and only then will the server
+                                                      accept `pet_id` at all. Before this existed, a returning
+                                                      customer re-typed the same dog every visit and
+                                                      `createForPublicBooking()` dutifully made another record of it.
+                                                    --}}
+                                                    <div class="row row-gap-3 mb-3 d-none" id="petPicker">
+                                                        <div class="col-md-12" id="petPickerList"></div>
+                                                    </div>
+
+                                                    <div class="row row-gap-3" id="newPetFields">
                                                         <div class="col-md-6">
                                                             <label class="form-label" for="pet_name">Pet's name<span class="text-danger ms-1">*</span></label>
                                                             <input type="text" class="form-control" id="pet_name" required maxlength="255">
@@ -528,6 +563,7 @@
             var SITE_URL = @json(route('website.public.home', ['tenant' => $tenant->id, 'slug' => $tenant->slug]));
             var PORTAL_LOGIN_URL = @json(route('customer-portal.login', ['tenant' => $tenant->id]));
             var API_BASE = '/api/v1/public/' + TENANT;
+            var CUSTOMER_API_BASE = '/api/v1/customer/' + @json($tenant->getKey());
             var SLOT_SEARCH_DAYS = 14; // how far ahead to look for the next open day, and the width of the date strip
 
             var state = {
@@ -540,6 +576,9 @@
                 date: null,
                 slots: [],
                 selectedSlot: null,    // trimmed naive "YYYY-MM-DDTHH:MM:SS"
+                customer: null,        // the signed-in Customer Portal customer, or null for a stranger
+                pets: [],              // that customer's pets; always empty for a stranger
+                selectedPetId: null,   // null = "a new pet", which is the only option for a stranger
             };
 
             var panels = { 1: 'panelService', 2: 'panelStaff', 3: 'panelSchedule', 4: 'panelCheckout' };
@@ -591,11 +630,45 @@
                 return { ok: res.ok, status: res.status, body: body };
             }
 
+            function cookie(name) {
+                var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? decodeURIComponent(match[2]) : '';
+            }
+
+            // The CSRF dance is NOT optional here, and its absence was a real bug: this page is
+            // served from the same origin as the API, so every fetch from it carries an `Origin`
+            // the `SANCTUM_STATEFUL_DOMAINS` list matches, which makes Sanctum treat the request
+            // as first-party and apply the `web` group's session + CSRF validation to it. A POST
+            // with no token is therefore refused with 419 "CSRF token mismatch" — so Confirm
+            // Booking could never succeed from a browser, while every curl check passed: curl
+            // sends no Origin/Referer by default and so took the stateless path instead. (The
+            // trap note about Sanctum *needing* a Referer is about login; for this endpoint it is
+            // the omission that hid the failure.) Same shape the Customer Portal's own login page
+            // already uses, and it is also what makes the `customer` session readable server-side
+            // for a signed-in booking.
             async function apiPost(path, data) {
+                await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+
                 var res = await fetch(API_BASE + path, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-XSRF-TOKEN': cookie('XSRF-TOKEN'),
+                    },
                     body: JSON.stringify(data),
+                });
+                var body = await res.json().catch(function () { return {}; });
+                return { ok: res.ok, status: res.status, body: body };
+            }
+
+            // The Customer Portal's own API (id-keyed, `D-043`), separate from the slug-keyed
+            // public one above. Only two reads: who is signed in, and their pets.
+            async function customerGet(path) {
+                var res = await fetch(CUSTOMER_API_BASE + path, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
                 });
                 var body = await res.json().catch(function () { return {}; });
                 return { ok: res.ok, status: res.status, body: body };
@@ -1222,6 +1295,93 @@
             // ---- Step 4: checkout ----
             function fieldValue(id) { return document.getElementById(id).value.trim(); }
 
+            // ---- Signed-in customer (D-043) ----
+
+            // Asked once, on load, so step 4 is already in the right shape by the time it is
+            // reached. A 401 is the ordinary answer for the anonymous flow, not a failure, so
+            // nothing is reported to the customer either way — the page simply keeps the form.
+            async function loadSignedInCustomer() {
+                var me = await customerGet('/me');
+
+                if (!me.ok || !me.body || !me.body.id) {
+                    return;
+                }
+
+                state.customer = me.body;
+
+                var pets = await customerGet('/pets');
+                state.pets = pets.ok ? (pets.body.data || []) : [];
+
+                applySignedInState();
+            }
+
+            function applySignedInState() {
+                document.getElementById('signedInName').textContent = state.customer.name || state.customer.email || 'Your account';
+                document.getElementById('signedInEmail').textContent = state.customer.email || '';
+                document.getElementById('signedInBlock').classList.remove('d-none');
+
+                // Hidden, not removed, and its inputs lose `required` with it: a `required` field
+                // inside a hidden block makes checkValidity() fail with nothing on screen to fix
+                // — the form would refuse to submit and never say why.
+                var contact = document.getElementById('contactBlock');
+                contact.classList.add('d-none');
+                ['first_name', 'last_name', 'email'].forEach(function (id) {
+                    document.getElementById(id).required = false;
+                });
+
+                renderPetPicker();
+            }
+
+            // Their pets as radios, plus "a new pet" — which is what the form below is for, so
+            // picking it is the only option that leaves the form on screen.
+            function renderPetPicker() {
+                if (state.pets.length === 0) {
+                    return;
+                }
+
+                var rows = state.pets.map(function (pet) {
+                    var detail = [pet.species_name, pet.breed].filter(Boolean).join(' · ');
+
+                    return '<div class="form-check mb-2">'
+                        + '<input class="form-check-input" type="radio" name="pet_choice" id="pet_choice_' + pet.id + '" value="' + pet.id + '">'
+                        + '<label class="form-check-label" for="pet_choice_' + pet.id + '">'
+                        + escapeHtml(pet.name) + (detail ? ' <span>(' + escapeHtml(detail) + ')</span>' : '')
+                        + '</label></div>';
+                }).join('');
+
+                document.getElementById('petPickerList').innerHTML = rows
+                    + '<div class="form-check mb-0">'
+                    + '<input class="form-check-input" type="radio" name="pet_choice" id="pet_choice_new" value="">'
+                    + '<label class="form-check-label" for="pet_choice_new">A different pet</label>'
+                    + '</div>';
+
+                document.getElementById('petPicker').classList.remove('d-none');
+
+                document.getElementsByName('pet_choice').forEach(function (input) {
+                    input.addEventListener('change', function () {
+                        selectPet(this.value === '' ? null : parseInt(this.value, 10));
+                    });
+                });
+
+                // Their first pet, pre-selected: the common case is booking for the same animal
+                // again, and that is the whole point of the picker.
+                var first = document.getElementById('pet_choice_' + state.pets[0].id);
+                first.checked = true;
+                selectPet(state.pets[0].id);
+            }
+
+            function selectPet(petId) {
+                state.selectedPetId = petId;
+
+                var fields = document.getElementById('newPetFields');
+                fields.classList.toggle('d-none', petId !== null);
+
+                // Same reason as the contact block above: `required` on a hidden field is an
+                // invisible submit blocker.
+                document.getElementById('pet_name').required = petId === null;
+                document.getElementById('pet_species').required = petId === null;
+            }
+
             function renderCheckoutSummary() {
                 var service = state.selectedService;
 
@@ -1247,9 +1407,13 @@
                     return;
                 }
 
-                // Both optional, but only as a pair — half-filled can't become a password.
-                var password = fieldValue('password');
-                var passwordConfirmation = fieldValue('password_confirmation');
+                var signedIn = state.customer !== null;
+
+                // Both optional, but only as a pair — half-filled can't become a password. Never
+                // read at all for a signed-in customer: those fields are off screen, and they
+                // already have a password.
+                var password = signedIn ? '' : fieldValue('password');
+                var passwordConfirmation = signedIn ? '' : fieldValue('password_confirmation');
 
                 if (password || passwordConfirmation) {
                     if (password.length < 12) {
@@ -1268,18 +1432,30 @@
                     staff_member_id: state.selectedStaffId,
                     starts_at: state.selectedSlot,
                     customer_notes: fieldValue('customer_notes') || null,
-                    first_name: fieldValue('first_name'),
-                    last_name: fieldValue('last_name'),
-                    email: fieldValue('email'),
-                    phone: fieldValue('phone') || null,
-                    password: password || null,
-                    password_confirmation: password ? passwordConfirmation : null,
-                    pet_name: fieldValue('pet_name'),
-                    pet_species_id: parseInt(document.getElementById('pet_species').value, 10),
-                    pet_breed: fieldValue('pet_breed') || null,
-                    pet_sex: document.getElementById('pet_sex').value || null,
                     policies_accepted: true,
                 };
+
+                // Identity is sent only by the anonymous flow. For a signed-in customer the
+                // server takes it from the session and ignores anything posted here, so sending
+                // it would be at best noise and at worst a claim this page has no business
+                // making.
+                if (!signedIn) {
+                    payload.first_name = fieldValue('first_name');
+                    payload.last_name = fieldValue('last_name');
+                    payload.email = fieldValue('email');
+                    payload.phone = fieldValue('phone') || null;
+                    payload.password = password || null;
+                    payload.password_confirmation = password ? passwordConfirmation : null;
+                }
+
+                if (state.selectedPetId !== null) {
+                    payload.pet_id = state.selectedPetId;
+                } else {
+                    payload.pet_name = fieldValue('pet_name');
+                    payload.pet_species_id = parseInt(document.getElementById('pet_species').value, 10);
+                    payload.pet_breed = fieldValue('pet_breed') || null;
+                    payload.pet_sex = document.getElementById('pet_sex').value || null;
+                }
 
                 var btn = this;
                 btn.disabled = true;
@@ -1378,6 +1554,15 @@
                         return '<option value="' + s.id + '">' + escapeHtml(s.name) + '</option>';
                     }).join('');
                 });
+
+                document.getElementById('checkoutLoginLink').href = PORTAL_LOGIN_URL;
+
+                // "Not you?" goes to the portal's own login, which is also where a different
+                // customer signs in — there is no log-out-and-stay-here path worth building when
+                // the next thing they need is to identify themselves anyway.
+                document.getElementById('signedInSwitch').href = PORTAL_LOGIN_URL;
+
+                loadSignedInCustomer();
 
                 showStep(1);
             })();

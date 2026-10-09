@@ -12,7 +12,13 @@ final class PublicBookingController
 {
     public function store(PublicBookingRequest $request, SubmitPublicBooking $submit): JsonResponse
     {
-        $appointment = $submit->execute($request->bookingAttributes());
+        // Who is booking comes from the request's own session, never from its body — the one
+        // thing only the HTTP layer can answer, so it is read here and passed in rather than
+        // reached for inside the action.
+        $appointment = $submit->execute(
+            $request->bookingAttributes(),
+            $request->signedInCustomerId(),
+        );
 
         return PublicAppointmentResource::make($appointment)
             ->response()
