@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Billing\Http\Controllers\Api\V1\InvoiceController;
 use Modules\Billing\Http\Controllers\Api\V1\PaymentCapabilityController;
 use Modules\Billing\Http\Controllers\Api\V1\PaymentMethodController;
+use Modules\Billing\Http\Controllers\Api\V1\StripeWebhookController;
 use Modules\Billing\Http\Controllers\Api\V1\SubscriptionCancellationController;
 use Modules\Billing\Http\Controllers\Api\V1\SubscriptionController;
 use Modules\Billing\Http\Controllers\Api\V1\SubscriptionPlanController;
@@ -21,6 +22,22 @@ use Modules\Billing\Http\Controllers\Api\V1\SubscriptionReactivationController;
 | cancelled or downgraded business could not reach the screen that lets it come back.
 |
 */
+
+/*
+| Gateway webhooks (D-050) sit outside the authenticated group below, and outside `tenant`:
+| Stripe holds no session, and the event itself is what says which tenant it concerns. The
+| signature is the authentication — see StripeWebhookController and StripeWebhookTranslator.
+|
+| Its own rate limiter, not the shared `api` one (120/min per IP): a gateway replaying a
+| backlog after an outage would blow that budget, and a 429 to Stripe delays settlement
+| silently. Same reasoning as `public-availability` on 2026-10-03.
+*/
+Route::middleware('throttle:gateway-webhooks')
+    ->prefix('billing/webhooks')
+    ->name('billing.webhooks.')
+    ->group(function (): void {
+        Route::post('stripe', StripeWebhookController::class)->name('stripe');
+    });
 
 Route::middleware(['auth:sanctum', 'tenant'])->prefix('billing')->name('billing.')->group(function (): void {
 

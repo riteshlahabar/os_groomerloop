@@ -40,6 +40,7 @@ final class ChargeSubscription
         // state a trial ends in when the business never added a card, and it belongs in the
         // dunning cycle like any other non-payment.
         if ($customerReference === null || ! $this->hasPaymentMethod()) {
+            // No reference to record: nothing was ever sent to the gateway.
             $this->markFailed($invoice, 'no_payment_method', 'No payment method on file.');
             $this->failures->execute($subscription, 'no_payment_method');
 
@@ -54,7 +55,12 @@ final class ChargeSubscription
         );
 
         if ($result->failed()) {
-            $this->markFailed($invoice, $result->failureCode ?? 'declined', $result->failureMessage ?? 'Declined.');
+            $this->markFailed(
+                $invoice,
+                $result->failureCode ?? 'declined',
+                $result->failureMessage ?? 'Declined.',
+                $result->reference,
+            );
             $this->failures->execute($subscription, $result->failureCode ?? 'declined');
 
             return $invoice->refresh();
@@ -115,12 +121,21 @@ final class ChargeSubscription
         });
     }
 
-    private function markFailed(Invoice $invoice, string $code, string $message): void
+    /**
+     * The gateway's own reference is stored on a failure as well as on a success (added
+     * 2026-10-09 with the webhook endpoint, `D-050`). Without it a charge that fails now and
+     * settles later — the `requires_action` case, where the customer completes 3DS after the
+     * off-session attempt gave up — arrives as a webhook naming a charge no invoice admits to,
+     * and has to be filed as unmatched. `markFailed` is also reached with no reference at all,
+     * when nothing was ever sent to the gateway.
+     */
+    private function markFailed(Invoice $invoice, string $code, string $message, ?string $reference = null): void
     {
-        $invoice->forceFill([
+        $invoice->forceFill(array_filter([
             'failure_code' => $code,
             'failure_message' => $message,
-        ])->save();
+            'gateway_charge_id' => $reference,
+        ], static fn ($value): bool => $value !== null))->save();
 
         $this->audit->record('invoice.payment_failed', $invoice, [
             'number' => $invoice->number,

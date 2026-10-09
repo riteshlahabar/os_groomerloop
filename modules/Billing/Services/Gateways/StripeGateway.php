@@ -172,7 +172,12 @@ final class StripeGateway implements PaymentGateway
         return $methods->data[0]->id ?? null;
     }
 
-    private static function brandLabel(string $stripeBrand): string
+    /**
+     * Public because `StripeWebhookTranslator` — the inbound twin of this class — has to label
+     * a card from a webhook payload the same way a card from an API response is labelled, or
+     * an auto-updated Visa could come back spelled "visa" on the billing screen.
+     */
+    public static function brandLabel(string $stripeBrand): string
     {
         return match ($stripeBrand) {
             'amex' => 'American Express',

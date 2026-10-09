@@ -22,6 +22,7 @@ class RateLimitServiceProvider extends ServiceProvider
         $this->registerAuthenticationLimiter();
         $this->registerPublicLimiter();
         $this->registerPublicAvailabilityLimiter();
+        $this->registerGatewayWebhookLimiter();
     }
 
     /**
@@ -78,5 +79,21 @@ class RateLimitServiceProvider extends ServiceProvider
     {
         RateLimiter::for('public-availability', static fn (Request $request) => Limit::perMinute(60)
             ->by('public-availability:'.$request->ip()));
+    }
+
+    /**
+     * Inbound payment-gateway webhooks (`D-050`), carved out of the `api` budget on 2026-10-09.
+     *
+     * Not keyed per tenant, unlike every limiter above: a webhook arrives before any tenant is
+     * known, and the sender is the gateway rather than a salon, so there is no tenant
+     * allowance to protect here. Generous on purpose — a gateway replaying a backlog after an
+     * outage legitimately bursts, and refusing it with a 429 delays settlement silently while
+     * it backs off. Still bounded, because the endpoint is unauthenticated: a forged POST is
+     * cheap to reject (the signature fails before any query runs), but not free.
+     */
+    private function registerGatewayWebhookLimiter(): void
+    {
+        RateLimiter::for('gateway-webhooks', static fn (Request $request) => Limit::perMinute(300)
+            ->by('gateway-webhooks:'.$request->ip()));
     }
 }
