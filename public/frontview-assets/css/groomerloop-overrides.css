@@ -46,3 +46,23 @@ header.fixed .navbar-header .navbar-brand.logo-white {
     color: var(--gray-900) !important;
 }
 
+
+/*
+ * Login/Register header: put the logo at the left edge on desktop.
+ *
+ * header .header-nav is display:flex + justify-content:space-between, and its first child is
+ * .menu-wrapper (the mobile drawer, which also holds ul.main-nav). Above 991.98px that wrapper
+ * has nothing visible in it — .menu-header is display:none there and the one nav item is now
+ * li.login-link, hidden at that width — but it is still a flex item, so it holds the left slot
+ * and space-between leaves the logo floating in the middle with an empty gap before it.
+ * Dropping the empty wrapper out of the flex flow on these two pages leaves exactly two items,
+ * so the logo sits hard left and the Sign In / Get Started buttons stay hard right.
+ *
+ * Scoped to min-width:992px so the drawer is untouched below it, which is where it is the only
+ * cross-link between the two pages (header .header-items is display:none there).
+ */
+@media (min-width: 992px) {
+    .auth-page header.header-one .header-nav .menu-wrapper {
+        display: none;
+    }
+}
