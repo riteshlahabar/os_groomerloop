@@ -22,12 +22,15 @@
     <div class="col-span-12">
       <div class="card" style="max-width:860px">
         <div class="card-header card-no-border pb-2">
+          {{--
+            What these rows decide: AvailabilityEngine::businessIsOpen() fails any day with no
+            window row, so these hours are the outer bound on every booking. A groomer's rota
+            and a service's own availability windows only ever narrow them further — nothing
+            widens them, which is why an empty table reads downstream as "no availability"
+            rather than "unconfigured" (the §12 report that prompted this screen; see CLAUDE.md's
+            known traps). Not said on screen, per the owner's no-prose rule.
+          --}}
           <h5>When you are open</h5>
-          <p class="f-light mb-0" style="font-size:13px">
-            These are the hours your customers can book inside. A groomer's own rota and a
-            service's own availability narrow this further — they never widen it, so a time
-            outside these hours is never bookable by anyone.
-          </p>
         </div>
         <div class="card-body pt-0">
           <div id="bhEmptyWarning" class="alert alert-warning" style="display:none">
