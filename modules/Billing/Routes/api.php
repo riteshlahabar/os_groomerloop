@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Billing\Http\Controllers\Api\V1\InvoiceController;
+use Modules\Billing\Http\Controllers\Api\V1\PaymentCapabilityController;
 use Modules\Billing\Http\Controllers\Api\V1\PaymentMethodController;
 use Modules\Billing\Http\Controllers\Api\V1\SubscriptionCancellationController;
 use Modules\Billing\Http\Controllers\Api\V1\SubscriptionController;
@@ -29,6 +30,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->prefix('billing')->name('billing.
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('payment-methods', [PaymentMethodController::class, 'index'])->name('payment-methods.index');
+
+        // What the browser may do about cards here (which client integration, which public
+        // key) — asked by /admin/billing rather than hard-coded into it, invariant #5. Read
+        // alongside the card list, so it sits under the same billing.view gate.
+        Route::get('payment-capabilities', PaymentCapabilityController::class)->name('payment-capabilities');
     });
 
     // Spending money. Owner only, by way of billing.manage.

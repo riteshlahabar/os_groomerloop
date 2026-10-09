@@ -113,19 +113,31 @@
           <div id="blPaymentMethods" class="f-light">Loading…</div>
 
           {{--
-            No card-number form here, deliberately and permanently. The API takes a single-use
-            token from the gateway's own client SDK and `StorePaymentMethodRequest` has no
-            `number`/`cvc`/`exp` rule at all, precisely so a card number never reaches this
-            application or its request log (§28). Capturing one would require Stripe.js in the
-            page, which is not wired up — so this says so rather than offering a form that
-            cannot work.
+            Card entry, §24/§28. There is still no card-number input of our own here and never
+            will be: #blCardElement is an empty mount point, and everything typed into it belongs
+            to an iframe Stripe.js serves from its own origin. The card number therefore never
+            enters this page's DOM, this application, or its request log — `stripe.createPaymentMethod()`
+            returns a `pm_...` id and only that id is POSTed to /api/v1/billing/payment-methods,
+            which is why `StorePaymentMethodRequest` has no `number`/`cvc`/`exp` rule at all.
+
+            Rendered empty and revealed by initCardEntry() only when
+            GET /api/v1/billing/payment-capabilities answers `stripe_elements` — the page asks
+            which integration is live rather than being told (invariant #5). When it answers
+            `unavailable` (no real gateway, or no publishable key) #blCardUnavailable carries a
+            bare state label instead, because a blank region reads as a failed load.
+
+            `hidden`, not `d-none`: no stylesheet /admin loads defines `d-none` — see CLAUDE.md's
+            known traps.
           --}}
-          <p class="f-light mt-3 mb-0" style="font-size:12px;border-left:3px solid var(--theme-default, #7366ff);padding-left:10px">
-            <strong>Adding a card is not available yet.</strong> It needs the payment gateway's
-            own client-side card field, which has not been added to this page. Card numbers are
-            never typed into or stored by GroomerLoop — the gateway returns a token and only the
-            token is sent here.
-          </p>
+          <div id="blCardEntry" class="mt-3" hidden>
+            <div id="blCardError" class="alert alert-danger" style="display:none"></div>
+            <div id="blCardElement" class="form-control" style="padding:10px 12px;height:auto"></div>
+            <button type="button" class="btn btn-primary btn-sm mt-2" id="blCardAdd">Add card</button>
+          </div>
+
+          <div id="blCardUnavailable" class="f-light mt-3" style="font-size:12px" hidden>
+            Card entry is not configured.
+          </div>
         </div>
       </div>
     </div>
@@ -721,6 +733,121 @@
         });
       }
 
+      /* ------------------------------------------------------------------- card entry ----- */
+
+      /*
+        Stripe.js is injected on demand, never with the page. A tenant on the fake gateway must
+        not have its browser contact js.stripe.com at all, and the script is useless without a
+        publishable key — so the capability answer decides whether it is fetched. Resolves on
+        the existing tag if something already added it, so two calls cannot load it twice.
+      */
+      function loadStripeJs() {
+        return new Promise(function (resolve, reject) {
+          if (window.Stripe) {
+            resolve();
+            return;
+          }
+
+          var existing = document.getElementById('blStripeJs');
+
+          if (existing) {
+            existing.addEventListener('load', function () { resolve(); });
+            existing.addEventListener('error', function () { reject(); });
+            return;
+          }
+
+          var script = document.createElement('script');
+          script.id = 'blStripeJs';
+          script.src = 'https://js.stripe.com/v3/';
+          script.onload = function () { resolve(); };
+          script.onerror = function () { reject(); };
+          document.head.appendChild(script);
+        });
+      }
+
+      function cardError(message) {
+        var el = document.getElementById('blCardError');
+        el.textContent = message;
+        el.style.display = message ? 'block' : 'none';
+      }
+
+      async function initCardEntry() {
+        var unavailable = document.getElementById('blCardUnavailable');
+
+        // Only an owner (billing.manage) may add one; for everyone else the region stays as
+        // the card list alone, with no state label to explain a control they never had.
+        if (!canManage) {
+          return;
+        }
+
+        var result = await api.get('/api/v1/billing/payment-capabilities');
+
+        if (!result.ok || result.body.data.card_entry !== 'stripe_elements') {
+          unavailable.hidden = false;
+          return;
+        }
+
+        try {
+          await loadStripeJs();
+        } catch (e) {
+          unavailable.hidden = false;
+          return;
+        }
+
+        var stripe = window.Stripe(result.body.data.publishable_key);
+
+        // The card number lives in Stripe's own iframe, not in this page (§28). Styling is
+        // passed in rather than inherited: the iframe cannot see this document's stylesheet.
+        var card = stripe.elements().create('card', {
+          hidePostalCode: false,
+          style: {
+            base: {
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              color: '#2c2c2c',
+              '::placeholder': { color: '#9a9a9a' },
+            },
+          },
+        });
+
+        card.mount('#blCardElement');
+        card.on('change', function (event) {
+          cardError(event.error ? event.error.message : '');
+        });
+
+        document.getElementById('blCardEntry').hidden = false;
+
+        document.getElementById('blCardAdd').addEventListener('click', async function () {
+          var button = this;
+          button.disabled = true;
+          cardError('');
+
+          // Tokenise against Stripe directly. A card error here (declined test card, bad
+          // expiry) never reaches our server, so it is reported from this result, not ours.
+          var tokenised = await stripe.createPaymentMethod({ type: 'card', card: card });
+
+          if (tokenised.error) {
+            cardError(tokenised.error.message || 'That card could not be used.');
+            button.disabled = false;
+            return;
+          }
+
+          var saved = await api.post('/api/v1/billing/payment-methods', {
+            token: tokenised.paymentMethod.id,
+          });
+
+          button.disabled = false;
+
+          if (!saved.ok) {
+            cardError(saved.body.message || 'Could not save that card.');
+            return;
+          }
+
+          card.clear();
+          loadPaymentMethods();
+        });
+      }
+
       /* --------------------------------------------------------------------- invoices ----- */
 
       async function loadInvoices(page) {
@@ -772,6 +899,10 @@
       }
 
       reload();
+
+      // Independent of reload(): the capability answer never changes between reloads, and
+      // mounting Elements twice would stack two iframes in the same div.
+      initCardEntry();
     })();
   </script>
 @endpush

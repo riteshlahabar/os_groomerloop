@@ -42,8 +42,14 @@ return [
     |
     | Modules\Billing\Services\Gateways\StripeGateway (invariant #5, spec §30). Set
     | BILLING_GATEWAY=stripe in .env once 'secret' is filled in; the webhook secret is unused
-    | until a webhook endpoint exists. 'key' is the publishable key the future client-side
-    | Stripe.js integration needs — never sent anywhere from this application itself.
+    | until a webhook endpoint exists. 'key' is the publishable key /admin/billing's Stripe.js
+    | card field needs; it is handed to that page by GET /api/v1/billing/payment-capabilities
+    | (Modules\Billing\Services\CardEntry) and is public by design — it can create tokens and
+    | nothing else. The secret key is never exposed to a browser.
+    |
+    | Both must be set for a card to be addable: 'secret' alone lets the server charge a card
+    | already on file, while the page reports card entry unconfigured, since without 'key'
+    | there is nothing to tokenise a new one with.
     |
     */
     'stripe' => [
